@@ -25,15 +25,12 @@ export default function EditProfile() {
   const [bannerFile, setBannerFile] = useState<File | null>(null);
   const [bannerPreview, setBannerPreview] = useState<string | null>(null);
   const [pageColor, setPageColor] = useState("#2563EB");
-  const [chatPrice, setChatPrice] = useState("");
-  const [autoReply, setAutoReply] = useState("");
 
   const { data: earnings } = useQuery({
     queryKey: ["creator-earnings"],
     queryFn: async () => { try { const { data } = await api.get("/creator/earnings"); return data.data; } catch { return {}; } },
   });
   const isPro = earnings?.tier_name === "Pro" || earnings?.tier_name === "Business";
-  const isBusiness = earnings?.tier_name === "Business";
 
   useEffect(() => {
     if (user) {
@@ -46,8 +43,6 @@ export default function EditProfile() {
   useEffect(() => {
     if (earnings?.page_color) setPageColor(earnings.page_color);
     if (earnings?.header_image) setBannerPreview(earnings.header_image);
-    if (earnings?.chat_price_idr) setChatPrice(String(earnings.chat_price_idr / 1000));
-    if (earnings?.auto_reply) setAutoReply(earnings.auto_reply);
   }, [earnings]);
 
   const save = useMutation({
@@ -70,8 +65,6 @@ export default function EditProfile() {
         display_name: displayName, bio, avatar_url: avatarUrl,
         header_image: bannerUrl || undefined,
         page_color: isPro ? pageColor : undefined,
-        chat_price_idr: isPro && chatPrice ? parseInt(chatPrice) * 1000 : 0,
-        auto_reply: isBusiness ? autoReply || undefined : undefined,
       });
     },
     onSuccess: () => { toast.success("Profil berhasil disimpan!"); fetchMe(); },
@@ -153,23 +146,6 @@ export default function EditProfile() {
                   <span className="text-xs text-gray-500 dark:text-gray-400">{pageColor}</span>
                   <Badge variant="outline" className="text-xs">Pro</Badge>
                 </div>
-              </div>
-            )}
-            {/* Chat Settings (Pro+) */}
-            {isPro && (
-              <div className="border-t dark:border-gray-700 pt-4 space-y-3">
-                <p className="text-sm font-medium">💬 Pengaturan Chat</p>
-                <div>
-                  <label className="text-xs text-gray-500 dark:text-gray-400">Harga per chat (Credit, 0 = gratis)</label>
-                  <Input type="number" value={chatPrice} onChange={e => setChatPrice(e.target.value)} placeholder="0" className="w-40" />
-                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{chatPrice && parseInt(chatPrice) > 0 ? `Supporter bayar ${chatPrice} Credit per pesan. Fee sesuai tier kamu (${earnings?.fee_percent ?? 20}%).` : "Chat gratis untuk semua supporter"}</p>
-                </div>
-                {isBusiness && (
-                  <div>
-                    <label className="text-xs text-gray-500 dark:text-gray-400">Auto-reply <Badge variant="outline" className="text-[10px] ml-1">Business</Badge></label>
-                    <Input value={autoReply} onChange={e => setAutoReply(e.target.value)} placeholder="Contoh: Terima kasih! Saya akan balas segera." />
-                  </div>
-                )}
               </div>
             )}
             <Button onClick={() => save.mutate()} disabled={save.isPending || !displayName}>
