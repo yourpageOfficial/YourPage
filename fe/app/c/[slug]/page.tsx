@@ -178,6 +178,21 @@ export default function CreatorPageView() {
           </Card>
         </div>
 
+        {/* Donation Goal */}
+        {creator.donation_goal_amount > 0 && creator.donation_goal_title && (
+          <Card className="mt-4 mx-2 sm:mx-0">
+            <CardContent className="p-4">
+              <p className="text-sm font-medium mb-2">🎯 {creator.donation_goal_title}</p>
+              <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${Math.min((creator.donation_goal_current / creator.donation_goal_amount) * 100, 100)}%` }} />
+              </div>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                {formatCredit(creator.donation_goal_current)} / {formatCredit(creator.donation_goal_amount)} Credit ({Math.min(Math.round((creator.donation_goal_current / creator.donation_goal_amount) * 100), 100)}%)
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Tabs */}
         <div className="mt-6 sm:mt-8 flex gap-1 border-b dark:border-gray-700 overflow-x-auto">
           {[

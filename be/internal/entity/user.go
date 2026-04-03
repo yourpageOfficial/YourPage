@@ -58,6 +58,10 @@ type CreatorProfile struct {
 	AdminNote          *string    `json:"admin_note,omitempty"`
 	ChatPriceIDR       int64      `json:"chat_price_idr" gorm:"column:chat_price_idr;default:0"`
 	AutoReply          *string    `json:"auto_reply,omitempty"`
+	DonationGoalAmount int64      `json:"donation_goal_amount" gorm:"default:0"`
+	DonationGoalTitle  *string    `json:"donation_goal_title,omitempty"`
+	DonationGoalCurrent int64     `json:"donation_goal_current" gorm:"default:0"`
+	WelcomeMessage     *string    `json:"welcome_message,omitempty"`
 	CreatedAt          time.Time  `json:"created_at"`
 	UpdatedAt          time.Time  `json:"updated_at"`
 }

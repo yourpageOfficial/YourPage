@@ -52,6 +52,9 @@ func (h *PublicHandler) GetCreatorPage(c *gin.Context) {
 		"page_color":    profile.PageColor,
 		"is_priority":    profile.Tier != nil && profile.Tier.Name == "Business",
 		"chat_price_idr": profile.ChatPriceIDR,
+		"donation_goal_title":   profile.DonationGoalTitle,
+		"donation_goal_amount":  profile.DonationGoalAmount,
+		"donation_goal_current": profile.DonationGoalCurrent,
 	})
 }
 
@@ -87,6 +90,10 @@ func (h *PublicHandler) GetMyEarnings(c *gin.Context) {
 		"social_links":      profile.SocialLinks,
 		"chat_price_idr":    profile.ChatPriceIDR,
 		"auto_reply":        profile.AutoReply,
+		"donation_goal_title":   profile.DonationGoalTitle,
+		"donation_goal_amount":  profile.DonationGoalAmount,
+		"donation_goal_current": profile.DonationGoalCurrent,
+		"welcome_message":       profile.WelcomeMessage,
 	})
 }
 

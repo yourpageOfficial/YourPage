@@ -145,6 +145,9 @@ export interface CreatorPage {
   page_color?: string;
   is_priority?: boolean;
   chat_price_idr?: number;
+  donation_goal_title?: string;
+  donation_goal_amount: number;
+  donation_goal_current: number;
 }
 
 export interface PlatformSettings {

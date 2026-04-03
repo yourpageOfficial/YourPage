@@ -301,6 +301,7 @@ func (s *paymentService) payWithCredits(
 	if err == nil {
 		_ = s.walletRepo.AddCredits(ctx, creatorID, netIDR)
 		profile.TotalEarnings += netIDR
+		if usecase == entity.PaymentUsecaseDonation { profile.DonationGoalCurrent += netIDR }
 		profile.Tier = nil
 		_ = s.userRepo.UpdateCreatorProfile(ctx, profile)
 		_ = s.followRepo.CreateNotification(ctx, &entity.Notification{
