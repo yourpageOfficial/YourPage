@@ -24,11 +24,11 @@ export default function AdminWithdrawals() {
   const bulk = useBulkSelect();
   const pendingIds = list.items.filter((w: any) => w.status === "pending").map((w: any) => w.id);
   const bulkApprove = useMutation({
-    mutationFn: async () => { for (const id of bulk.selected) await api.patch(`/admin/withdrawals/${id}`, { status: "approved" }); },
+    mutationFn: async () => { for (const id of Array.from(bulk.selected)) await api.patch(`/admin/withdrawals/${id}`, { status: "approved" }); },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin-withdrawals"] }); toast.success(`${bulk.count} withdrawal approved`); bulk.clear(); },
   });
   const bulkReject = useMutation({
-    mutationFn: async () => { for (const id of bulk.selected) await api.patch(`/admin/withdrawals/${id}`, { status: "rejected" }); },
+    mutationFn: async () => { for (const id of Array.from(bulk.selected)) await api.patch(`/admin/withdrawals/${id}`, { status: "rejected" }); },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin-withdrawals"] }); toast.success(`${bulk.count} withdrawal rejected`); bulk.clear(); },
   });
   const update = useMutation({

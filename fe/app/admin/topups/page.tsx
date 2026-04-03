@@ -25,11 +25,11 @@ export default function AdminTopups() {
   const pendingIds = list.items.filter((t: any) => t.status === "pending").map((t: any) => t.id);
 
   const bulkApprove = useMutation({
-    mutationFn: async () => { for (const id of bulk.selected) await api.post(`/admin/credit-topups/${id}/approve`); },
+    mutationFn: async () => { for (const id of Array.from(bulk.selected)) await api.post(`/admin/credit-topups/${id}/approve`); },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin-topups"] }); toast.success(`${bulk.count} topup approved`); bulk.clear(); },
   });
   const bulkReject = useMutation({
-    mutationFn: async () => { for (const id of bulk.selected) await api.post(`/admin/credit-topups/${id}/reject`, { admin_note: "Bulk rejected" }); },
+    mutationFn: async () => { for (const id of Array.from(bulk.selected)) await api.post(`/admin/credit-topups/${id}/reject`, { admin_note: "Bulk rejected" }); },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin-topups"] }); toast.success(`${bulk.count} topup rejected`); bulk.clear(); },
   });
   const approve = useMutation({ mutationFn: (id: string) => api.post(`/admin/credit-topups/${id}/approve`, { admin_note: notes[id] }), onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-topups"] }) });
