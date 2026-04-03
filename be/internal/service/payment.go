@@ -31,7 +31,8 @@ type CheckoutDonationRequest struct {
 	Message     *string   `json:"message"      validate:"omitempty,max=500"`
 	DonorName   string    `json:"donor_name"   validate:"required,max=100"`
 	IsAnonymous bool      `json:"is_anonymous"`
-	Provider    string    `json:"provider"     validate:"required,oneof=credits"` // TODO: add xendit paypal
+	MediaURL    *string   `json:"media_url"`
+	Provider    string    `json:"provider"     validate:"required,oneof=credits"`
 }
 
 type CheckoutResponse struct {
@@ -210,6 +211,7 @@ func (s *paymentService) CheckoutDonation(ctx context.Context, buyerID uuid.UUID
 				Message:      req.Message,
 				DonorName:    req.DonorName,
 				IsAnonymous:  req.IsAnonymous,
+				MediaURL:     req.MediaURL,
 				Status:       entity.PaymentStatusPaid,
 			}
 			return s.donationRepo.Create(ctx, donation)

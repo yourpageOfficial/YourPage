@@ -6,7 +6,7 @@ import { Navbar } from "@/components/navbar";
 import { AuthGuard } from "@/components/auth-guard";
 import { cn } from "@/lib/utils";
 import { MobileSidebar } from "@/components/mobile-sidebar";
-import { BarChart3, FileText, Package, Heart, Banknote, ShieldCheck, UserCog, Receipt, Rss, Sparkles, PieChart, MessageCircle, Target } from "lucide-react";
+import { BarChart3, FileText, Package, Heart, Banknote, ShieldCheck, UserCog, Receipt, Rss, Sparkles, PieChart, MessageCircle, Target, Monitor } from "lucide-react";
 
 const sidebarItems = [
   { href: "/dashboard", label: "Ringkasan", icon: BarChart3 },
@@ -20,6 +20,7 @@ const sidebarItems = [
   { href: "/dashboard/withdrawals", label: "Penarikan", icon: Banknote },
   { href: "/dashboard/subscription", label: "Langganan", icon: Sparkles },
   { href: "/dashboard/chat-settings", label: "Chat", icon: MessageCircle },
+  { href: "/dashboard/overlay", label: "Overlay", icon: Monitor },
   { href: "/dashboard/profile", label: "Profil", icon: UserCog },
   { href: "/dashboard/kyc", label: "Verifikasi KYC", icon: ShieldCheck },
 ];

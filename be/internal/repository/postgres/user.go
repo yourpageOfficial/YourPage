@@ -165,3 +165,17 @@ func (r *userRepo) ListExpiredTierCreators(ctx context.Context) ([]entity.Creato
 		Find(&profiles).Error
 	return profiles, err
 }
+
+func (r *userRepo) ListOverlayTiers(ctx context.Context, creatorID uuid.UUID) ([]entity.OverlayTier, error) {
+	var tiers []entity.OverlayTier
+	err := r.db.WithContext(ctx).Where("creator_id = ?", creatorID).Order("sort_order, min_credits").Find(&tiers).Error
+	return tiers, err
+}
+
+func (r *userRepo) CreateOverlayTier(ctx context.Context, t *entity.OverlayTier) error {
+	return r.db.WithContext(ctx).Create(t).Error
+}
+
+func (r *userRepo) DeleteOverlayTier(ctx context.Context, id, creatorID uuid.UUID) error {
+	return r.db.WithContext(ctx).Where("id = ? AND creator_id = ?", id, creatorID).Delete(&entity.OverlayTier{}).Error
+}

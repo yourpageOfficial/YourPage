@@ -19,6 +19,7 @@ type Donation struct {
 	DonorName   string     `json:"donor_name"`
 	DonorEmail  string     `json:"-"`
 	IsAnonymous bool       `json:"is_anonymous" gorm:"default:false"`
+	MediaURL    *string    `json:"media_url,omitempty"`
 	Status      PaymentStatus `json:"status" gorm:"default:'pending'"`
 	CreatedAt   time.Time  `json:"created_at"`
 	UpdatedAt   time.Time  `json:"updated_at"`

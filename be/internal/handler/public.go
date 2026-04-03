@@ -95,7 +95,7 @@ func (h *PublicHandler) GetMyEarnings(c *gin.Context) {
 		"donation_goal_amount":  profile.DonationGoalAmount,
 		"donation_goal_current": profile.DonationGoalCurrent,
 		"welcome_message":       profile.WelcomeMessage,
-		"overlay_style":         profile.OverlayStyle,
+		"overlay_style": profile.OverlayStyle, "overlay_text_template": profile.OverlayTextTemplate,
 	})
 }
 

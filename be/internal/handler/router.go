@@ -6,7 +6,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/redis/go-redis/v9"
+	"github.com/google/uuid"
 	"github.com/yourpage/be/internal/config"
+	"github.com/yourpage/be/internal/entity"
 	"github.com/yourpage/be/internal/handler/middleware"
 	"github.com/yourpage/be/internal/repository"
 	"gorm.io/gorm"
@@ -29,6 +31,7 @@ type Handlers struct {
 	Webhook    *WebhookHandler
 	Chat       *ChatHandler
 	PlatformRepo repository.PlatformRepository
+	UserRepo     repository.UserRepository
 	AuditDB      *gorm.DB
 }
 
@@ -232,6 +235,32 @@ func NewRouter(cfg *config.Config, rdb *redis.Client, h Handlers) *gin.Engine {
 		withdrawalG.POST("", h.Withdrawal.Create)
 		withdrawalG.GET("", h.Withdrawal.ListMine)
 	}
+
+	// ---- Overlay Tiers (public read, auth write) ----
+	api.GET("/overlay-tiers/:creatorId", func(c *gin.Context) {
+		cid, err := uuid.Parse(c.Param("creatorId"))
+		if err != nil { c.JSON(400, gin.H{"error": "invalid id"}); return }
+		tiers, _ := h.UserRepo.ListOverlayTiers(c.Request.Context(), cid)
+		c.JSON(200, gin.H{"success": true, "data": tiers})
+	})
+	api.POST("/overlay-tiers", auth, creatorOnly, func(c *gin.Context) {
+		var body struct {
+			MinCredits int     `json:"min_credits"`
+			ImageURL   string  `json:"image_url"`
+			SoundURL   *string `json:"sound_url"`
+			Label      *string `json:"label"`
+		}
+		if err := c.ShouldBindJSON(&body); err != nil { c.JSON(400, gin.H{"error": "invalid body"}); return }
+		t := &entity.OverlayTier{ID: uuid.New(), CreatorID: getUserID(c), MinCredits: body.MinCredits, ImageURL: body.ImageURL, SoundURL: body.SoundURL, Label: body.Label}
+		if err := h.UserRepo.CreateOverlayTier(c.Request.Context(), t); err != nil { c.JSON(500, gin.H{"error": "internal"}); return }
+		c.JSON(201, gin.H{"success": true, "data": t})
+	})
+	api.DELETE("/overlay-tiers/:id", auth, creatorOnly, func(c *gin.Context) {
+		id, err := uuid.Parse(c.Param("id"))
+		if err != nil { c.JSON(400, gin.H{"error": "invalid id"}); return }
+		h.UserRepo.DeleteOverlayTier(c.Request.Context(), id, getUserID(c))
+		c.JSON(200, gin.H{"success": true, "message": "deleted"})
+	})
 
 	// ---- Chat ----
 	chatG := api.Group("/chat", auth)

@@ -124,6 +124,7 @@ func main() {
 		Webhook:    handler.NewWebhookHandler(paymentRepo, xenditClient),
 		Chat:       handler.NewChatHandler(chatSvc),
 		PlatformRepo: platformRepo,
+		UserRepo:     userRepo,
 		AuditDB:      db,
 	}
 

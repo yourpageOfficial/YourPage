@@ -26,6 +26,9 @@ type UserRepository interface {
 	SearchCreators(ctx context.Context, query string, cursor *uuid.UUID, limit int) ([]entity.CreatorProfile, error)
 	ListFeaturedCreators(ctx context.Context) ([]entity.CreatorProfile, error)
 	ListExpiredTierCreators(ctx context.Context) ([]entity.CreatorProfile, error)
+	ListOverlayTiers(ctx context.Context, creatorID uuid.UUID) ([]entity.OverlayTier, error)
+	CreateOverlayTier(ctx context.Context, t *entity.OverlayTier) error
+	DeleteOverlayTier(ctx context.Context, id, creatorID uuid.UUID) error
 
 	// Analytics
 	CountCreatorPosts(ctx context.Context, userID uuid.UUID) (int64, error)
