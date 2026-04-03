@@ -63,9 +63,12 @@ export default function WalletPage() {
                   <p className="text-xs text-gray-500 dark:text-gray-400">{formatDate(tx.created_at)}</p>
                 </div>
                 <div className="text-right">
-                  <Badge className={tx.type === "topup" || tx.type === "refund" ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400" : "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400"}>
-                    {tx.type === "topup" || tx.type === "refund" ? "+" : "-"}{tx.credits} Credit
+                  <Badge className={["topup", "refund", "earning"].includes(tx.type) ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400" : "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400"}>
+                    {["topup", "refund", "earning"].includes(tx.type) ? "+" : "-"}{tx.credits} Credit
                   </Badge>
+                  {tx.type === "withdrawal" && (
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{formatIDR(tx.idr_amount)}</p>
+                  )}
                 </div>
               </CardContent>
             </Card>

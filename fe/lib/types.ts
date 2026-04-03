@@ -100,7 +100,7 @@ export interface Wallet {
 
 export interface CreditTransaction {
   id: string;
-  type: "topup" | "spend" | "refund";
+  type: "topup" | "spend" | "refund" | "withdrawal" | "earning";
   credits: number;
   idr_amount: number;
   description: string;

@@ -57,6 +57,7 @@ type CreatorProfile struct {
 	FeaturedOrder      int        `json:"featured_order" gorm:"default:0"`
 	AdminNote          *string    `json:"admin_note,omitempty"`
 	ChatPriceIDR       int64      `json:"chat_price_idr" gorm:"column:chat_price_idr;default:0"`
+	ChatAllowFrom      string     `json:"chat_allow_from" gorm:"column:chat_allow_from;default:'all'"`
 	AutoReply          *string    `json:"auto_reply,omitempty"`
 	DonationGoalAmount int64      `json:"donation_goal_amount" gorm:"default:0"`
 	DonationGoalTitle  *string    `json:"donation_goal_title,omitempty"`

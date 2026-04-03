@@ -8,12 +8,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/lib/toast";
-import { useAuth } from "@/lib/auth";
 import { formatCredit } from "@/lib/utils";
 import { Target, MessageSquare } from "lucide-react";
 
 export default function DonationSettingsPage() {
-  const { user } = useAuth();
   const qc = useQueryClient();
   const [goalTitle, setGoalTitle] = useState("");
   const [goalAmount, setGoalAmount] = useState("");
@@ -24,14 +22,11 @@ export default function DonationSettingsPage() {
     queryFn: async () => { try { const { data } = await api.get("/creator/earnings"); return data.data; } catch { return {}; } },
   });
 
-  const [overlayStyle, setOverlayStyle] = useState("bounce");
-
   useEffect(() => {
     if (earnings) {
       setGoalTitle(earnings.donation_goal_title || "");
       setGoalAmount(earnings.donation_goal_amount ? String(earnings.donation_goal_amount / 1000) : "");
       setWelcomeMsg(earnings.welcome_message || "");
-      setOverlayStyle(earnings.overlay_style || "bounce");
     }
   }, [earnings]);
 
@@ -40,7 +35,6 @@ export default function DonationSettingsPage() {
       donation_goal_title: goalTitle || null,
       donation_goal_amount: goalAmount ? parseInt(goalAmount) * 1000 : 0,
       welcome_message: welcomeMsg || null,
-      overlay_style: overlayStyle,
     }),
     onSuccess: () => { toast.success("Pengaturan disimpan!"); qc.invalidateQueries({ queryKey: ["creator-earnings"] }); },
     onError: (e: any) => toast.error(e.response?.data?.error || "Gagal"),
@@ -102,41 +96,6 @@ export default function DonationSettingsPage() {
       <Button onClick={() => save.mutate()} disabled={save.isPending} className="w-full sm:w-auto">
         {save.isPending ? "Menyimpan..." : "Simpan Pengaturan"}
       </Button>
-
-      {/* OBS Overlay */}
-      <Card className="mt-4">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base">📺 Overlay Streaming (OBS/Streamlabs)</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <p className="text-sm text-gray-500 dark:text-gray-400">Tambahkan sebagai Browser Source di OBS.</p>
-
-          <div>
-            <label className="text-xs text-gray-500 dark:text-gray-400">Animasi</label>
-            <div className="flex gap-2 mt-1">
-              {[
-                { id: "bounce", label: "⬆️ Bounce" },
-                { id: "slide", label: "➡️ Slide" },
-                { id: "fade", label: "✨ Fade" },
-                { id: "spin", label: "🔄 Spin" },
-              ].map(a => (
-                <Button key={a.id} size="sm" variant={overlayStyle === a.id ? "default" : "outline"} onClick={() => setOverlayStyle(a.id)} className="text-xs">
-                  {a.label}
-                </Button>
-              ))}
-            </div>
-          </div>
-
-          <div className="flex gap-2">
-            <Input readOnly value={typeof window !== "undefined" ? `${window.location.origin}/overlay?id=${user?.id || ""}&style=${overlayStyle}` : ""} className="text-xs" />
-            <Button size="sm" variant="outline" onClick={() => {
-              navigator.clipboard.writeText(`${window.location.origin}/overlay?id=${user?.id || ""}&style=${overlayStyle}`);
-              toast.success("URL overlay disalin!");
-            }}>Copy</Button>
-          </div>
-          <p className="text-xs text-gray-400 dark:text-gray-500">OBS: Browser Source · 800×200px · Background transparan</p>
-        </CardContent>
-      </Card>
     </div>
   );
 }

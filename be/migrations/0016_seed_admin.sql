@@ -1,15 +1,7 @@
 -- +goose Up
-INSERT INTO users (id, email, username, password_hash, display_name, role, created_at, updated_at)
-VALUES (
-    uuid_generate_v4(),
-    'admin@yourpage.id',
-    'admin',
-    '$2a$12$h3JqXFW8LLayQ/IP46oyKOUPWV7aNdFSJZBnyb4QV7nzmYz4Y5wTW',
-    'Admin YourPage',
-    'admin',
-    NOW(),
-    NOW()
-) ON CONFLICT DO NOTHING;
+-- Admin user is created at runtime via ADMIN_EMAIL + ADMIN_PASSWORD env vars (see main.go).
+-- This migration is intentionally a no-op to preserve migration history.
+-- DO NOT add hardcoded credentials here.
 
 -- +goose Down
-DELETE FROM users WHERE email = 'admin@yourpage.id';
+-- No-op.

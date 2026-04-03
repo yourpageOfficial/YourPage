@@ -220,13 +220,34 @@ func (s *adminService) UpdateWithdrawalStatus(ctx context.Context, id uuid.UUID,
 		return err
 	}
 
-	if err := s.withdrawalRepo.UpdateStatus(ctx, id, req.Status, req.AdminNote); err != nil {
-		return err
+	// Deduct credits BEFORE updating status to keep state consistent.
+	// If deduction fails, abort so status stays unchanged.
+	if req.Status == entity.WithdrawalStatusProcessed {
+		settings, err := s.platformRepo.GetSettings(ctx)
+		if err != nil {
+			return fmt.Errorf("admin: get settings: %w", err)
+		}
+		creditRate := settings.CreditRateIDR
+		if creditRate <= 0 {
+			creditRate = 1000 // default fallback
+		}
+		creditsToDeduct := w.AmountIDR / creditRate
+		if err := s.walletRepo.DeductCredits(ctx, w.CreatorID, creditsToDeduct); err != nil {
+			return fmt.Errorf("admin: deduct credits failed, withdrawal status not changed: %w", err)
+		}
+		// Record withdrawal transaction so it appears in creator's wallet history
+		desc := fmt.Sprintf("Penarikan ke %s %s", w.BankName, w.AccountNumber)
+		if err := s.walletRepo.CreateTransaction(ctx, &entity.CreditTransaction{
+			ID: uuid.New(), UserID: w.CreatorID,
+			Type: entity.CreditTransactionWithdrawal, Credits: creditsToDeduct,
+			IDRAmount: w.AmountIDR, ReferenceID: &id, Description: desc,
+		}); err != nil {
+			fmt.Printf("admin: create withdrawal credit transaction: %v\n", err)
+		}
 	}
 
-	// Deduct from wallet if processed
-	if req.Status == entity.WithdrawalStatusProcessed {
-		_ = s.walletRepo.DeductCredits(ctx, w.CreatorID, w.AmountIDR/1000)
+	if err := s.withdrawalRepo.UpdateStatus(ctx, id, req.Status, req.AdminNote); err != nil {
+		return err
 	}
 
 	// Notify creator on any status change
@@ -245,10 +266,13 @@ func (s *adminService) UpdateWithdrawalStatus(ctx context.Context, id uuid.UUID,
 		if req.AdminNote != nil && req.Status == entity.WithdrawalStatusRejected {
 			body += " Alasan: " + *req.AdminNote
 		}
-		_ = s.followRepo.CreateNotification(ctx, &entity.Notification{
+		if err := s.followRepo.CreateNotification(ctx, &entity.Notification{
 			ID: uuid.New(), UserID: w.CreatorID, Type: entity.NotificationWithdrawalUpdated,
 			Title: title, Body: body, ReferenceID: &id,
-		})
+		}); err != nil {
+			// Non-fatal: log but do not fail the withdrawal update
+			fmt.Printf("admin: create withdrawal notification: %v\n", err)
+		}
 	}
 
 	return nil
@@ -287,10 +311,12 @@ func (s *adminService) UpdateKYCStatus(ctx context.Context, id uuid.UUID, req Up
 			body = "KYC kamu ditolak."
 			if req.AdminNote != nil { body += " Alasan: " + *req.AdminNote }
 		}
-		_ = s.followRepo.CreateNotification(ctx, &entity.Notification{
+		if err := s.followRepo.CreateNotification(ctx, &entity.Notification{
 			ID: uuid.New(), UserID: userID, Type: entity.NotificationKYCUpdated,
 			Title: "Status KYC Diperbarui", Body: body,
-		})
+		}); err != nil {
+			fmt.Printf("admin: create KYC notification: %v\n", err)
+		}
 	}
 	return nil
 }
@@ -358,7 +384,9 @@ func (s *adminService) ApproveTopup(ctx context.Context, id uuid.UUID, req Appro
 		ReferenceID: &id,
 		Description: "Manual QRIS top-up (approved)",
 	}
-	_ = s.walletRepo.CreateTransaction(ctx, tx)
+	if err := s.walletRepo.CreateTransaction(ctx, tx); err != nil {
+		fmt.Printf("admin: create topup transaction record: %v\n", err)
+	}
 
 	// Notify user.
 	notif := entity.Notification{
@@ -368,7 +396,9 @@ func (s *adminService) ApproveTopup(ctx context.Context, id uuid.UUID, req Appro
 		Title:  "Top-up Berhasil",
 		Body:   fmt.Sprintf("Top-up Rp %d berhasil, saldo bertambah %d credit.", topup.AmountIDR, topup.Credits),
 	}
-	_ = s.followRepo.CreateNotification(ctx, &notif)
+	if err := s.followRepo.CreateNotification(ctx, &notif); err != nil {
+		fmt.Printf("admin: create topup notification: %v\n", err)
+	}
 
 	return nil
 }

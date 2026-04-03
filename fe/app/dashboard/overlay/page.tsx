@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -30,8 +30,13 @@ export default function OverlaySettingsPage() {
     queryFn: async () => { try { const { data } = await api.get("/creator/earnings"); return data.data; } catch { return {}; } },
   });
 
-  const [textTemplate, setTextTemplate] = useState(earnings?.overlay_text_template || "{donor} donated {amount} Credit!");
-  const [overlayStyle, setOverlayStyle] = useState(earnings?.overlay_style || "bounce");
+  const [textTemplate, setTextTemplate] = useState("{donor} donated {amount} Credit!");
+  const [overlayStyle, setOverlayStyle] = useState("bounce");
+
+  useEffect(() => {
+    if (earnings?.overlay_style) setOverlayStyle(earnings.overlay_style);
+    if (earnings?.overlay_text_template) setTextTemplate(earnings.overlay_text_template);
+  }, [earnings]);
 
   const addTier = useMutation({
     mutationFn: async () => {
@@ -92,7 +97,11 @@ export default function OverlaySettingsPage() {
           <div className="space-y-2">
             {tiers?.map((t: any) => (
               <div key={t.id} className="flex items-center gap-3 p-2 rounded-lg bg-gray-50 dark:bg-gray-800">
-                <img src={t.image_url} alt="" className="h-12 w-12 rounded object-cover" />
+                {t.image_url ? (
+                  <img src={t.image_url} alt="" className="h-12 w-12 rounded object-cover" />
+                ) : (
+                  <div className="h-12 w-12 rounded bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-gray-400 text-xs">No img</div>
+                )}
                 <div className="flex-1">
                   <p className="text-sm font-medium">≥ {t.min_credits} Credit</p>
                   {t.label && <p className="text-xs text-gray-500 dark:text-gray-400">{t.label}</p>}
@@ -129,7 +138,7 @@ export default function OverlaySettingsPage() {
                 <Button size="sm" variant="outline" onClick={() => fileRef.current?.click()}><Upload className="mr-1 h-4 w-4" /> Upload GIF/Gambar</Button>
               )}
             </div>
-            <Button size="sm" onClick={() => addTier.mutate()} disabled={!imageFile || !minCredits || addTier.isPending}>
+            <Button size="sm" onClick={() => addTier.mutate()} disabled={!minCredits || addTier.isPending}>
               {addTier.isPending ? "Uploading..." : "Tambah Tier"}
             </Button>
           </div>

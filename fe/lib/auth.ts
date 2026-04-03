@@ -21,6 +21,8 @@ export const useAuth = create<AuthState>((set) => ({
     const me = await api.get("/auth/me");
     const user = me.data.data;
     set({ user });
+    // Set a session cookie for server-side middleware route protection
+    document.cookie = `auth-role=${user.role}; path=/; SameSite=Lax`;
     // Redirect — first time to welcome, otherwise to dashboard
     const isFirstLogin = !localStorage.getItem("has_logged_in");
     localStorage.setItem("has_logged_in", "true");
@@ -43,6 +45,8 @@ export const useAuth = create<AuthState>((set) => ({
     if (rt) api.post("/auth/logout", { refresh_token: rt }).catch(() => {});
     localStorage.removeItem("access_token");
     localStorage.removeItem("refresh_token");
+    // Clear session cookie
+    document.cookie = "auth-role=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
     set({ user: null });
     window.location.href = "/";
   },

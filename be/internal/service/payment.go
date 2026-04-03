@@ -306,6 +306,13 @@ func (s *paymentService) payWithCredits(
 		if usecase == entity.PaymentUsecaseDonation { profile.DonationGoalCurrent += netIDR }
 		profile.Tier = nil
 		_ = s.userRepo.UpdateCreatorProfile(ctx, profile)
+		// Record earning transaction
+		_ = s.walletRepo.CreateTransaction(ctx, &entity.CreditTransaction{
+			ID: uuid.New(), UserID: creatorID, Type: entity.CreditTransactionEarning,
+			Credits: netIDR / settings.CreditRateIDR, IDRAmount: netIDR,
+			PaymentID: &paymentID, ReferenceID: &referenceID,
+			Description: fmt.Sprintf("Pendapatan dari %s", usecase),
+		})
 		_ = s.followRepo.CreateNotification(ctx, &entity.Notification{
 			ID: uuid.New(), UserID: creatorID, Type: entity.NotificationPurchaseSuccess,
 			Title: "Pembelian Baru!",

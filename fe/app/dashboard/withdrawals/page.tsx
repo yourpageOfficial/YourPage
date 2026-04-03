@@ -41,13 +41,23 @@ export default function DashboardWithdrawals() {
     },
   });
 
+  const validateWithdrawal = (): string | null => {
+    if (!/^\d{10,16}$/.test(accNumber)) return "Nomor rekening harus 10-16 digit angka";
+    if (!amount || parseInt(amount) < 100) return "Minimum penarikan 100 Credit";
+    return null;
+  };
+
   const create = useMutation({
-    mutationFn: () => api.post("/withdrawals", {
-      amount_idr: parseInt(amount) * 1000,
-      bank_name: bankName,
-      account_number: accNumber,
-      account_name: accName,
-    }),
+    mutationFn: () => {
+      const validationError = validateWithdrawal();
+      if (validationError) return Promise.reject(new Error(validationError));
+      return api.post("/withdrawals", {
+        amount_idr: parseInt(amount) * 1000,
+        bank_name: bankName,
+        account_number: accNumber,
+        account_name: accName,
+      });
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["my-withdrawals"] });
       qc.invalidateQueries({ queryKey: ["creator-earnings"] });
@@ -60,8 +70,9 @@ export default function DashboardWithdrawals() {
       setError("");
     },
     onError: (err: any) => {
-      const msg = err.response?.data?.error || "Gagal";
-      if (msg.includes("minimum")) setError("Minimum penarikan 100 Credit");
+      const msg = err.response?.data?.error || err.message || "Gagal";
+      if (msg.includes("digit")) setError(msg);
+      else if (msg.includes("minimum") || msg.includes("100 Credit")) setError("Minimum penarikan 100 Credit");
       else if (msg.includes("Credit") || msg.includes("insufficient")) setError("Saldo tidak cukup");
       else if (msg.includes("KYC")) setError("KYC harus diverifikasi terlebih dahulu untuk penarikan pertama");
       else setError(msg);
@@ -100,7 +111,7 @@ export default function DashboardWithdrawals() {
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{amount ? `= Rp ${(parseInt(amount) * 1000).toLocaleString("id-ID")}` : ""}</p>
             </div>
             <Input placeholder="Nama Bank (BCA, BNI, Mandiri, dll)" value={bankName} onChange={(e) => setBankName(e.target.value)} />
-            <Input placeholder="Nomor Rekening" value={accNumber} onChange={(e) => setAccNumber(e.target.value)} />
+            <Input placeholder="Nomor Rekening (10-16 digit)" value={accNumber} onChange={(e) => setAccNumber(e.target.value.replace(/\D/g, ""))} inputMode="numeric" maxLength={16} />
             <Input placeholder="Nama Pemilik Rekening (sesuai KTP)" value={accName} onChange={(e) => setAccName(e.target.value)} />
             <Button onClick={() => create.mutate()} disabled={create.isPending || !amount || !bankName || !accNumber || !accName}>
               {create.isPending ? "Memproses..." : "Kirim Request"}

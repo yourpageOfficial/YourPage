@@ -87,7 +87,7 @@ type AuthService interface {
 	ForgotPassword(ctx context.Context, email string) error
 	ResetPassword(ctx context.Context, token, newPassword string) error
 	UpgradeToCreator(ctx context.Context, userID uuid.UUID, req UpgradeCreatorRequest) error
-	UpdateProfile(ctx context.Context, userID uuid.UUID, displayName, bio, avatarURL, pageColor, headerImage *string, chatPrice *int64, autoReply *string, socialLinks map[string]interface{}, goalTitle *string, goalAmount *int64, welcomeMsg, overlayStyle, overlayText *string) error
+	UpdateProfile(ctx context.Context, userID uuid.UUID, displayName, bio, avatarURL, pageColor, headerImage *string, chatPrice *int64, chatAllowFrom *string, autoReply *string, socialLinks map[string]interface{}, goalTitle *string, goalAmount *int64, welcomeMsg, overlayStyle, overlayText *string) error
 	ChangePassword(ctx context.Context, userID uuid.UUID, oldPassword, newPassword string) error
 	SubscribeTier(ctx context.Context, userID uuid.UUID, tierID uuid.UUID) error
 }
@@ -372,7 +372,7 @@ func (s *authService) UpgradeToCreator(ctx context.Context, userID uuid.UUID, re
 }
 
 // UpdateProfile updates display name, bio, and avatar.
-func (s *authService) UpdateProfile(ctx context.Context, userID uuid.UUID, displayName, bio, avatarURL, pageColor, headerImage *string, chatPrice *int64, autoReply *string, socialLinks map[string]interface{}, goalTitle *string, goalAmount *int64, welcomeMsg, overlayStyle, overlayText *string) error {
+func (s *authService) UpdateProfile(ctx context.Context, userID uuid.UUID, displayName, bio, avatarURL, pageColor, headerImage *string, chatPrice *int64, chatAllowFrom *string, autoReply *string, socialLinks map[string]interface{}, goalTitle *string, goalAmount *int64, welcomeMsg, overlayStyle, overlayText *string) error {
 	user, err := s.userRepo.FindByID(ctx, userID)
 	if err != nil {
 		return err
@@ -392,12 +392,18 @@ func (s *authService) UpdateProfile(ctx context.Context, userID uuid.UUID, displ
 	}
 	// Save page_color to creator profile
 	// Save creator-specific fields
-	if user.Role == entity.RoleCreator && (pageColor != nil || headerImage != nil || chatPrice != nil || autoReply != nil || socialLinks != nil || goalTitle != nil || goalAmount != nil || welcomeMsg != nil) {
+	if user.Role == entity.RoleCreator && (pageColor != nil || headerImage != nil || chatPrice != nil || chatAllowFrom != nil || autoReply != nil || socialLinks != nil || goalTitle != nil || goalAmount != nil || welcomeMsg != nil || overlayStyle != nil || overlayText != nil) {
 		cp, err := s.userRepo.FindCreatorByUserID(ctx, userID)
 		if err == nil {
 			if pageColor != nil { cp.PageColor = pageColor }
 			if headerImage != nil { cp.HeaderImageURL = headerImage }
 			if chatPrice != nil { cp.ChatPriceIDR = *chatPrice }
+			if chatAllowFrom != nil {
+				switch *chatAllowFrom {
+				case "all", "supporter_only", "creator_only", "none":
+					cp.ChatAllowFrom = *chatAllowFrom
+				}
+			}
 			if autoReply != nil { cp.AutoReply = autoReply }
 			if socialLinks != nil { cp.SocialLinks = entity.JSONMap(socialLinks) }
 			if goalTitle != nil { cp.DonationGoalTitle = goalTitle }

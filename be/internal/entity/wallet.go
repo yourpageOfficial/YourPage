@@ -9,9 +9,11 @@ import (
 type CreditTransactionType string
 
 const (
-	CreditTransactionTopup  CreditTransactionType = "topup"
-	CreditTransactionSpend  CreditTransactionType = "spend"
-	CreditTransactionRefund CreditTransactionType = "refund"
+	CreditTransactionTopup      CreditTransactionType = "topup"
+	CreditTransactionSpend      CreditTransactionType = "spend"
+	CreditTransactionRefund     CreditTransactionType = "refund"
+	CreditTransactionWithdrawal CreditTransactionType = "withdrawal"
+	CreditTransactionEarning    CreditTransactionType = "earning"
 )
 
 type UserWallet struct {

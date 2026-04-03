@@ -1,12 +1,37 @@
 package handler
 
 import (
+	"io"
+	"net/http"
+	"strings"
+
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/yourpage/be/internal/pkg/response"
 	"github.com/yourpage/be/internal/pkg/validator"
 	"github.com/yourpage/be/internal/service"
 )
+
+// allowedProductMimes lists MIME type prefixes/values accepted for product assets.
+var allowedProductMimes = []string{
+	"image/", "video/", "audio/",
+	"application/pdf",
+	"application/zip",
+	"application/x-zip-compressed",
+	"application/epub+zip",
+	"application/octet-stream",
+}
+
+func isAllowedMime(detected string, allowlist []string) bool {
+	for _, allowed := range allowlist {
+		if strings.HasSuffix(allowed, "/") {
+			if strings.HasPrefix(detected, allowed) { return true }
+		} else if detected == allowed {
+			return true
+		}
+	}
+	return false
+}
 
 type ProductHandler struct {
 	svc      service.ProductService
@@ -110,11 +135,21 @@ func (h *ProductHandler) AddAsset(c *gin.Context) {
 	}
 	defer file.Close()
 
+	// Detect real MIME type from file content
+	sniff := make([]byte, 512)
+	n, _ := file.Read(sniff)
+	file.Seek(0, io.SeekStart)
+	detectedMime := http.DetectContentType(sniff[:n])
+	if !isAllowedMime(detectedMime, allowedProductMimes) {
+		response.BadRequest(c, "file type not allowed")
+		return
+	}
+
 	req := service.AddAssetRequest{
 		File:        file,
 		FileName:    header.Filename,
 		FileSize:    header.Size,
-		ContentType: header.Header.Get("Content-Type"),
+		ContentType: detectedMime,
 	}
 
 	asset, err := h.svc.AddAsset(c.Request.Context(), productID, getUserID(c), req)

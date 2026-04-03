@@ -76,14 +76,27 @@ func (s *chatService) SendMessage(ctx context.Context, senderID uuid.UUID, req S
 		return msg, nil
 	}
 
-	// Supporter starting new chat
+	// Starting new chat (supporter or creator → target creator)
 	if req.CreatorID == uuid.Nil { return nil, fmt.Errorf("creator_id required") }
 	if req.CreatorID == senderID { return nil, entity.ErrForbidden }
 
 	creatorProfile, err := s.userRepo.FindCreatorByUserID(ctx, req.CreatorID)
 	if err != nil { return nil, entity.ErrNotFound }
 
-	// Must follow
+	// Check chat_allow_from setting
+	senderIsCreator := sender.Role == entity.RoleCreator
+	allowFrom := creatorProfile.ChatAllowFrom
+	if allowFrom == "" { allowFrom = "all" }
+	switch allowFrom {
+	case "none":
+		return nil, fmt.Errorf("Creator tidak menerima chat saat ini")
+	case "supporter_only":
+		if senderIsCreator { return nil, fmt.Errorf("Creator ini hanya menerima chat dari supporter") }
+	case "creator_only":
+		if !senderIsCreator { return nil, fmt.Errorf("Creator ini hanya menerima chat dari sesama creator") }
+	}
+
+	// Must follow (both supporter and creator must follow first)
 	isFollowing, _ := s.followRepo.IsFollowing(ctx, senderID, req.CreatorID)
 	if !isFollowing { return nil, fmt.Errorf("Follow creator terlebih dahulu untuk mengirim chat") }
 
@@ -121,7 +134,9 @@ func (s *chatService) SendMessage(ctx context.Context, senderID uuid.UUID, req S
 			AmountIDR: creatorProfile.ChatPriceIDR, FeeIDR: feeIDR, NetAmountIDR: netIDR,
 			Status: entity.PaymentStatusPaid, PaidAt: &now,
 		}
-		if err := s.paymentRepo.Create(ctx, payment); err != nil { _ = err }
+		if err := s.paymentRepo.Create(ctx, payment); err != nil {
+			return nil, fmt.Errorf("chat: create payment record: %w", err)
+		}
 	}
 
 	msg := &entity.ChatMessage{

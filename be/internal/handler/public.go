@@ -12,11 +12,12 @@ import (
 )
 
 type PublicHandler struct {
-	userRepo repository.UserRepository
+	userRepo   repository.UserRepository
+	followRepo repository.FollowRepository
 }
 
-func NewPublicHandler(userRepo repository.UserRepository) *PublicHandler {
-	return &PublicHandler{userRepo: userRepo}
+func NewPublicHandler(userRepo repository.UserRepository, followRepo repository.FollowRepository) *PublicHandler {
+	return &PublicHandler{userRepo: userRepo, followRepo: followRepo}
 }
 
 // GetCreatorPage returns the public creator profile by slug.
@@ -37,6 +38,14 @@ func (h *PublicHandler) GetCreatorPage(c *gin.Context) {
 	tierBadge := ""
 	if profile.Tier != nil { tierBadge = profile.Tier.Badge }
 
+	// Check if authenticated user is following this creator
+	isFollowing := false
+	if viewerID := optionalUserID(c); viewerID != nil && *viewerID != user.ID {
+		if following, err := h.followRepo.IsFollowing(c.Request.Context(), *viewerID, user.ID); err == nil {
+			isFollowing = following
+		}
+	}
+
 	response.OK(c, gin.H{
 		"user_id":        user.ID,
 		"username":       user.Username,
@@ -51,11 +60,13 @@ func (h *PublicHandler) GetCreatorPage(c *gin.Context) {
 		"tier_badge":     tierBadge,
 		"page_color":    profile.PageColor,
 		"is_priority":    profile.Tier != nil && profile.Tier.Name == "Business",
-		"chat_price_idr": profile.ChatPriceIDR,
+		"chat_price_idr":    profile.ChatPriceIDR,
+		"chat_allow_from":   profile.ChatAllowFrom,
 		"donation_goal_title":   profile.DonationGoalTitle,
 		"donation_goal_amount":  profile.DonationGoalAmount,
 		"donation_goal_current": profile.DonationGoalCurrent,
 		"overlay_style":        profile.OverlayStyle,
+		"is_following":         isFollowing,
 	})
 }
 
@@ -90,6 +101,7 @@ func (h *PublicHandler) GetMyEarnings(c *gin.Context) {
 		"header_image":       profile.HeaderImageURL,
 		"social_links":      profile.SocialLinks,
 		"chat_price_idr":    profile.ChatPriceIDR,
+		"chat_allow_from":   profile.ChatAllowFrom,
 		"auto_reply":        profile.AutoReply,
 		"donation_goal_title":   profile.DonationGoalTitle,
 		"donation_goal_amount":  profile.DonationGoalAmount,

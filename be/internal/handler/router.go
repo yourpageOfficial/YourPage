@@ -117,7 +117,8 @@ func NewRouter(cfg *config.Config, rdb *redis.Client, h Handlers) *gin.Engine {
 	// ---- Public creator page ----
 	api.GET("/creators/search", rl.Middleware(), shortCache, h.Public.SearchCreators)
 	api.GET("/creators/featured", rl.Middleware(), shortCache, h.Public.ListFeaturedCreators)
-	api.GET("/creators/:slug", rl.Middleware(), shortCache, h.Public.GetCreatorPage)
+	// optAuth: inject user ID if logged in (for is_following), no shortCache since response is user-specific
+	api.GET("/creators/:slug", rl.Middleware(), optAuth, h.Public.GetCreatorPage)
 
 	// Platform QRIS (public, for topup page)
 	api.GET("/platform/qris", func(c *gin.Context) {
@@ -241,7 +242,14 @@ func NewRouter(cfg *config.Config, rdb *redis.Client, h Handlers) *gin.Engine {
 		cid, err := uuid.Parse(c.Param("creatorId"))
 		if err != nil { c.JSON(400, gin.H{"error": "invalid id"}); return }
 		tiers, _ := h.UserRepo.ListOverlayTiers(c.Request.Context(), cid)
-		c.JSON(200, gin.H{"success": true, "data": tiers})
+		// Also return overlay style settings for the creator
+		overlayStyle := "bounce"
+		overlayTextTemplate := "{donor} donated {amount} Credit!"
+		if profile, err := h.UserRepo.FindCreatorByUserID(c.Request.Context(), cid); err == nil {
+			if profile.OverlayStyle != "" { overlayStyle = profile.OverlayStyle }
+			if profile.OverlayTextTemplate != "" { overlayTextTemplate = profile.OverlayTextTemplate }
+		}
+		c.JSON(200, gin.H{"success": true, "data": tiers, "overlay_style": overlayStyle, "overlay_text_template": overlayTextTemplate})
 	})
 	api.POST("/overlay-tiers", auth, creatorOnly, func(c *gin.Context) {
 		var body struct {

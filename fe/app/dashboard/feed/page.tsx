@@ -8,7 +8,7 @@ import type { Post, PaginatedResponse } from "@/lib/types";
 import Link from "next/link";
 
 export default function CreatorFeed() {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["feed"],
     queryFn: async () => { const { data } = await api.get<PaginatedResponse<Post>>("/feed"); return data.data; },
   });
@@ -20,7 +20,13 @@ export default function CreatorFeed() {
         <Link href="/explore" className="text-sm text-primary hover:underline">Explore Kreator →</Link>
       </div>
       {isLoading && <ListSkeleton count={3} />}
-      {data?.length === 0 && <p className="text-gray-500 dark:text-gray-400">Follow kreator lain untuk melihat konten mereka.</p>}
+      {isError && (
+        <div className="text-center py-8">
+          <p className="text-red-500 mb-2">Gagal memuat feed.</p>
+          <button onClick={() => refetch()} className="text-sm text-primary hover:underline">Coba lagi</button>
+        </div>
+      )}
+      {!isLoading && !isError && data?.length === 0 && <p className="text-gray-500 dark:text-gray-400">Follow kreator lain untuk melihat konten mereka.</p>}
       <div className="space-y-6">{data?.map((p) => <PostCard key={p.id} post={p} />)}</div>
     </div>
   );

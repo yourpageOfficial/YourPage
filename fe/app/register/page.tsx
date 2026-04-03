@@ -18,9 +18,15 @@ export default function RegisterPage() {
   const { register, login } = useAuth();
   const router = useRouter();
 
+  const emailRegex = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    if (!emailRegex.test(email)) {
+      setError("Format email tidak valid");
+      return;
+    }
     setLoading(true);
     try {
       await register(email, username, password, role);

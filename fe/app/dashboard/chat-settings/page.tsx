@@ -14,6 +14,7 @@ import Link from "next/link";
 export default function ChatSettingsPage() {
   const qc = useQueryClient();
   const [chatPrice, setChatPrice] = useState("");
+  const [chatAllowFrom, setChatAllowFrom] = useState("all");
   const [autoReply, setAutoReply] = useState("");
 
   const { data: earnings } = useQuery({
@@ -28,6 +29,7 @@ export default function ChatSettingsPage() {
   useEffect(() => {
     if (earnings) {
       setChatPrice(earnings.chat_price_idr ? String(earnings.chat_price_idr / 1000) : "");
+      setChatAllowFrom(earnings.chat_allow_from || "all");
       setAutoReply(earnings.auto_reply || "");
     }
   }, [earnings]);
@@ -35,6 +37,7 @@ export default function ChatSettingsPage() {
   const save = useMutation({
     mutationFn: () => api.put("/auth/me", {
       chat_price_idr: chatPrice ? parseInt(chatPrice) * 1000 : 0,
+      chat_allow_from: chatAllowFrom,
       auto_reply: isBusiness ? autoReply || null : undefined,
     }),
     onSuccess: () => { toast.success("Pengaturan chat disimpan!"); qc.invalidateQueries({ queryKey: ["creator-earnings"] }); },
@@ -70,7 +73,7 @@ export default function ChatSettingsPage() {
               <p className="text-sm font-medium">Simulasi per pesan:</p>
               <div className="grid grid-cols-3 gap-2 text-sm">
                 <div className="text-center p-2 rounded bg-white dark:bg-gray-700">
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Supporter bayar</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Pengirim bayar</p>
                   <p className="font-bold text-primary">{priceNum} Credit</p>
                 </div>
                 <div className="text-center p-2 rounded bg-white dark:bg-gray-700">
@@ -93,6 +96,38 @@ export default function ChatSettingsPage() {
             <Button size="sm" variant="outline" onClick={() => setChatPrice("25")}>25 Credit</Button>
             <Button size="sm" variant="outline" onClick={() => setChatPrice("0")}>Gratis</Button>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Who can chat */}
+      <Card className="mb-4">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Lock className="h-5 w-5" /> Siapa yang Boleh Chat
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-sm text-gray-500 dark:text-gray-400">Atur siapa saja yang bisa memulai percakapan dengan kamu.</p>
+          <div className="grid grid-cols-2 gap-2">
+            {[
+              { id: "all",            label: "👥 Semua",           desc: "Supporter & creator" },
+              { id: "supporter_only", label: "🙋 Supporter Saja",  desc: "Hanya supporter" },
+              { id: "creator_only",   label: "🎨 Creator Saja",    desc: "Hanya sesama creator" },
+              { id: "none",           label: "🔕 Tidak Ada",       desc: "Chat dinonaktifkan" },
+            ].map(opt => (
+              <button
+                key={opt.id}
+                onClick={() => setChatAllowFrom(opt.id)}
+                className={`p-3 rounded-lg border-2 text-left transition-all ${chatAllowFrom === opt.id ? "border-primary bg-primary/5" : "border-gray-200 dark:border-gray-700 hover:border-gray-300"}`}
+              >
+                <p className="text-sm font-medium">{opt.label}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">{opt.desc}</p>
+              </button>
+            ))}
+          </div>
+          {chatAllowFrom === "none" && (
+            <p className="text-xs text-amber-600 dark:text-amber-400">⚠️ Tidak ada yang bisa memulai chat baru denganmu.</p>
+          )}
         </CardContent>
       </Card>
 
@@ -133,7 +168,7 @@ export default function ChatSettingsPage() {
               <span className="font-medium">{isPro ? "Unlimited" : "10 / hari"}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-500 dark:text-gray-400">Syarat supporter</span>
+              <span className="text-gray-500 dark:text-gray-400">Syarat pengirim</span>
               <span className="font-medium">Harus follow kamu</span>
             </div>
             <div className="flex justify-between">

@@ -72,8 +72,9 @@ func (s *withdrawalService) Create(ctx context.Context, creatorID uuid.UUID, req
 	}
 
 	// Check wallet balance
+	// Use multiplication to avoid integer division truncation: balance*rate >= amountIDR
 	balance, err := s.walletRepo.GetBalance(ctx, creatorID)
-	if err != nil || balance < req.AmountIDR/1000 {
+	if err != nil || balance*settings.CreditRateIDR < req.AmountIDR {
 		return nil, entity.ErrInsufficientCredit
 	}
 

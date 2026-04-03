@@ -22,7 +22,7 @@ export default function ExplorePage() {
   const [query, setQuery] = useState("");
   const debouncedQuery = useDebounce(query, 300);
 
-  const { data: creators, isLoading } = useQuery({
+  const { data: creators, isLoading, isError, refetch } = useQuery({
     queryKey: ["explore", debouncedQuery],
     queryFn: async () => {
       const { data } = await api.get(`/creators/search?q=${encodeURIComponent(debouncedQuery)}`);
@@ -86,8 +86,16 @@ export default function ExplorePage() {
           </div>
         )}
 
+        {/* Error state */}
+        {isError && (
+          <div className="text-center py-8">
+            <p className="text-red-500 mb-2">Gagal memuat kreator.</p>
+            <button onClick={() => refetch()} className="text-sm text-primary hover:underline">Coba lagi</button>
+          </div>
+        )}
+
         {/* Search results */}
-        {query && (
+        {query && !isError && (
           <div>
             {isLoading && <ListSkeleton count={3} />}
             {results && results.length > 0 && (

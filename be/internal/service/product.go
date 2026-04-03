@@ -123,6 +123,10 @@ func (s *productService) Create(ctx context.Context, creatorID uuid.UUID, req Cr
 		if count >= 3 { return nil, fmt.Errorf("batas produk untuk tier Free adalah 3. Upgrade tier untuk menambah produk") }
 	}
 
+	deliveryType := req.DeliveryType
+	if deliveryType == "" {
+		deliveryType = "file"
+	}
 	product := &entity.Product{
 		ID:           uuid.New(),
 		CreatorID:    creatorID,
@@ -133,6 +137,8 @@ func (s *productService) Create(ctx context.Context, creatorID uuid.UUID, req Cr
 		PriceIDR:     req.PriceIDR,
 		IsActive:     req.IsActive,
 		ThumbnailURL: req.ThumbnailURL,
+		DeliveryType: deliveryType,
+		DeliveryURL:  req.DeliveryURL,
 	}
 
 	if err := s.productRepo.Create(ctx, product); err != nil {
@@ -196,6 +202,12 @@ func (s *productService) Update(ctx context.Context, productID, creatorID uuid.U
 	}
 	if req.ThumbnailURL != nil {
 		product.ThumbnailURL = req.ThumbnailURL
+	}
+	if req.DeliveryType != nil {
+		product.DeliveryType = *req.DeliveryType
+	}
+	if req.DeliveryURL != nil {
+		product.DeliveryURL = req.DeliveryURL
 	}
 
 	if err := s.productRepo.Update(ctx, product); err != nil {

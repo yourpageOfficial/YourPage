@@ -14,18 +14,22 @@ const anims: Record<string, string> = {
 function OverlayContent() {
   const sp = useSearchParams();
   const creatorId = sp.get("id");
-  const style = sp.get("style") || "bounce";
+  const [style, setStyle] = useState(sp.get("style") || "bounce");
   const [donation, setDonation] = useState<any>(null);
   const [tierImage, setTierImage] = useState("");
   const [textTpl, setTextTpl] = useState("{donor} donated {amount} Credit!");
   const lastId = useRef("");
   const init = useRef(false);
 
-  // Fetch overlay tiers + text template once
+  // Fetch overlay tiers + style settings once
   const [tiers, setTiers] = useState<any[]>([]);
   useEffect(() => {
     if (!creatorId) return;
-    fetch(`/api/v1/overlay-tiers/${creatorId}`).then(r => r.json()).then(d => setTiers(d.data || [])).catch(() => {});
+    fetch(`/api/v1/overlay-tiers/${creatorId}`).then(r => r.json()).then(d => {
+      setTiers(d.data || []);
+      if (d.overlay_style) setStyle(d.overlay_style);
+      if (d.overlay_text_template) setTextTpl(d.overlay_text_template);
+    }).catch(() => {});
   }, [creatorId]);
 
   // Poll donations

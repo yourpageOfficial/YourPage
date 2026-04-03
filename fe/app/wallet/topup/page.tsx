@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import api from "@/lib/api";
 import { Navbar } from "@/components/navbar";
 import { AuthGuard } from "@/components/auth-guard";
@@ -9,13 +9,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatIDR } from "@/lib/utils";
-import { Upload, CheckCircle, ArrowLeft } from "lucide-react";
+import { Upload, Clock, ArrowLeft } from "lucide-react";
 import type { Wallet, ApiResponse } from "@/lib/types";
 
 const presets = [10000, 25000, 50000, 100000, 250000, 500000];
 
 export default function TopupPage() {
-  const qc = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [amount, setAmount] = useState("");
@@ -47,7 +46,7 @@ export default function TopupPage() {
       fd.append("proof", proofFile!);
       return api.post(`/wallet/topup/${topupData.id}/proof`, fd, { headers: { "Content-Type": "multipart/form-data" } });
     },
-    onSuccess: () => { setStep(3); setError(""); qc.invalidateQueries({ queryKey: ["wallet"] }); },
+    onSuccess: () => { setStep(3); setError(""); },
     onError: (err: any) => setError(err.response?.data?.error || "Gagal upload"),
   });
 
@@ -169,9 +168,14 @@ export default function TopupPage() {
         {step === 3 && (
           <Card>
             <CardContent className="py-10 text-center">
-              <CheckCircle className="mx-auto h-16 w-16 text-green-500" />
-              <p className="mt-4 text-lg font-semibold">Top-up Berhasil Dikirim!</p>
-              <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">Admin akan memverifikasi bukti transfer kamu.</p>
+              <Clock className="mx-auto h-16 w-16 text-yellow-500" />
+              <p className="mt-4 text-lg font-semibold">Bukti Transfer Diterima</p>
+              <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                Menunggu verifikasi admin (1×24 jam). Credit akan ditambahkan setelah disetujui.
+              </p>
+              <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+                Kamu akan mendapat notifikasi setelah admin memverifikasi.
+              </p>
               <Button className="mt-6" onClick={() => { setStep(1); setAmount(""); setDonorName(""); setProofFile(null); setTopupData(null); }}>
                 Top-up Lagi
               </Button>

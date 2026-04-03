@@ -2,12 +2,16 @@ package handler
 
 import (
 	"fmt"
+	"io"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/yourpage/be/internal/pkg/response"
 	"github.com/yourpage/be/internal/service"
 )
+
+var allowedTopupMimes = []string{"image/"}
 
 type WalletHandler struct {
 	svc service.WalletService
@@ -60,7 +64,17 @@ func (h *WalletHandler) UploadTopupProof(c *gin.Context) {
 	if err != nil { response.BadRequest(c, "proof image is required"); return }
 	defer file.Close()
 
-	topup, err := h.svc.UploadTopupProof(c.Request.Context(), getUserID(c), topupID, donorName, file, header.Size, header.Header.Get("Content-Type"))
+	// Detect real MIME type — only allow images for topup proof
+	sniff := make([]byte, 512)
+	n, _ := file.Read(sniff)
+	file.Seek(0, io.SeekStart)
+	detectedMime := http.DetectContentType(sniff[:n])
+	if !isAllowedMime(detectedMime, allowedTopupMimes) {
+		response.BadRequest(c, "only image files are accepted as topup proof")
+		return
+	}
+
+	topup, err := h.svc.UploadTopupProof(c.Request.Context(), getUserID(c), topupID, donorName, file, header.Size, detectedMime)
 	if err != nil { handleServiceError(c, err); return }
 	response.OK(c, topup)
 }

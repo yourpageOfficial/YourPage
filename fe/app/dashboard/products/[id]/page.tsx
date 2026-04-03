@@ -26,6 +26,8 @@ export default function DashboardProductDetail() {
   const [price, setPrice] = useState("");
   const [type, setType] = useState("ebook");
   const [isActive, setIsActive] = useState(true);
+  const [deliveryType, setDeliveryType] = useState("file");
+  const [deliveryUrl, setDeliveryUrl] = useState("");
 
   const { data: product } = useQuery({
     queryKey: ["my-product", id],
@@ -42,11 +44,17 @@ export default function DashboardProductDetail() {
       setPrice(String(Math.floor(product.price_idr / 1000)));
       setType(product.type);
       setIsActive(product.is_active);
+      setDeliveryType((product as any).delivery_type || "file");
+      setDeliveryUrl((product as any).delivery_url || "");
     }
   }, [product]);
 
   const save = useMutation({
-    mutationFn: () => api.put(`/products/${id}`, { name, description, price_idr: parseInt(price) * 1000, type, is_active: isActive }),
+    mutationFn: () => api.put(`/products/${id}`, {
+      name, description, price_idr: parseInt(price) * 1000, type, is_active: isActive,
+      delivery_type: deliveryType,
+      delivery_url: deliveryType === "link" && deliveryUrl ? deliveryUrl : undefined,
+    }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["my-product", id] }); toast.success("Produk tersimpan!"); },
     onError: (err: any) => toast.error(err.response?.data?.error || "Gagal menyimpan"),
   });
@@ -90,6 +98,19 @@ export default function DashboardProductDetail() {
               {isActive ? "✓ Active" : "Inactive"}
             </Button>
           </div>
+          <div>
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Tipe Pengiriman</label>
+            <div className="flex gap-2 mt-1">
+              <Button size="sm" variant={deliveryType === "file" ? "default" : "outline"} onClick={() => setDeliveryType("file")}>File Upload</Button>
+              <Button size="sm" variant={deliveryType === "link" ? "default" : "outline"} onClick={() => setDeliveryType("link")}>Link / Key</Button>
+            </div>
+          </div>
+          {deliveryType === "link" && (
+            <div>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">URL / Serial Key</label>
+              <Input placeholder="https://... atau serial key" value={deliveryUrl} onChange={(e) => setDeliveryUrl(e.target.value)} className="mt-1" />
+            </div>
+          )}
           <Button onClick={() => save.mutate()} disabled={save.isPending}>
             <Save className="mr-1 h-4 w-4" /> {save.isPending ? "Menyimpan..." : "Simpan"}
           </Button>

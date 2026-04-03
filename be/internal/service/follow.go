@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"log"
 
 	"github.com/google/uuid"
 	"github.com/yourpage/be/internal/entity"
@@ -49,7 +50,9 @@ func (s *followService) Follow(ctx context.Context, followerID, creatorID uuid.U
 	if err := s.followRepo.Follow(ctx, followerID, creatorID); err != nil {
 		return err
 	}
-	_ = s.userRepo.IncrementFollowerCount(ctx, profile.ID, 1)
+	if err := s.userRepo.IncrementFollowerCount(ctx, profile.ID, 1); err != nil {
+		log.Printf("follow: increment follower count for profile %s: %v", profile.ID, err)
+	}
 
 	// Notify creator
 	follower, _ := s.userRepo.FindByID(ctx, followerID)
@@ -71,7 +74,9 @@ func (s *followService) Unfollow(ctx context.Context, followerID, creatorID uuid
 	if err := s.followRepo.Unfollow(ctx, followerID, creatorID); err != nil {
 		return err
 	}
-	_ = s.userRepo.IncrementFollowerCount(ctx, profile.ID, -1)
+	if err := s.userRepo.IncrementFollowerCount(ctx, profile.ID, -1); err != nil {
+		log.Printf("unfollow: decrement follower count for profile %s: %v", profile.ID, err)
+	}
 	return nil
 }
 

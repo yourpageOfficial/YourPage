@@ -115,8 +115,9 @@ func (h *AuthHandler) UpdateMe(c *gin.Context) {
 		AvatarURL   *string `json:"avatar_url"`
 		PageColor    *string `json:"page_color"`
 		HeaderImage  *string `json:"header_image"`
-		ChatPriceIDR *int64  `json:"chat_price_idr"`
-		AutoReply    *string                `json:"auto_reply"`
+		ChatPriceIDR  *int64  `json:"chat_price_idr"`
+		ChatAllowFrom *string `json:"chat_allow_from"`
+		AutoReply     *string `json:"auto_reply"`
 		SocialLinks         map[string]interface{} `json:"social_links"`
 		DonationGoalTitle   *string `json:"donation_goal_title"`
 		DonationGoalAmount  *int64  `json:"donation_goal_amount"`
@@ -127,7 +128,7 @@ func (h *AuthHandler) UpdateMe(c *gin.Context) {
 		response.BadRequest(c, "invalid request body")
 		return
 	}
-	err := h.svc.UpdateProfile(c.Request.Context(), userID, body.DisplayName, body.Bio, body.AvatarURL, body.PageColor, body.HeaderImage, body.ChatPriceIDR, body.AutoReply, body.SocialLinks, body.DonationGoalTitle, body.DonationGoalAmount, body.WelcomeMessage, body.OverlayStyle, body.OverlayTextTemplate)
+	err := h.svc.UpdateProfile(c.Request.Context(), userID, body.DisplayName, body.Bio, body.AvatarURL, body.PageColor, body.HeaderImage, body.ChatPriceIDR, body.ChatAllowFrom, body.AutoReply, body.SocialLinks, body.DonationGoalTitle, body.DonationGoalAmount, body.WelcomeMessage, body.OverlayStyle, body.OverlayTextTemplate)
 	if err != nil {
 		handleServiceError(c, err)
 		return

@@ -1,16 +1,22 @@
 package handler
 
 import (
+	"io"
+	"net/http"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/yourpage/be/internal/entity"
 	"github.com/yourpage/be/internal/handler/middleware"
 	"github.com/yourpage/be/internal/pkg/response"
 	"github.com/yourpage/be/internal/pkg/validator"
 	"github.com/yourpage/be/internal/service"
-	"github.com/yourpage/be/internal/entity"
 )
+
+var allowedPostMimes = []string{
+	"image/", "video/", "audio/", "application/pdf",
+}
 
 type PostHandler struct {
 	svc      service.PostService
@@ -127,6 +133,16 @@ func (h *PostHandler) AddMedia(c *gin.Context) {
 	}
 	defer file.Close()
 
+	// Detect real MIME type from file content
+	sniff := make([]byte, 512)
+	n, _ := file.Read(sniff)
+	file.Seek(0, io.SeekStart)
+	detectedMime := http.DetectContentType(sniff[:n])
+	if !isAllowedMime(detectedMime, allowedPostMimes) {
+		response.BadRequest(c, "file type not allowed")
+		return
+	}
+
 	mediaType := entity.MediaType(c.PostForm("media_type"))
 	switch mediaType {
 	case entity.MediaTypeImage, entity.MediaTypeVideo, entity.MediaTypeAudio, entity.MediaTypeDocument:
@@ -140,7 +156,7 @@ func (h *PostHandler) AddMedia(c *gin.Context) {
 		File:        file,
 		FileName:    header.Filename,
 		FileSize:    header.Size,
-		ContentType: header.Header.Get("Content-Type"),
+		ContentType: detectedMime,
 		MediaType:   mediaType,
 		SortOrder:   sortOrder,
 	}

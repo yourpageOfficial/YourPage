@@ -50,6 +50,14 @@ func ParseToken(cfg config.JWTConfig, tokenStr string) (*Claims, error) {
 		return nil, errors.New("jwt: invalid token")
 	}
 
+	// Validate role is a known value
+	switch claims.Role {
+	case "admin", "creator", "supporter":
+		// valid
+	default:
+		return nil, fmt.Errorf("jwt: invalid role: %q", claims.Role)
+	}
+
 	return claims, nil
 }
 
