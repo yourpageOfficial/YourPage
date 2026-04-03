@@ -2,6 +2,8 @@ package handler
 
 import (
 	"fmt"
+	"net/http"
+	"path/filepath"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -58,27 +60,34 @@ func (h *KYCHandler) UploadFile(c *gin.Context) {
 	}
 	defer file.Close()
 
-	// Validate file type
-	ct := header.Header.Get("Content-Type")
-	allowed := map[string]bool{
-		"image/jpeg": true, "image/png": true, "image/gif": true, "image/webp": true,
-		"video/mp4": true, "video/webm": true,
-		"audio/mpeg": true, "audio/wav": true,
-		"application/pdf": true, "application/zip": true,
-	}
-	if !allowed[ct] {
-		response.BadRequest(c, "file type not allowed")
-		return
-	}
-
-	// Max 50MB for generic uploads
+	// Max 50MB
 	if header.Size > 50*1024*1024 {
 		response.UnprocessableEntity(c, "file too large (max 50MB)")
 		return
 	}
 
-	objectName := fmt.Sprintf("uploads/%s/%s-%s", getUserID(c), uuid.NewString(), header.Filename)
-	url, err := h.storage.UploadFile(c.Request.Context(), h.cfg.MinIO.PublicBucket, objectName, file, header.Size, ct)
+	// Validate by reading magic bytes (not trusting Content-Type header)
+	buf := make([]byte, 512)
+	n, _ := file.Read(buf)
+	detectedType := http.DetectContentType(buf[:n])
+	file.Seek(0, 0) // reset reader
+
+	allowed := map[string]bool{
+		"image/jpeg": true, "image/png": true, "image/gif": true, "image/webp": true,
+		"video/mp4": true, "video/webm": true,
+		"audio/mpeg": true, "audio/wav": true,
+		"application/pdf": true, "application/zip": true,
+		"application/octet-stream": true, // for zip/binary
+	}
+	if !allowed[detectedType] {
+		response.BadRequest(c, "file type not allowed: "+detectedType)
+		return
+	}
+
+	// Sanitize filename
+	safeName := uuid.NewString() + filepath.Ext(header.Filename)
+	objectName := fmt.Sprintf("uploads/%s/%s", getUserID(c), safeName)
+	url, err := h.storage.UploadFile(c.Request.Context(), h.cfg.MinIO.PublicBucket, objectName, file, header.Size, detectedType)
 	if err != nil {
 		response.InternalError(c)
 		return

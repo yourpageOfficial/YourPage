@@ -9,6 +9,8 @@ import (
 	"github.com/yourpage/be/internal/config"
 	"github.com/yourpage/be/internal/handler/middleware"
 	"github.com/yourpage/be/internal/repository"
+	"gorm.io/gorm"
+	"os"
 	"time"
 )
 
@@ -27,6 +29,7 @@ type Handlers struct {
 	Webhook    *WebhookHandler
 	Chat       *ChatHandler
 	PlatformRepo repository.PlatformRepository
+	AuditDB      *gorm.DB
 }
 
 func NewRouter(cfg *config.Config, rdb *redis.Client, h Handlers) *gin.Engine {
@@ -54,10 +57,17 @@ func NewRouter(cfg *config.Config, rdb *redis.Client, h Handlers) *gin.Engine {
 		promhttp.Handler().ServeHTTP(c.Writer, c.Request)
 	})
 
-	// CORS
+	// CORS — restrict in production
+	allowedOrigins := []string{"http://localhost:3000", "http://localhost"}
+	if domain := os.Getenv("DOMAIN"); domain != "" && domain != "_" {
+		allowedOrigins = append(allowedOrigins, "https://"+domain, "http://"+domain)
+	}
 	r.Use(cors.New(cors.Config{
 		AllowOriginFunc: func(origin string) bool {
-			return true // Allow all origins in dev; restrict in production
+			for _, o := range allowedOrigins {
+				if o == origin { return true }
+			}
+			return false
 		},
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
@@ -238,7 +248,7 @@ func NewRouter(cfg *config.Config, rdb *redis.Client, h Handlers) *gin.Engine {
 	api.POST("/reports", optAuth, h.KYC.CreateReport)
 
 	// ---- Admin ----
-	adminG := api.Group("/admin", auth, h.Admin.RequireAdmin)
+	adminG := api.Group("/admin", auth, h.Admin.RequireAdmin, middleware.AdminAudit(h.AuditDB))
 	{
 		adminG.GET("/users", h.Admin.ListUsers)
 		adminG.GET("/analytics", h.Admin.GetAnalytics)

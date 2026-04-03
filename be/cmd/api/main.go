@@ -11,7 +11,9 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
+	"golang.org/x/crypto/bcrypt"
 	"github.com/yourpage/be/internal/config"
+	"github.com/yourpage/be/internal/entity"
 	"github.com/yourpage/be/internal/handler"
 	infraredis "github.com/yourpage/be/internal/infrastructure/redis"
 	"github.com/yourpage/be/internal/pkg/logger"
@@ -85,6 +87,20 @@ func main() {
 		withdrawalRepo, walletRepo, kycRepo, followRepo, platformRepo,
 	)
 	chatRepo := postgres.NewChatRepo(db)
+
+	// Seed admin from env (only if not exists)
+	if adminEmail := os.Getenv("ADMIN_EMAIL"); adminEmail != "" {
+		adminPass := os.Getenv("ADMIN_PASSWORD")
+		if adminPass == "" { adminPass = "changeme123" }
+		if _, err := userRepo.FindByEmail(context.Background(), adminEmail); err != nil {
+			hash, _ := bcrypt.GenerateFromPassword([]byte(adminPass), 12)
+			userRepo.Create(context.Background(), &entity.User{
+				ID: uuid.New(), Email: adminEmail, Username: "admin",
+				PasswordHash: string(hash), DisplayName: "Admin", Role: entity.RoleAdmin,
+			})
+			log.Info().Str("email", adminEmail).Msg("admin user created")
+		}
+	}
 	chatSvc := service.NewChatService(chatRepo, userRepo, walletRepo, followRepo, paymentRepo)
 
 	paymentSvc := service.NewPaymentService(
@@ -108,6 +124,7 @@ func main() {
 		Webhook:    handler.NewWebhookHandler(paymentRepo, xenditClient),
 		Chat:       handler.NewChatHandler(chatSvc),
 		PlatformRepo: platformRepo,
+		AuditDB:      db,
 	}
 
 	// ---- Router ----
