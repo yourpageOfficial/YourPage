@@ -343,8 +343,8 @@ func (s *adminService) ApproveTopup(ctx context.Context, id uuid.UUID, req Appro
 		return err
 	}
 
-	// Add credits to user wallet.
-	if err := s.walletRepo.AddCredits(ctx, topup.UserID, topup.Credits); err != nil {
+	// Add credits to user wallet (balance stored in IDR).
+	if err := s.walletRepo.AddCredits(ctx, topup.UserID, topup.AmountIDR); err != nil {
 		return fmt.Errorf("admin: add credits: %w", err)
 	}
 
