@@ -84,6 +84,7 @@ func (h *PublicHandler) GetMyEarnings(c *gin.Context) {
 		"fee_percent":        feePct,
 		"page_color":         profile.PageColor,
 		"header_image":       profile.HeaderImageURL,
+		"social_links":      profile.SocialLinks,
 		"chat_price_idr":    profile.ChatPriceIDR,
 		"auto_reply":        profile.AutoReply,
 	})

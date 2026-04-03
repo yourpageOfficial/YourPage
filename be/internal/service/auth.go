@@ -87,7 +87,7 @@ type AuthService interface {
 	ForgotPassword(ctx context.Context, email string) error
 	ResetPassword(ctx context.Context, token, newPassword string) error
 	UpgradeToCreator(ctx context.Context, userID uuid.UUID, req UpgradeCreatorRequest) error
-	UpdateProfile(ctx context.Context, userID uuid.UUID, displayName, bio, avatarURL, pageColor, headerImage *string, chatPrice *int64, autoReply *string) error
+	UpdateProfile(ctx context.Context, userID uuid.UUID, displayName, bio, avatarURL, pageColor, headerImage *string, chatPrice *int64, autoReply *string, socialLinks map[string]interface{}) error
 	ChangePassword(ctx context.Context, userID uuid.UUID, oldPassword, newPassword string) error
 	SubscribeTier(ctx context.Context, userID uuid.UUID, tierID uuid.UUID) error
 }
@@ -372,7 +372,7 @@ func (s *authService) UpgradeToCreator(ctx context.Context, userID uuid.UUID, re
 }
 
 // UpdateProfile updates display name, bio, and avatar.
-func (s *authService) UpdateProfile(ctx context.Context, userID uuid.UUID, displayName, bio, avatarURL, pageColor, headerImage *string, chatPrice *int64, autoReply *string) error {
+func (s *authService) UpdateProfile(ctx context.Context, userID uuid.UUID, displayName, bio, avatarURL, pageColor, headerImage *string, chatPrice *int64, autoReply *string, socialLinks map[string]interface{}) error {
 	user, err := s.userRepo.FindByID(ctx, userID)
 	if err != nil {
 		return err
@@ -392,13 +392,14 @@ func (s *authService) UpdateProfile(ctx context.Context, userID uuid.UUID, displ
 	}
 	// Save page_color to creator profile
 	// Save creator-specific fields
-	if user.Role == entity.RoleCreator && (pageColor != nil || headerImage != nil || chatPrice != nil || autoReply != nil) {
+	if user.Role == entity.RoleCreator && (pageColor != nil || headerImage != nil || chatPrice != nil || autoReply != nil || socialLinks != nil) {
 		cp, err := s.userRepo.FindCreatorByUserID(ctx, userID)
 		if err == nil {
 			if pageColor != nil { cp.PageColor = pageColor }
 			if headerImage != nil { cp.HeaderImageURL = headerImage }
 			if chatPrice != nil { cp.ChatPriceIDR = *chatPrice }
 			if autoReply != nil { cp.AutoReply = autoReply }
+			if socialLinks != nil { cp.SocialLinks = entity.JSONMap(socialLinks) }
 			cp.Tier = nil
 			return s.userRepo.UpdateCreatorProfile(ctx, cp)
 		}
