@@ -96,6 +96,24 @@ export default function DonationSettingsPage() {
       <Button onClick={() => save.mutate()} disabled={save.isPending} className="w-full sm:w-auto">
         {save.isPending ? "Menyimpan..." : "Simpan Pengaturan"}
       </Button>
+
+      {/* OBS Overlay */}
+      <Card className="mt-4">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">📺 Overlay Streaming (OBS/Streamlabs)</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-sm text-gray-500 dark:text-gray-400">Tambahkan sebagai Browser Source di OBS untuk menampilkan notifikasi donasi saat live streaming.</p>
+          <div className="flex gap-2">
+            <Input readOnly value={typeof window !== "undefined" ? `${window.location.origin}/overlay?id=${earnings?.user_id || ""}` : ""} className="text-xs" />
+            <Button size="sm" variant="outline" onClick={() => {
+              navigator.clipboard.writeText(`${window.location.origin}/overlay?id=${earnings?.user_id || ""}`);
+              toast.success("URL overlay disalin!");
+            }}>Copy</Button>
+          </div>
+          <p className="text-xs text-gray-400 dark:text-gray-500">Ukuran: 800×200px · Background transparan</p>
+        </CardContent>
+      </Card>
     </div>
   );
 }

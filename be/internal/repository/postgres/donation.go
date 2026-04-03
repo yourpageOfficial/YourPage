@@ -64,3 +64,10 @@ func (r *donationRepo) ListAll(ctx context.Context, cursor *uuid.UUID, limit int
 	err := q.Order("created_at DESC").Limit(limit).Find(&donations).Error
 	return donations, err
 }
+
+func (r *donationRepo) GetLatest(ctx context.Context, creatorID uuid.UUID) (*entity.Donation, error) {
+	var d entity.Donation
+	err := r.db.WithContext(ctx).Where("creator_id = ?", creatorID).Order("created_at DESC").First(&d).Error
+	if err != nil { return nil, err }
+	return &d, nil
+}

@@ -60,3 +60,11 @@ func (h *DonationHandler) ListMySent(c *gin.Context) {
 	}
 	response.Paginated(c, donations, uuidToString(next))
 }
+
+func (h *DonationHandler) GetLatest(c *gin.Context) {
+	creatorID, err := uuid.Parse(c.Param("creatorId"))
+	if err != nil { response.BadRequest(c, "invalid creator id"); return }
+	donation, err := h.svc.GetLatestDonation(c.Request.Context(), creatorID)
+	if err != nil { response.OK(c, nil); return }
+	response.OK(c, donation)
+}
