@@ -25,7 +25,7 @@ export default function WalletPage() {
     queryFn: async () => { const { data } = await api.get<PaginatedResponse<CreditTransaction>>("/wallet/transactions"); return data.data; },
   });
 
-  const totalCredits = idrToCredit(wallet?.balance_credits ?? 0);
+  const totalCredits = wallet?.balance_credits ?? 0;
 
   return (
     <AuthGuard>
@@ -42,7 +42,7 @@ export default function WalletPage() {
           </CardHeader>
           <CardContent>
             <p className="text-2xl sm:text-3xl font-bold text-primary">{totalCredits} Credit</p>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">= {formatIDR(wallet?.balance_credits ?? 0)}</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">= {formatIDR(totalCredits * 1000)}</p>
             <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">1 Credit = Rp 1.000</p>
           </CardContent>
         </Card>

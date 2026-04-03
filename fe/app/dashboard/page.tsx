@@ -69,7 +69,7 @@ export default function DashboardOverview() {
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
         <StatCard icon={TrendingUp} label="Total Pendapatan" value={formatCredit(data?.total_earnings ?? 0)} color="text-green-600" />
-        <StatCard icon={Wallet} label="Saldo Credit" value={formatCredit(data?.balance_idr ?? 0)} color="text-primary" />
+        <StatCard icon={Wallet} label="Saldo Credit" value={<Link href="/wallet" className="text-primary hover:underline">Lihat Wallet →</Link>} color="text-primary" />
         <StatCard icon={Users} label="Followers" value={data?.follower_count ?? 0} />
         <StatCard icon={HardDrive} label="Storage" value={`${storageGB} / ${quotaGB} GB`} />
       </div>

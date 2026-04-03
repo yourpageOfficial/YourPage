@@ -31,7 +31,7 @@ export default function SupporterFeed() {
             <Wallet className="h-8 w-8 text-primary shrink-0" />
             <div>
               <p className="text-xs text-gray-500 dark:text-gray-400">Saldo Credit</p>
-              <p className="text-lg font-bold">{formatCredit(wallet?.balance_credits ?? 0)}</p>
+              <p className="text-lg font-bold">{wallet?.balance_credits ?? 0} Credit</p>
             </div>
             <Link href="/wallet/topup" className="ml-auto"><Button size="sm" variant="outline">Top-up</Button></Link>
           </CardContent>

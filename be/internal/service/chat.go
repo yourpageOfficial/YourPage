@@ -97,31 +97,31 @@ func (s *chatService) SendMessage(ctx context.Context, senderID uuid.UUID, req S
 	// Paid chat
 	isPaid := creatorProfile.ChatPriceIDR > 0
 	if isPaid {
+		chatCredits := creatorProfile.ChatPriceIDR / 1000 // IDR to Credit
 		wallet, err := s.walletRepo.FindOrCreateWallet(ctx, senderID)
 		if err != nil { return nil, err }
-		if wallet.BalanceCredits < creatorProfile.ChatPriceIDR { return nil, entity.ErrInsufficientCredit }
-		if err := s.walletRepo.DeductCredits(ctx, senderID, creatorProfile.ChatPriceIDR); err != nil { return nil, err }
+		if wallet.BalanceCredits < chatCredits { return nil, entity.ErrInsufficientCredit }
+		if err := s.walletRepo.DeductCredits(ctx, senderID, chatCredits); err != nil { return nil, err }
 		feePct := 20
 		if creatorProfile.CustomFeePercent != nil { feePct = *creatorProfile.CustomFeePercent }
-		fee := creatorProfile.ChatPriceIDR * int64(feePct) / 100
-		net := creatorProfile.ChatPriceIDR - fee
-		creatorProfile.TotalEarnings += net
+		feeCredits := chatCredits * int64(feePct) / 100
+		netCredits := chatCredits - feeCredits
+		creatorProfile.TotalEarnings += creatorProfile.ChatPriceIDR - (creatorProfile.ChatPriceIDR * int64(feePct) / 100)
 		creatorProfile.Tier = nil
 		s.userRepo.UpdateCreatorProfile(ctx, creatorProfile)
-		// Credit to creator wallet
-		s.walletRepo.AddCredits(ctx, req.CreatorID, net)
+		s.walletRepo.AddCredits(ctx, req.CreatorID, netCredits)
 
+		feeIDR := creatorProfile.ChatPriceIDR * int64(feePct) / 100
+		netIDR := creatorProfile.ChatPriceIDR - feeIDR
 		now := time.Now()
 		payment := &entity.Payment{
 			ID: uuid.New(), ExternalID: fmt.Sprintf("CHAT-%s", uuid.New()),
 			Provider: entity.PaymentProviderCredits, Usecase: entity.PaymentUsecaseChat,
 			ReferenceID: conv.ID, PayerID: &senderID,
-			AmountIDR: creatorProfile.ChatPriceIDR, FeeIDR: fee, NetAmountIDR: net,
+			AmountIDR: creatorProfile.ChatPriceIDR, FeeIDR: feeIDR, NetAmountIDR: netIDR,
 			Status: entity.PaymentStatusPaid, PaidAt: &now,
 		}
-		if err := s.paymentRepo.Create(ctx, payment); err != nil {
-			_ = err
-		}
+		if err := s.paymentRepo.Create(ctx, payment); err != nil { _ = err }
 	}
 
 	msg := &entity.ChatMessage{

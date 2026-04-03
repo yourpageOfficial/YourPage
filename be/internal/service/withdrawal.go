@@ -73,7 +73,7 @@ func (s *withdrawalService) Create(ctx context.Context, creatorID uuid.UUID, req
 
 	// Check wallet balance
 	balance, err := s.walletRepo.GetBalance(ctx, creatorID)
-	if err != nil || balance < req.AmountIDR {
+	if err != nil || balance < req.AmountIDR/1000 {
 		return nil, entity.ErrInsufficientCredit
 	}
 

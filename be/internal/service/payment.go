@@ -249,20 +249,20 @@ func (s *paymentService) payWithCredits(
 		creditsNeeded++
 	}
 
-	// Check wallet balance (all funds in one place now)
+	// Check wallet balance (stored in Credits)
 	walletBalance, err := s.walletRepo.GetBalance(ctx, buyerID)
 	if err != nil {
 		return nil, err
 	}
-	if walletBalance < amountIDR {
+	if walletBalance < creditsNeeded {
 		return nil, entity.ErrInsufficientCredit
 	}
 
 	paymentID := uuid.New()
 	uniqueCode := validator.GenerateUniqueCode()
 
-	// Deduct from wallet
-	if err := s.walletRepo.DeductCredits(ctx, buyerID, amountIDR); err != nil {
+	// Deduct Credits from wallet
+	if err := s.walletRepo.DeductCredits(ctx, buyerID, creditsNeeded); err != nil {
 		return nil, entity.ErrInsufficientCredit
 	}
 
@@ -299,7 +299,7 @@ func (s *paymentService) payWithCredits(
 	// 5. Credit creator wallet + update earnings + notify
 	profile, err := s.userRepo.FindCreatorByUserID(ctx, creatorID)
 	if err == nil {
-		_ = s.walletRepo.AddCredits(ctx, creatorID, netIDR)
+		_ = s.walletRepo.AddCredits(ctx, creatorID, netIDR/settings.CreditRateIDR)
 		profile.TotalEarnings += netIDR
 		if usecase == entity.PaymentUsecaseDonation { profile.DonationGoalCurrent += netIDR }
 		profile.Tier = nil

@@ -226,7 +226,7 @@ func (s *adminService) UpdateWithdrawalStatus(ctx context.Context, id uuid.UUID,
 
 	// Deduct from wallet if processed
 	if req.Status == entity.WithdrawalStatusProcessed {
-		_ = s.walletRepo.DeductCredits(ctx, w.CreatorID, w.AmountIDR)
+		_ = s.walletRepo.DeductCredits(ctx, w.CreatorID, w.AmountIDR/1000)
 	}
 
 	// Notify creator on any status change
@@ -343,8 +343,8 @@ func (s *adminService) ApproveTopup(ctx context.Context, id uuid.UUID, req Appro
 		return err
 	}
 
-	// Add credits to user wallet (balance stored in IDR).
-	if err := s.walletRepo.AddCredits(ctx, topup.UserID, topup.AmountIDR); err != nil {
+	// Add credits to user wallet (1 Credit = Rp 1.000)
+	if err := s.walletRepo.AddCredits(ctx, topup.UserID, topup.Credits); err != nil {
 		return fmt.Errorf("admin: add credits: %w", err)
 	}
 
@@ -489,7 +489,7 @@ func (s *adminService) RefundPayment(ctx context.Context, id uuid.UUID, adminNot
 		case entity.PaymentUsecasePostPurchase:
 			post, err := s.postRepo.FindByID(ctx, payment.ReferenceID)
 			if err == nil {
-				_ = s.walletRepo.DeductCredits(ctx, post.CreatorID, payment.NetAmountIDR)
+				_ = s.walletRepo.DeductCredits(ctx, post.CreatorID, payment.NetAmountIDR/1000)
 				if p, err := s.userRepo.FindCreatorByUserID(ctx, post.CreatorID); err == nil {
 					p.TotalEarnings -= payment.NetAmountIDR; p.Tier = nil; _ = s.userRepo.UpdateCreatorProfile(ctx, p)
 				}
@@ -497,7 +497,7 @@ func (s *adminService) RefundPayment(ctx context.Context, id uuid.UUID, adminNot
 		case entity.PaymentUsecaseProductPurchase:
 			product, err := s.productRepo.FindByID(ctx, payment.ReferenceID)
 			if err == nil {
-				_ = s.walletRepo.DeductCredits(ctx, product.CreatorID, payment.NetAmountIDR)
+				_ = s.walletRepo.DeductCredits(ctx, product.CreatorID, payment.NetAmountIDR/1000)
 				if p, err := s.userRepo.FindCreatorByUserID(ctx, product.CreatorID); err == nil {
 					p.TotalEarnings -= payment.NetAmountIDR; p.Tier = nil; _ = s.userRepo.UpdateCreatorProfile(ctx, p)
 				}

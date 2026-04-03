@@ -487,10 +487,11 @@ func (s *authService) SubscribeTier(ctx context.Context, userID uuid.UUID, tierI
 	if err != nil {
 		return entity.ErrNotFound
 	}
-	if wallet.BalanceCredits < tier.PriceIDR {
+	tierCredits := tier.PriceIDR / 1000
+	if wallet.BalanceCredits < tierCredits {
 		return entity.ErrInsufficientCredit
 	}
-	if err := s.walletRepo.DeductCredits(ctx, userID, tier.PriceIDR); err != nil {
+	if err := s.walletRepo.DeductCredits(ctx, userID, tierCredits); err != nil {
 		return err
 	}
 
