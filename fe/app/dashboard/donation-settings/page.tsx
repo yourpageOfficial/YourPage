@@ -8,10 +8,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/lib/toast";
+import { useAuth } from "@/lib/auth";
 import { formatCredit } from "@/lib/utils";
 import { Target, MessageSquare } from "lucide-react";
 
 export default function DonationSettingsPage() {
+  const { user } = useAuth();
   const qc = useQueryClient();
   const [goalTitle, setGoalTitle] = useState("");
   const [goalAmount, setGoalAmount] = useState("");
@@ -105,9 +107,9 @@ export default function DonationSettingsPage() {
         <CardContent className="space-y-3">
           <p className="text-sm text-gray-500 dark:text-gray-400">Tambahkan sebagai Browser Source di OBS untuk menampilkan notifikasi donasi saat live streaming.</p>
           <div className="flex gap-2">
-            <Input readOnly value={typeof window !== "undefined" ? `${window.location.origin}/overlay?id=${earnings?.user_id || ""}` : ""} className="text-xs" />
+            <Input readOnly value={typeof window !== "undefined" ? `${window.location.origin}/overlay?id=${user?.id || ""}` : ""} className="text-xs" />
             <Button size="sm" variant="outline" onClick={() => {
-              navigator.clipboard.writeText(`${window.location.origin}/overlay?id=${earnings?.user_id || ""}`);
+              navigator.clipboard.writeText(`${window.location.origin}/overlay?id=${user?.id || ""}`);
               toast.success("URL overlay disalin!");
             }}>Copy</Button>
           </div>
