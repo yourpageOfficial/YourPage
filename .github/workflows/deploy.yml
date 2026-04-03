@@ -1,0 +1,42 @@
+name: Deploy YourPage
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+
+      - name: Build Backend
+        working-directory: ./be
+        run: go build ./...
+
+      - name: Build Frontend
+        working-directory: ./fe
+        run: |
+          npm ci
+          npm run build
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Deploy to GCP VM
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USER }}
+          key: ${{ secrets.VM_SSH_KEY }}
+          script: |
+            cd ~/YourPage
+            git pull origin main
+            docker compose -f docker-compose.production.yml up -d --build
+            echo "✅ Deployed at $(date)"

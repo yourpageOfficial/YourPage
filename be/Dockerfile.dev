@@ -1,0 +1,19 @@
+FROM golang:1.25-alpine
+
+RUN apk add --no-cache git ca-certificates tzdata curl
+
+RUN go install github.com/air-verse/air@v1.61.7
+
+WORKDIR /app
+
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+
+ENV TZ=Asia/Jakarta
+ENV CGO_ENABLED=0
+
+EXPOSE 8080
+
+CMD ["air", "-c", ".air.toml"]

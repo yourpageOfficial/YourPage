@@ -1,0 +1,24 @@
+run:
+  timeout: 5m
+  modules-download-mode: readonly
+
+linters:
+  enable:
+    - goimports
+    - govet
+    - staticcheck
+    - errcheck
+    - unused
+    - gosimple
+    - ineffassign
+    - typecheck
+
+linters-settings:
+  goimports:
+    local-prefixes: github.com/yourpage/be
+
+issues:
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - errcheck

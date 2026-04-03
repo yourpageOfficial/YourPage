@@ -1,0 +1,30 @@
+# Environment
+.env
+be/.env
+fe/.env.local
+
+# Secrets
+nginx/ssl/
+
+# Go
+be/tmp/
+be/bin/
+be/docs/
+
+# Node
+fe/node_modules/
+fe/.next/
+
+# IDE
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+
+# Backups
+backups/
+
+# Production secrets
+.env
+nginx/ssl/
