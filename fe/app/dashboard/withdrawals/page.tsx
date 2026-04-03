@@ -38,7 +38,7 @@ export default function DashboardWithdrawals() {
 
   const create = useMutation({
     mutationFn: () => api.post("/withdrawals", {
-      amount_idr: parseInt(amount),
+      amount_idr: parseInt(amount) * 1000,
       bank_name: bankName,
       account_number: accNumber,
       account_name: accName,
@@ -55,7 +55,7 @@ export default function DashboardWithdrawals() {
     },
     onError: (err: any) => {
       const msg = err.response?.data?.error || "Gagal";
-      if (msg.includes("minimum")) setError("Minimum penarikan Rp 100.000");
+      if (msg.includes("minimum")) setError("Minimum penarikan 100 Credit");
       else if (msg.includes("Credit") || msg.includes("insufficient")) setError("Saldo tidak cukup");
       else if (msg.includes("KYC")) setError("KYC harus diverifikasi terlebih dahulu untuk penarikan pertama");
       else setError(msg);
@@ -89,11 +89,9 @@ export default function DashboardWithdrawals() {
           <CardContent className="space-y-3">
             {error && <p className="text-sm text-red-600">{error}</p>}
             <div>
-              <label className="text-sm font-medium">Nominal (min Rp 100.000)</label>
-              <Input type="number" placeholder="100000" value={amount} onChange={(e) => setAmount(e.target.value)} />
-              {earnings && parseInt(amount) > earnings.balance_idr && (
-                <p className="text-xs text-red-500 mt-1">Melebihi saldo tersedia</p>
-              )}
+              <label className="text-sm font-medium">Nominal Credit (min 100 Credit = Rp 100.000)</label>
+              <Input type="number" placeholder="100" value={amount} onChange={(e) => setAmount(e.target.value)} />
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{amount ? `= Rp ${(parseInt(amount) * 1000).toLocaleString("id-ID")}` : ""}</p>
             </div>
             <Input placeholder="Nama Bank (BCA, BNI, Mandiri, dll)" value={bankName} onChange={(e) => setBankName(e.target.value)} />
             <Input placeholder="Nomor Rekening" value={accNumber} onChange={(e) => setAccNumber(e.target.value)} />
