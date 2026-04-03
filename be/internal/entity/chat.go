@@ -24,7 +24,7 @@ type ChatMessage struct {
 	SenderID       uuid.UUID `json:"sender_id" gorm:"type:uuid"`
 	Content        string    `json:"content"`
 	IsPaid         bool      `json:"is_paid" gorm:"default:false"`
-	AmountIDR      int64     `json:"amount_idr" gorm:"default:0"`
+	AmountIDR      int64     `json:"amount_idr" gorm:"column:amount_idr;default:0"`
 	Sender         *User     `json:"sender,omitempty" gorm:"foreignKey:SenderID"`
 	CreatedAt      time.Time `json:"created_at"`
 }
