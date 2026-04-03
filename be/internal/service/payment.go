@@ -249,21 +249,40 @@ func (s *paymentService) payWithCredits(
 		creditsNeeded++
 	}
 
-	// Check balance.
-	balance, err := s.walletRepo.GetBalance(ctx, buyerID)
+	// Check balance (wallet + creator earnings combined).
+	// balance_credits is stored in IDR
+	walletBalance, err := s.walletRepo.GetBalance(ctx, buyerID)
 	if err != nil {
 		return nil, err
 	}
-	if balance < creditsNeeded {
+	var earningsBalance int64
+	if cp, err := s.userRepo.FindCreatorByUserID(ctx, buyerID); err == nil {
+		earningsBalance = cp.BalanceIDR
+	}
+	totalBalance := walletBalance + earningsBalance
+	if totalBalance < amountIDR {
 		return nil, entity.ErrInsufficientCredit
 	}
 
 	paymentID := uuid.New()
 	uniqueCode := validator.GenerateUniqueCode()
 
-	// 1. Deduct credits FIRST (atomic — fails if insufficient)
-	if err := s.walletRepo.DeductCredits(ctx, buyerID, creditsNeeded); err != nil {
-		return nil, entity.ErrInsufficientCredit
+	// Deduct from wallet first, then earnings
+	remaining := amountIDR
+	if walletBalance > 0 {
+		fromWallet := walletBalance
+		if fromWallet > remaining { fromWallet = remaining }
+		if err := s.walletRepo.DeductCredits(ctx, buyerID, fromWallet); err != nil {
+			return nil, entity.ErrInsufficientCredit
+		}
+		remaining -= fromWallet
+	}
+	if remaining > 0 {
+		if cp, err := s.userRepo.FindCreatorByUserID(ctx, buyerID); err == nil {
+			cp.BalanceIDR -= remaining
+			cp.Tier = nil
+			s.userRepo.UpdateCreatorProfile(ctx, cp)
+		}
 	}
 
 	// 2. Create payment record

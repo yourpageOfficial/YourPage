@@ -88,6 +88,10 @@ func (s *chatService) SendMessage(ctx context.Context, senderID uuid.UUID, req S
 	conv, err := s.chatRepo.FindOrCreateConversation(ctx, req.CreatorID, senderID)
 	if err != nil { return nil, err }
 
+	// Save tier info before modifying profile
+	tierName := ""
+	if creatorProfile.Tier != nil { tierName = creatorProfile.Tier.Name }
+
 	// Paid chat
 	isPaid := creatorProfile.ChatPriceIDR > 0
 	if isPaid {
@@ -112,7 +116,7 @@ func (s *chatService) SendMessage(ctx context.Context, senderID uuid.UUID, req S
 	s.chatRepo.IncrementUnread(ctx, conv.ID, true)
 
 	// Auto-reply (Business tier)
-	if creatorProfile.AutoReply != nil && *creatorProfile.AutoReply != "" && creatorProfile.Tier != nil && creatorProfile.Tier.Name == "Business" {
+	if creatorProfile.AutoReply != nil && *creatorProfile.AutoReply != "" && tierName == "Business" {
 		autoMsg := &entity.ChatMessage{ID: uuid.New(), ConversationID: conv.ID, SenderID: req.CreatorID, Content: *creatorProfile.AutoReply}
 		s.chatRepo.CreateMessage(ctx, autoMsg)
 		s.chatRepo.IncrementUnread(ctx, conv.ID, false)
