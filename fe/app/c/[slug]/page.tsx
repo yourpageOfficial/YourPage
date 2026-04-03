@@ -96,6 +96,7 @@ export default function CreatorPageView() {
       });
       setDonateSuccess(true);
       setDonateAmount(""); setDonateMsg("");
+      qc.invalidateQueries({ queryKey: ["creator", slug] });
     } catch (err: any) {
       const msg = err.response?.data?.error || "Gagal";
       setDonateError(msg.includes("Credit") || msg.includes("insufficient") ? "Credit tidak cukup. Top-up dulu." : msg);

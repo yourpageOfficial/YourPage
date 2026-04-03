@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 
@@ -8,7 +8,8 @@ function OverlayContent() {
   const searchParams = useSearchParams();
   const creatorId = searchParams.get("id");
   const [donation, setDonation] = useState<any>(null);
-  const [shown, setShown] = useState<Set<string>>(new Set());
+  const lastId = useRef<string>("");
+  const initialized = useRef(false);
 
   useEffect(() => {
     if (!creatorId) return;
@@ -16,34 +17,48 @@ function OverlayContent() {
       try {
         const res = await fetch(`/api/v1/donations/creator/${creatorId}/latest`);
         const data = await res.json();
-        if (data.data && !shown.has(data.data.id)) {
+        if (!data.data) return;
+
+        // First poll — just record the ID, don't show
+        if (!initialized.current) {
+          lastId.current = data.data.id;
+          initialized.current = true;
+          return;
+        }
+
+        // New donation since last check
+        if (data.data.id !== lastId.current) {
+          lastId.current = data.data.id;
           setDonation(data.data);
-          setShown(prev => new Set(prev).add(data.data.id));
           setTimeout(() => setDonation(null), 8000);
         }
       } catch {}
     }, 3000);
     return () => clearInterval(poll);
-  }, [creatorId, shown]);
+  }, [creatorId]);
 
-  if (!donation) return <div />;
+  if (!donation) return <div style={{ background: "transparent" }} />;
 
   return (
-    <div className="fixed inset-0 flex items-end justify-center pb-8 pointer-events-none">
-      <div className="animate-bounce-in bg-white/95 dark:bg-gray-900/95 rounded-2xl shadow-2xl px-8 py-5 text-center max-w-md border-2 border-primary">
-        <p className="text-3xl mb-2">☕</p>
-        <p className="text-lg font-bold text-primary">{donation.donor_name || "Anonim"}</p>
-        <p className="text-2xl font-black my-1">{(donation.amount_idr / 1000).toFixed(0)} Credit</p>
-        {donation.message && <p className="text-sm text-gray-600 dark:text-gray-300 mt-2 italic">&ldquo;{donation.message}&rdquo;</p>}
+    <div style={{ position: "fixed", inset: 0, display: "flex", alignItems: "flex-end", justifyContent: "center", paddingBottom: 32, pointerEvents: "none", background: "transparent" }}>
+      <div style={{
+        background: "rgba(255,255,255,0.95)", borderRadius: 16, padding: "20px 32px",
+        textAlign: "center", maxWidth: 400, boxShadow: "0 8px 32px rgba(0,0,0,0.2)",
+        border: "3px solid #2563EB", animation: "bounceIn 0.5s ease-out"
+      }}>
+        <div style={{ fontSize: 40, marginBottom: 8 }}>☕</div>
+        <div style={{ fontSize: 18, fontWeight: 700, color: "#2563EB" }}>{donation.donor_name || "Anonim"}</div>
+        <div style={{ fontSize: 28, fontWeight: 900, margin: "4px 0" }}>{(donation.amount_idr / 1000).toFixed(0)} Credit</div>
+        {donation.message && <div style={{ fontSize: 14, color: "#666", marginTop: 8, fontStyle: "italic" }}>&ldquo;{donation.message}&rdquo;</div>}
       </div>
-      <style jsx>{`
+      <style dangerouslySetInnerHTML={{ __html: `
         @keyframes bounceIn {
           0% { transform: scale(0) translateY(50px); opacity: 0; }
           60% { transform: scale(1.1) translateY(-10px); opacity: 1; }
           100% { transform: scale(1) translateY(0); opacity: 1; }
         }
-        .animate-bounce-in { animation: bounceIn 0.5s ease-out; }
-      `}</style>
+        body { background: transparent !important; }
+      `}} />
     </div>
   );
 }
