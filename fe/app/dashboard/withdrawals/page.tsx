@@ -24,8 +24,13 @@ export default function DashboardWithdrawals() {
     queryKey: ["creator-earnings"],
     queryFn: async () => {
       const { data } = await api.get("/creator/earnings");
-      return data.data as { balance_idr: number; total_earnings: number };
+      return data.data as { total_earnings: number };
     },
+  });
+
+  const { data: wallet } = useQuery({
+    queryKey: ["wallet"],
+    queryFn: async () => { const { data } = await api.get("/wallet/balance"); return data.data; },
   });
 
   const { data: withdrawals } = useQuery({
@@ -46,6 +51,7 @@ export default function DashboardWithdrawals() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["my-withdrawals"] });
       qc.invalidateQueries({ queryKey: ["creator-earnings"] });
+      qc.invalidateQueries({ queryKey: ["wallet"] });
       setShowForm(false);
       setAmount("");
       setBankName("");
@@ -73,12 +79,12 @@ export default function DashboardWithdrawals() {
         <CardContent className="flex items-center justify-between p-4">
           <div>
             <p className="text-sm text-gray-500 dark:text-gray-400">Saldo Credit</p>
-            <p className="text-2xl font-bold text-primary">{formatCredit(earnings?.balance_idr ?? 0)}</p>
-            <p className="text-xs text-gray-400 dark:text-gray-400">= {formatIDR(earnings?.balance_idr ?? 0)}</p>
+            <p className="text-2xl font-bold text-primary">{wallet?.balance_credits ?? 0} Credit</p>
+            <p className="text-xs text-gray-400 dark:text-gray-400">= {formatIDR((wallet?.balance_credits ?? 0) * 1000)}</p>
           </div>
           <div className="text-right">
             <p className="text-sm text-gray-500 dark:text-gray-400">Total Pendapatan</p>
-            <p className="text-lg font-semibold text-green-600">{formatCredit(earnings?.total_earnings ?? 0)}</p>
+            <p className="text-lg font-semibold text-green-600">{formatCredit(earnings?.total_earnings ?? 0)} Credit</p>
           </div>
         </CardContent>
       </Card>
