@@ -81,6 +81,9 @@ services:
       MINIO_PUBLIC_BUCKET: public-media
       MINIO_PRIVATE_BUCKET: private-media
       GIN_MODE: release
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@yourpage.id}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      DOMAIN: ${DOMAIN:-_}
       PORT: "8080"
     depends_on:
       postgres:

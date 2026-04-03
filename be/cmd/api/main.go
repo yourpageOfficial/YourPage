@@ -88,17 +88,24 @@ func main() {
 	)
 	chatRepo := postgres.NewChatRepo(db)
 
-	// Seed admin from env (only if not exists)
+	// Seed/update admin from env
 	if adminEmail := os.Getenv("ADMIN_EMAIL"); adminEmail != "" {
 		adminPass := os.Getenv("ADMIN_PASSWORD")
 		if adminPass == "" { adminPass = "changeme123" }
-		if _, err := userRepo.FindByEmail(context.Background(), adminEmail); err != nil {
-			hash, _ := bcrypt.GenerateFromPassword([]byte(adminPass), 12)
+		hash, _ := bcrypt.GenerateFromPassword([]byte(adminPass), 12)
+		existing, err := userRepo.FindByEmail(context.Background(), adminEmail)
+		if err != nil {
+			// Create new admin
 			userRepo.Create(context.Background(), &entity.User{
 				ID: uuid.New(), Email: adminEmail, Username: "admin",
 				PasswordHash: string(hash), DisplayName: "Admin", Role: entity.RoleAdmin,
 			})
 			log.Info().Str("email", adminEmail).Msg("admin user created")
+		} else {
+			// Update password if ADMIN_PASSWORD is set
+			existing.PasswordHash = string(hash)
+			userRepo.Update(context.Background(), existing)
+			log.Info().Str("email", adminEmail).Msg("admin password updated from env")
 		}
 	}
 	chatSvc := service.NewChatService(chatRepo, userRepo, walletRepo, followRepo, paymentRepo)
