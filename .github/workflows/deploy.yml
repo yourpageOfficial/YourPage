@@ -2,10 +2,11 @@ name: Deploy YourPage
 
 on:
   push:
-    branches: [main]
+    tags:
+      - 'v*'
 
 jobs:
-  test:
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -21,15 +22,14 @@ jobs:
       - name: Build Frontend
         working-directory: ./fe
         run: |
-          npm ci
+          npm install
           npm run build
 
   deploy:
-    needs: test
+    needs: build
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
     steps:
-      - name: Deploy to GCP VM
+      - name: Deploy to VM
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.VM_HOST }}
@@ -37,6 +37,7 @@ jobs:
           key: ${{ secrets.VM_SSH_KEY }}
           script: |
             cd ~/YourPage
-            git pull origin main
+            git fetch --tags
+            git checkout ${{ github.ref_name }}
             docker compose -f docker-compose.production.yml up -d --build
-            echo "✅ Deployed at $(date)"
+            echo "✅ Deployed ${{ github.ref_name }} at $(date)"
