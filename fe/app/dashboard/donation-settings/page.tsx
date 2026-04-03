@@ -24,11 +24,14 @@ export default function DonationSettingsPage() {
     queryFn: async () => { try { const { data } = await api.get("/creator/earnings"); return data.data; } catch { return {}; } },
   });
 
+  const [overlayStyle, setOverlayStyle] = useState("bounce");
+
   useEffect(() => {
     if (earnings) {
       setGoalTitle(earnings.donation_goal_title || "");
       setGoalAmount(earnings.donation_goal_amount ? String(earnings.donation_goal_amount / 1000) : "");
       setWelcomeMsg(earnings.welcome_message || "");
+      setOverlayStyle(earnings.overlay_style || "bounce");
     }
   }, [earnings]);
 
@@ -37,6 +40,7 @@ export default function DonationSettingsPage() {
       donation_goal_title: goalTitle || null,
       donation_goal_amount: goalAmount ? parseInt(goalAmount) * 1000 : 0,
       welcome_message: welcomeMsg || null,
+      overlay_style: overlayStyle,
     }),
     onSuccess: () => { toast.success("Pengaturan disimpan!"); qc.invalidateQueries({ queryKey: ["creator-earnings"] }); },
     onError: (e: any) => toast.error(e.response?.data?.error || "Gagal"),
@@ -105,15 +109,32 @@ export default function DonationSettingsPage() {
           <CardTitle className="text-base">📺 Overlay Streaming (OBS/Streamlabs)</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          <p className="text-sm text-gray-500 dark:text-gray-400">Tambahkan sebagai Browser Source di OBS untuk menampilkan notifikasi donasi saat live streaming.</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Tambahkan sebagai Browser Source di OBS.</p>
+
+          <div>
+            <label className="text-xs text-gray-500 dark:text-gray-400">Animasi</label>
+            <div className="flex gap-2 mt-1">
+              {[
+                { id: "bounce", label: "⬆️ Bounce" },
+                { id: "slide", label: "➡️ Slide" },
+                { id: "fade", label: "✨ Fade" },
+                { id: "spin", label: "🔄 Spin" },
+              ].map(a => (
+                <Button key={a.id} size="sm" variant={overlayStyle === a.id ? "default" : "outline"} onClick={() => setOverlayStyle(a.id)} className="text-xs">
+                  {a.label}
+                </Button>
+              ))}
+            </div>
+          </div>
+
           <div className="flex gap-2">
-            <Input readOnly value={typeof window !== "undefined" ? `${window.location.origin}/overlay?id=${user?.id || ""}` : ""} className="text-xs" />
+            <Input readOnly value={typeof window !== "undefined" ? `${window.location.origin}/overlay?id=${user?.id || ""}&style=${overlayStyle}` : ""} className="text-xs" />
             <Button size="sm" variant="outline" onClick={() => {
-              navigator.clipboard.writeText(`${window.location.origin}/overlay?id=${user?.id || ""}`);
+              navigator.clipboard.writeText(`${window.location.origin}/overlay?id=${user?.id || ""}&style=${overlayStyle}`);
               toast.success("URL overlay disalin!");
             }}>Copy</Button>
           </div>
-          <p className="text-xs text-gray-400 dark:text-gray-500">Ukuran: 800×200px · Background transparan</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500">OBS: Browser Source · 800×200px · Background transparan</p>
         </CardContent>
       </Card>
     </div>

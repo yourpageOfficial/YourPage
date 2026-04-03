@@ -87,7 +87,7 @@ type AuthService interface {
 	ForgotPassword(ctx context.Context, email string) error
 	ResetPassword(ctx context.Context, token, newPassword string) error
 	UpgradeToCreator(ctx context.Context, userID uuid.UUID, req UpgradeCreatorRequest) error
-	UpdateProfile(ctx context.Context, userID uuid.UUID, displayName, bio, avatarURL, pageColor, headerImage *string, chatPrice *int64, autoReply *string, socialLinks map[string]interface{}, goalTitle *string, goalAmount *int64, welcomeMsg *string) error
+	UpdateProfile(ctx context.Context, userID uuid.UUID, displayName, bio, avatarURL, pageColor, headerImage *string, chatPrice *int64, autoReply *string, socialLinks map[string]interface{}, goalTitle *string, goalAmount *int64, welcomeMsg, overlayStyle *string) error
 	ChangePassword(ctx context.Context, userID uuid.UUID, oldPassword, newPassword string) error
 	SubscribeTier(ctx context.Context, userID uuid.UUID, tierID uuid.UUID) error
 }
@@ -372,7 +372,7 @@ func (s *authService) UpgradeToCreator(ctx context.Context, userID uuid.UUID, re
 }
 
 // UpdateProfile updates display name, bio, and avatar.
-func (s *authService) UpdateProfile(ctx context.Context, userID uuid.UUID, displayName, bio, avatarURL, pageColor, headerImage *string, chatPrice *int64, autoReply *string, socialLinks map[string]interface{}, goalTitle *string, goalAmount *int64, welcomeMsg *string) error {
+func (s *authService) UpdateProfile(ctx context.Context, userID uuid.UUID, displayName, bio, avatarURL, pageColor, headerImage *string, chatPrice *int64, autoReply *string, socialLinks map[string]interface{}, goalTitle *string, goalAmount *int64, welcomeMsg, overlayStyle *string) error {
 	user, err := s.userRepo.FindByID(ctx, userID)
 	if err != nil {
 		return err
@@ -403,6 +403,7 @@ func (s *authService) UpdateProfile(ctx context.Context, userID uuid.UUID, displ
 			if goalTitle != nil { cp.DonationGoalTitle = goalTitle }
 			if goalAmount != nil { cp.DonationGoalAmount = *goalAmount }
 			if welcomeMsg != nil { cp.WelcomeMessage = welcomeMsg }
+			if overlayStyle != nil { cp.OverlayStyle = *overlayStyle }
 			cp.Tier = nil
 			return s.userRepo.UpdateCreatorProfile(ctx, cp)
 		}

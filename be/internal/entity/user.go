@@ -62,6 +62,7 @@ type CreatorProfile struct {
 	DonationGoalTitle  *string    `json:"donation_goal_title,omitempty"`
 	DonationGoalCurrent int64     `json:"donation_goal_current" gorm:"default:0"`
 	WelcomeMessage     *string    `json:"welcome_message,omitempty"`
+	OverlayStyle       string     `json:"overlay_style" gorm:"default:'bounce'"`
 	CreatedAt          time.Time  `json:"created_at"`
 	UpdatedAt          time.Time  `json:"updated_at"`
 }
