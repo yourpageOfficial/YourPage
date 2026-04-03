@@ -249,40 +249,21 @@ func (s *paymentService) payWithCredits(
 		creditsNeeded++
 	}
 
-	// Check balance (wallet + creator earnings combined).
-	// balance_credits is stored in IDR
+	// Check wallet balance (all funds in one place now)
 	walletBalance, err := s.walletRepo.GetBalance(ctx, buyerID)
 	if err != nil {
 		return nil, err
 	}
-	var earningsBalance int64
-	if cp, err := s.userRepo.FindCreatorByUserID(ctx, buyerID); err == nil {
-		earningsBalance = cp.BalanceIDR
-	}
-	totalBalance := walletBalance + earningsBalance
-	if totalBalance < amountIDR {
+	if walletBalance < amountIDR {
 		return nil, entity.ErrInsufficientCredit
 	}
 
 	paymentID := uuid.New()
 	uniqueCode := validator.GenerateUniqueCode()
 
-	// Deduct from wallet first, then earnings
-	remaining := amountIDR
-	if walletBalance > 0 {
-		fromWallet := walletBalance
-		if fromWallet > remaining { fromWallet = remaining }
-		if err := s.walletRepo.DeductCredits(ctx, buyerID, fromWallet); err != nil {
-			return nil, entity.ErrInsufficientCredit
-		}
-		remaining -= fromWallet
-	}
-	if remaining > 0 {
-		if cp, err := s.userRepo.FindCreatorByUserID(ctx, buyerID); err == nil {
-			cp.BalanceIDR -= remaining
-			cp.Tier = nil
-			s.userRepo.UpdateCreatorProfile(ctx, cp)
-		}
+	// Deduct from wallet
+	if err := s.walletRepo.DeductCredits(ctx, buyerID, amountIDR); err != nil {
+		return nil, entity.ErrInsufficientCredit
 	}
 
 	// 2. Create payment record
@@ -315,11 +296,12 @@ func (s *paymentService) payWithCredits(
 		Description: fmt.Sprintf("Payment for %s", usecase),
 	})
 
-	// 5. Credit creator balance + notify
+	// 5. Credit creator wallet + update earnings + notify
 	profile, err := s.userRepo.FindCreatorByUserID(ctx, creatorID)
 	if err == nil {
-		profile.BalanceIDR += netIDR
+		_ = s.walletRepo.AddCredits(ctx, creatorID, netIDR)
 		profile.TotalEarnings += netIDR
+		profile.Tier = nil
 		_ = s.userRepo.UpdateCreatorProfile(ctx, profile)
 		_ = s.followRepo.CreateNotification(ctx, &entity.Notification{
 			ID: uuid.New(), UserID: creatorID, Type: entity.NotificationPurchaseSuccess,

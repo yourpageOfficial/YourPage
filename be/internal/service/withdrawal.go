@@ -36,6 +36,7 @@ type WithdrawalService interface {
 type withdrawalService struct {
 	withdrawalRepo repository.WithdrawalRepository
 	userRepo       repository.UserRepository
+	walletRepo     repository.WalletRepository
 	kycRepo        repository.KYCRepository
 	platformRepo   repository.PlatformRepository
 }
@@ -43,12 +44,14 @@ type withdrawalService struct {
 func NewWithdrawalService(
 	withdrawalRepo repository.WithdrawalRepository,
 	userRepo repository.UserRepository,
+	walletRepo repository.WalletRepository,
 	kycRepo repository.KYCRepository,
 	platformRepo repository.PlatformRepository,
 ) WithdrawalService {
 	return &withdrawalService{
 		withdrawalRepo: withdrawalRepo,
 		userRepo:       userRepo,
+		walletRepo:     walletRepo,
 		kycRepo:        kycRepo,
 		platformRepo:   platformRepo,
 	}
@@ -63,11 +66,14 @@ func (s *withdrawalService) Create(ctx context.Context, creatorID uuid.UUID, req
 		return nil, entity.ErrMinWithdrawal
 	}
 
-	profile, err := s.userRepo.FindCreatorByUserID(ctx, creatorID)
+	_, err = s.userRepo.FindCreatorByUserID(ctx, creatorID)
 	if err != nil {
 		return nil, fmt.Errorf("withdrawal: creator not found: %w", err)
 	}
-	if profile.BalanceIDR < req.AmountIDR {
+
+	// Check wallet balance
+	balance, err := s.walletRepo.GetBalance(ctx, creatorID)
+	if err != nil || balance < req.AmountIDR {
 		return nil, entity.ErrInsufficientCredit
 	}
 

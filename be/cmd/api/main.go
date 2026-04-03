@@ -78,7 +78,7 @@ func main() {
 	donationSvc := service.NewDonationService(donationRepo, paymentRepo, userRepo, platformRepo)
 	walletSvc := service.NewWalletService(walletRepo, platformRepo, storageSvc, cfg)
 	followSvc := service.NewFollowService(followRepo, userRepo)
-	withdrawalSvc := service.NewWithdrawalService(withdrawalRepo, userRepo, kycRepo, platformRepo)
+	withdrawalSvc := service.NewWithdrawalService(withdrawalRepo, userRepo, walletRepo, kycRepo, platformRepo)
 	kycSvc := service.NewKYCService(kycRepo)
 	adminSvc := service.NewAdminService(
 		userRepo, postRepo, productRepo, paymentRepo, donationRepo,

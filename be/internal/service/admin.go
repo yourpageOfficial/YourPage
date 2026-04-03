@@ -224,13 +224,9 @@ func (s *adminService) UpdateWithdrawalStatus(ctx context.Context, id uuid.UUID,
 		return err
 	}
 
-	// Deduct balance if processed
+	// Deduct from wallet if processed
 	if req.Status == entity.WithdrawalStatusProcessed {
-		profile, err := s.userRepo.FindCreatorByUserID(ctx, w.CreatorID)
-		if err == nil {
-			profile.BalanceIDR -= w.AmountIDR
-			_ = s.userRepo.UpdateCreatorProfile(ctx, profile)
-		}
+		_ = s.walletRepo.DeductCredits(ctx, w.CreatorID, w.AmountIDR)
 	}
 
 	// Notify creator on any status change
@@ -493,21 +489,17 @@ func (s *adminService) RefundPayment(ctx context.Context, id uuid.UUID, adminNot
 		case entity.PaymentUsecasePostPurchase:
 			post, err := s.postRepo.FindByID(ctx, payment.ReferenceID)
 			if err == nil {
-				profile, err := s.userRepo.FindCreatorByUserID(ctx, post.CreatorID)
-				if err == nil {
-					profile.BalanceIDR -= payment.NetAmountIDR
-					profile.TotalEarnings -= payment.NetAmountIDR
-					_ = s.userRepo.UpdateCreatorProfile(ctx, profile)
+				_ = s.walletRepo.DeductCredits(ctx, post.CreatorID, payment.NetAmountIDR)
+				if p, err := s.userRepo.FindCreatorByUserID(ctx, post.CreatorID); err == nil {
+					p.TotalEarnings -= payment.NetAmountIDR; p.Tier = nil; _ = s.userRepo.UpdateCreatorProfile(ctx, p)
 				}
 			}
 		case entity.PaymentUsecaseProductPurchase:
 			product, err := s.productRepo.FindByID(ctx, payment.ReferenceID)
 			if err == nil {
-				profile, err := s.userRepo.FindCreatorByUserID(ctx, product.CreatorID)
-				if err == nil {
-					profile.BalanceIDR -= payment.NetAmountIDR
-					profile.TotalEarnings -= payment.NetAmountIDR
-					_ = s.userRepo.UpdateCreatorProfile(ctx, profile)
+				_ = s.walletRepo.DeductCredits(ctx, product.CreatorID, payment.NetAmountIDR)
+				if p, err := s.userRepo.FindCreatorByUserID(ctx, product.CreatorID); err == nil {
+					p.TotalEarnings -= payment.NetAmountIDR; p.Tier = nil; _ = s.userRepo.UpdateCreatorProfile(ctx, p)
 				}
 			}
 		}

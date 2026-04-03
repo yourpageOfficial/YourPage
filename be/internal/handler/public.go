@@ -74,7 +74,7 @@ func (h *PublicHandler) GetMyEarnings(c *gin.Context) {
 
 	response.OK(c, gin.H{
 		"total_earnings":     profile.TotalEarnings,
-		"balance_idr":        profile.BalanceIDR,
+		"balance_idr":        0, // deprecated, use wallet
 		"follower_count":     profile.FollowerCount,
 		"storage_used_bytes": profile.StorageUsedBytes,
 		"storage_quota_bytes": profile.StorageQuotaBytes,
@@ -118,7 +118,7 @@ func (h *PublicHandler) GetCreatorAnalytics(c *gin.Context) {
 		"sales_count":      salesCount,
 		"total_sales":      totalSales,
 		"total_earnings":   profile.TotalEarnings,
-		"balance_idr":      profile.BalanceIDR,
+		"balance_idr":      0, // deprecated, use wallet
 		"follower_count":   profile.FollowerCount,
 		"fee_percent":      profile.CustomFeePercent,
 	})

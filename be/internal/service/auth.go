@@ -478,33 +478,21 @@ func (s *authService) SubscribeTier(ctx context.Context, userID uuid.UUID, tierI
 		return s.userRepo.UpdateCreatorProfile(ctx, profile)
 	}
 
-	// Check combined balance (wallet credits + creator earnings)
+	// Check wallet balance (single source)
 	wallet, err := s.walletRepo.FindOrCreateWallet(ctx, userID)
 	if err != nil {
 		return entity.ErrNotFound
 	}
-	totalBalance := wallet.BalanceCredits + profile.BalanceIDR
-	if totalBalance < tier.PriceIDR {
+	if wallet.BalanceCredits < tier.PriceIDR {
 		return entity.ErrInsufficientCredit
 	}
-
-	// Deduct: wallet first, then earnings
-	remaining := tier.PriceIDR
-	if wallet.BalanceCredits > 0 {
-		fromWallet := wallet.BalanceCredits
-		if fromWallet > remaining { fromWallet = remaining }
-		if err := s.walletRepo.DeductCredits(ctx, userID, fromWallet); err != nil {
-			return err
-		}
-		remaining -= fromWallet
-	}
-	if remaining > 0 {
-		profile.BalanceIDR -= remaining
+	if err := s.walletRepo.DeductCredits(ctx, userID, tier.PriceIDR); err != nil {
+		return err
 	}
 
 	// Update tier
 	profile.TierID = &tier.ID
-	profile.Tier = nil // clear preloaded association so GORM uses TierID
+	profile.Tier = nil
 	expires := time.Now().AddDate(0, 1, 0)
 	profile.TierExpiresAt = &expires
 	feeP := tier.FeePercent

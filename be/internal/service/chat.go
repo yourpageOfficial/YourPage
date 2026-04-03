@@ -105,10 +105,11 @@ func (s *chatService) SendMessage(ctx context.Context, senderID uuid.UUID, req S
 		if creatorProfile.CustomFeePercent != nil { feePct = *creatorProfile.CustomFeePercent }
 		fee := creatorProfile.ChatPriceIDR * int64(feePct) / 100
 		net := creatorProfile.ChatPriceIDR - fee
-		creatorProfile.BalanceIDR += net
 		creatorProfile.TotalEarnings += net
 		creatorProfile.Tier = nil
 		s.userRepo.UpdateCreatorProfile(ctx, creatorProfile)
+		// Credit to creator wallet
+		s.walletRepo.AddCredits(ctx, req.CreatorID, net)
 
 		now := time.Now()
 		payment := &entity.Payment{

@@ -20,21 +20,12 @@ export default function WalletPage() {
     queryFn: async () => { const { data } = await api.get<ApiResponse<Wallet>>("/wallet/balance"); return data.data; },
   });
 
-  // Creator also has earnings balance
-  const { data: earnings } = useQuery({
-    queryKey: ["creator-earnings"],
-    enabled: user?.role === "creator",
-    queryFn: async () => { const { data } = await api.get("/creator/earnings"); return data.data as any; },
-  });
-
   const { data: txs } = useQuery({
     queryKey: ["wallet-txs"],
     queryFn: async () => { const { data } = await api.get<PaginatedResponse<CreditTransaction>>("/wallet/transactions"); return data.data; },
   });
 
-  const walletCredits = wallet?.balance_credits ?? 0;
-  const earningsCredits = earnings ? idrToCredit(earnings.balance_idr || 0) : 0;
-  const totalCredits = walletCredits + earningsCredits;
+  const totalCredits = idrToCredit(wallet?.balance_credits ?? 0);
 
   return (
     <AuthGuard>
@@ -42,36 +33,23 @@ export default function WalletPage() {
       <main className="mx-auto max-w-2xl px-3 sm:px-4 py-6 sm:py-8">
         <h1 className="mb-6 text-xl sm:text-2xl font-bold">Wallet</h1>
 
-        {/* Total balance */}
         <Card className="mb-4">
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle>Total Credit</CardTitle>
+              <CardTitle>Saldo Credit</CardTitle>
               <Link href="/wallet/topup"><Button size="sm">Top-up</Button></Link>
             </div>
           </CardHeader>
           <CardContent>
             <p className="text-2xl sm:text-3xl font-bold text-primary">{totalCredits} Credit</p>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">= {formatIDR(totalCredits * 1000)}</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">= {formatIDR(wallet?.balance_credits ?? 0)}</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">1 Credit = Rp 1.000</p>
           </CardContent>
         </Card>
 
-        {/* Breakdown for creator */}
         {user?.role === "creator" && (
-          <div className="grid grid-cols-2 gap-3 mb-6">
-            <Card>
-              <CardContent className="p-3 sm:p-4">
-                <p className="text-xs text-gray-500 dark:text-gray-400">Dari Top-up</p>
-                <p className="text-lg font-bold">{walletCredits} Credit</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-3 sm:p-4">
-                <p className="text-xs text-gray-500 dark:text-gray-400">Dari Penjualan</p>
-                <p className="text-lg font-bold text-green-600">{earningsCredits} Credit</p>
-                <Link href="/dashboard/withdrawals" className="text-xs text-primary hover:underline">Tarik dana →</Link>
-              </CardContent>
-            </Card>
+          <div className="mb-4">
+            <Link href="/dashboard/withdrawals" className="text-sm text-primary hover:underline">💰 Tarik saldo ke rekening bank →</Link>
           </div>
         )}
 
