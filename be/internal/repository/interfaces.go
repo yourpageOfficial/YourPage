@@ -38,6 +38,7 @@ type UserRepository interface {
 type PostRepository interface {
 	Create(ctx context.Context, post *entity.Post) error
 	FindByID(ctx context.Context, id uuid.UUID) (*entity.Post, error)
+	FindByIDUnscoped(ctx context.Context, id uuid.UUID) (*entity.Post, error)
 	Update(ctx context.Context, post *entity.Post) error
 	SoftDelete(ctx context.Context, id uuid.UUID) error
 	ListByCreator(ctx context.Context, creatorID uuid.UUID, status string, cursor *uuid.UUID, limit int) ([]entity.Post, error)

@@ -143,9 +143,9 @@ func (r *productRepo) FindPurchase(ctx context.Context, productID, supporterID u
 
 func (r *productRepo) ListPurchasedProducts(ctx context.Context, supporterID uuid.UUID, cursor *uuid.UUID, limit int) ([]entity.Product, error) {
 	var products []entity.Product
-	q := r.db.WithContext(ctx).Preload("Creator").Preload("Assets").
+	q := r.db.WithContext(ctx).Unscoped().Preload("Creator").Preload("Assets").
 		Joins("JOIN product_purchases ON product_purchases.product_id = products.id").
-		Where("product_purchases.supporter_id = ? AND products.deleted_at IS NULL", supporterID)
+		Where("product_purchases.supporter_id = ?", supporterID)
 	if cursor != nil {
 		q = q.Where("products.id > ?", *cursor)
 	}

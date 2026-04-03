@@ -157,7 +157,13 @@ func (s *postService) Create(ctx context.Context, creatorID uuid.UUID, req Creat
 func (s *postService) GetByID(ctx context.Context, postID uuid.UUID, viewerID *uuid.UUID) (*entity.Post, error) {
 	post, err := s.postRepo.FindByID(ctx, postID)
 	if err != nil {
-		return nil, err
+		// Post deleted — check if viewer purchased it
+		if viewerID != nil {
+			if _, purchaseErr := s.postRepo.FindPurchase(ctx, postID, *viewerID); purchaseErr == nil {
+				post, err = s.postRepo.FindByIDUnscoped(ctx, postID)
+			}
+		}
+		if err != nil { return nil, err }
 	}
 
 	media, err := s.postRepo.ListMedia(ctx, postID)

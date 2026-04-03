@@ -31,6 +31,15 @@ func (r *postRepo) FindByID(ctx context.Context, id uuid.UUID) (*entity.Post, er
 	return &post, err
 }
 
+func (r *postRepo) FindByIDUnscoped(ctx context.Context, id uuid.UUID) (*entity.Post, error) {
+	var post entity.Post
+	err := r.db.WithContext(ctx).Unscoped().Preload("Creator").Preload("Media").Where("id = ?", id).First(&post).Error
+	if err == gorm.ErrRecordNotFound {
+		return nil, entity.ErrNotFound
+	}
+	return &post, err
+}
+
 func (r *postRepo) Update(ctx context.Context, post *entity.Post) error {
 	return r.db.WithContext(ctx).Save(post).Error
 }
@@ -150,9 +159,9 @@ func (r *postRepo) FindPurchasedPostIDs(ctx context.Context, supporterID uuid.UU
 
 func (r *postRepo) ListPurchasedPosts(ctx context.Context, supporterID uuid.UUID, cursor *uuid.UUID, limit int) ([]entity.Post, error) {
 	var posts []entity.Post
-	q := r.db.WithContext(ctx).Preload("Media").Preload("Creator").
+	q := r.db.WithContext(ctx).Unscoped().Preload("Media").Preload("Creator").
 		Joins("JOIN post_purchases ON post_purchases.post_id = posts.id").
-		Where("post_purchases.supporter_id = ? AND posts.deleted_at IS NULL", supporterID)
+		Where("post_purchases.supporter_id = ?", supporterID)
 	if cursor != nil {
 		q = q.Where("posts.id > ?", *cursor)
 	}
