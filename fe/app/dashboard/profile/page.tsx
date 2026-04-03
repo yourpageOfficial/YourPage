@@ -162,7 +162,7 @@ export default function EditProfile() {
                 <div>
                   <label className="text-xs text-gray-500 dark:text-gray-400">Harga per chat (Credit, 0 = gratis)</label>
                   <Input type="number" value={chatPrice} onChange={e => setChatPrice(e.target.value)} placeholder="0" className="w-40" />
-                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{chatPrice && parseInt(chatPrice) > 0 ? `Supporter bayar ${chatPrice} Credit per pesan. Kamu dapat ${Math.floor(parseInt(chatPrice) * 0.8)} Credit (fee 20%).` : "Chat gratis untuk semua supporter"}</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{chatPrice && parseInt(chatPrice) > 0 ? `Supporter bayar ${chatPrice} Credit per pesan. Fee sesuai tier kamu (${earnings?.fee_percent ?? 20}%).` : "Chat gratis untuk semua supporter"}</p>
                 </div>
                 {isBusiness && (
                   <div>

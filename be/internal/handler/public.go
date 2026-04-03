@@ -50,7 +50,8 @@ func (h *PublicHandler) GetCreatorPage(c *gin.Context) {
 		"is_verified":    profile.IsVerified,
 		"tier_badge":     tierBadge,
 		"page_color":    profile.PageColor,
-		"is_priority":   profile.Tier != nil && profile.Tier.Name == "Business",
+		"is_priority":    profile.Tier != nil && profile.Tier.Name == "Business",
+		"chat_price_idr": profile.ChatPriceIDR,
 	})
 }
 

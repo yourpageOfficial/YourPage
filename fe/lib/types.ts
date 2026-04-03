@@ -144,6 +144,7 @@ export interface CreatorPage {
   tier_badge?: string;
   page_color?: string;
   is_priority?: boolean;
+  chat_price_idr?: number;
 }
 
 export interface PlatformSettings {

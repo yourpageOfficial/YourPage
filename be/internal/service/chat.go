@@ -95,7 +95,9 @@ func (s *chatService) SendMessage(ctx context.Context, senderID uuid.UUID, req S
 		if err != nil { return nil, err }
 		if wallet.BalanceCredits < creatorProfile.ChatPriceIDR { return nil, entity.ErrInsufficientCredit }
 		if err := s.walletRepo.DeductCredits(ctx, senderID, creatorProfile.ChatPriceIDR); err != nil { return nil, err }
-		fee := creatorProfile.ChatPriceIDR * 20 / 100
+		feePct := 20
+		if creatorProfile.CustomFeePercent != nil { feePct = *creatorProfile.CustomFeePercent }
+		fee := creatorProfile.ChatPriceIDR * int64(feePct) / 100
 		creatorProfile.BalanceIDR += creatorProfile.ChatPriceIDR - fee
 		creatorProfile.TotalEarnings += creatorProfile.ChatPriceIDR - fee
 		creatorProfile.Tier = nil

@@ -22,11 +22,23 @@ export default function ChatContent() {
   const [message, setMessage] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
   const initCreator = searchParams.get("creator");
+  const chatPrice = parseInt(searchParams.get("price") || "0");
 
   const { data: conversations } = useQuery({
     queryKey: ["chat-conversations"],
     queryFn: async () => { const { data } = await api.get("/chat"); return (data.data || []) as any[]; },
     refetchInterval: 5000,
+  });
+
+  // Fetch creator info for chat price
+  const { data: creatorInfo } = useQuery({
+    queryKey: ["creator-info", initCreator],
+    queryFn: async () => {
+      const { data } = await api.get(`/creators/search?q=`);
+      // Find by user_id from all creators — or use a direct lookup
+      return null; // Will use conversations data instead
+    },
+    enabled: false,
   });
 
   useEffect(() => {
@@ -97,10 +109,15 @@ export default function ChatContent() {
             })}
             <div ref={bottomRef} />
           </div>
-          <div className="flex gap-2 p-3 border-t dark:border-gray-700 shrink-0">
-            <Input value={message} onChange={e => setMessage(e.target.value)} placeholder="Tulis pesan..." className="flex-1"
-              onKeyDown={e => { if (e.key === "Enter" && message.trim()) send.mutate(); }} />
-            <Button size="icon" onClick={() => send.mutate()} disabled={!message.trim() || send.isPending}><Send className="h-4 w-4" /></Button>
+          <div className="p-3 border-t dark:border-gray-700 shrink-0">
+            {chatPrice > 0 && activeConv?.creator_id !== user?.id && (
+              <p className="text-[10px] text-yellow-600 dark:text-yellow-400 mb-1">💰 {chatPrice / 1000} Credit per pesan</p>
+            )}
+            <div className="flex gap-2">
+              <Input value={message} onChange={e => setMessage(e.target.value)} placeholder="Tulis pesan..." className="flex-1"
+                onKeyDown={e => { if (e.key === "Enter" && message.trim()) send.mutate(); }} />
+              <Button size="icon" onClick={() => send.mutate()} disabled={!message.trim() || send.isPending}><Send className="h-4 w-4" /></Button>
+            </div>
           </div>
         </div>
       </AuthGuard>
@@ -115,6 +132,7 @@ export default function ChatContent() {
           <h1 className="text-lg font-bold mb-4">Chat Baru</h1>
           <Card><CardContent className="p-4 space-y-3">
             <p className="text-sm text-gray-500 dark:text-gray-400">Kirim pesan pertama</p>
+            {chatPrice > 0 && <p className="text-xs text-yellow-600 dark:text-yellow-400">💰 Setiap pesan dikenakan {chatPrice / 1000} Credit</p>}
             <Input value={message} onChange={e => setMessage(e.target.value)} placeholder="Tulis pesan..."
               onKeyDown={e => { if (e.key === "Enter" && message.trim()) startChat.mutate(); }} />
             <Button onClick={() => startChat.mutate()} disabled={!message.trim() || startChat.isPending} className="w-full"><Send className="mr-2 h-4 w-4" /> Kirim</Button>
