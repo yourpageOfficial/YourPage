@@ -56,6 +56,8 @@ type CreatorProfile struct {
 	IsFeatured         bool       `json:"is_featured" gorm:"default:false"`
 	FeaturedOrder      int        `json:"featured_order" gorm:"default:0"`
 	AdminNote          *string    `json:"admin_note,omitempty"`
+	ChatPriceIDR       int64      `json:"chat_price_idr" gorm:"default:0"`
+	AutoReply          *string    `json:"auto_reply,omitempty"`
 	CreatedAt          time.Time  `json:"created_at"`
 	UpdatedAt          time.Time  `json:"updated_at"`
 }

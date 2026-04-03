@@ -84,6 +84,9 @@ func main() {
 		userRepo, postRepo, productRepo, paymentRepo, donationRepo,
 		withdrawalRepo, walletRepo, kycRepo, followRepo, platformRepo,
 	)
+	chatRepo := postgres.NewChatRepo(db)
+	chatSvc := service.NewChatService(chatRepo, userRepo, walletRepo, followRepo)
+
 	paymentSvc := service.NewPaymentService(
 		paymentRepo, postRepo, productRepo, donationRepo,
 		walletRepo, userRepo, followRepo, platformRepo,
@@ -103,6 +106,7 @@ func main() {
 		Public:     handler.NewPublicHandler(userRepo),
 		Payment:    handler.NewPaymentHandler(paymentSvc, userRepo),
 		Webhook:    handler.NewWebhookHandler(paymentRepo, xenditClient),
+		Chat:       handler.NewChatHandler(chatSvc),
 		PlatformRepo: platformRepo,
 	}
 

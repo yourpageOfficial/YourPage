@@ -163,6 +163,7 @@ export default function CreatorPageView() {
                     {followStatus ? "Unfollow" : "Follow"}
                   </Button>
                   <ReportButton targetType="user" targetId={creator.user_id} />
+                  <Link href="/chat"><Button size="sm" variant="outline">💬 Chat</Button></Link>
                 </>
               ) : (
                 <Link href="/login"><Button size="sm" style={creator.page_color ? { backgroundColor: creator.page_color, color: 'white' } : undefined}>Follow</Button></Link>

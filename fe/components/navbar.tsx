@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
-import { Bell, LogOut, User, Wallet, Search, Menu, X, Moon, Sun, LayoutDashboard, Rss } from "lucide-react";
+import { Bell, LogOut, User, Wallet, Search, Menu, X, Moon, Sun, LayoutDashboard, Rss, MessageCircle } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useEffect, useState } from "react";
 
@@ -65,6 +65,7 @@ export function Navbar() {
                 <Link href="/s"><Button variant="ghost" size="sm">Dashboard</Button></Link>
               )}
               <Link href="/explore"><Button variant="ghost" size="sm">Explore</Button></Link>
+              <Link href="/chat"><Button variant="ghost" size="icon"><MessageCircle className="h-4 w-4" /></Button></Link>
               <Link href="/notifications"><Button variant="ghost" size="icon"><Bell className="h-4 w-4" /></Button></Link>
               <Link href="/wallet"><Button variant="ghost" size="icon"><Wallet className="h-4 w-4" /></Button></Link>
               <Link href={user.role === "admin" ? "/admin/profile" : "/profile"}>

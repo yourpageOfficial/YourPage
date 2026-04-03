@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth";
-import { Home, Bell, User, Rss } from "lucide-react";
+import { Home, Bell, User, Rss, MessageCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function BottomNav() {
@@ -18,6 +18,7 @@ export function BottomNav() {
     { href: dashboardLink, icon: Home, label: "Home" },
     { href: user.role === "creator" ? "/dashboard/feed" : "/feed", icon: Rss, label: "Feed" },
     { href: "/notifications", icon: Bell, label: "Notif" },
+    { href: "/chat", icon: MessageCircle, label: "Chat" },
     { href: user.role === "admin" ? "/admin/profile" : "/profile", icon: User, label: "Profil" },
   ];
 

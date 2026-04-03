@@ -25,6 +25,7 @@ type Handlers struct {
 	Public     *PublicHandler
 	Payment    *PaymentHandler
 	Webhook    *WebhookHandler
+	Chat       *ChatHandler
 	PlatformRepo repository.PlatformRepository
 }
 
@@ -219,6 +220,15 @@ func NewRouter(cfg *config.Config, rdb *redis.Client, h Handlers) *gin.Engine {
 	{
 		withdrawalG.POST("", h.Withdrawal.Create)
 		withdrawalG.GET("", h.Withdrawal.ListMine)
+	}
+
+	// ---- Chat ----
+	chatG := api.Group("/chat", auth)
+	{
+		chatG.GET("", h.Chat.ListConversations)
+		chatG.GET("/:id", h.Chat.GetMessages)
+		chatG.POST("", h.Chat.SendMessage)
+		chatG.POST("/:id/read", h.Chat.MarkRead)
 	}
 
 	// ---- KYC & Reports ----
