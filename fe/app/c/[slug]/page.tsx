@@ -266,11 +266,11 @@ export default function CreatorPageView() {
                       <Input placeholder="Pesan (opsional)" value={donateMsg} onChange={(e) => setDonateMsg(e.target.value)} className="h-8 text-sm" maxLength={500} />
                       {donateError && <p className="text-xs text-red-600">{donateError}</p>}
                       {donateError.includes("Top-up") && <a href="/wallet/topup" className="text-xs text-primary hover:underline">Top-up Credit →</a>}
-                      <Button size="sm" className="w-full" onClick={handleDonate} disabled={donating || !donateAmount || parseInt(donateAmount) < 1000}
+                      <Button size="sm" className="w-full" onClick={handleDonate} disabled={donating || !donateAmount || parseInt(donateAmount) < 1}
                         style={creator.page_color ? { backgroundColor: creator.page_color, borderColor: creator.page_color } : undefined}>
-                        {donating ? "..." : `Kirim ${donateAmount ? formatIDR(parseInt(donateAmount)) : ""}`}
+                        {donating ? "..." : `Kirim ${donateAmount ? donateAmount + " Credit" : ""}`}
                       </Button>
-                      <p className="text-[10px] text-gray-400 text-center">Credit · 10% fee</p>
+                      <p className="text-[10px] text-gray-400 text-center">Dibayar dengan Credit</p>
                     </>
                   )}
                 </CardContent>
