@@ -22,6 +22,7 @@ const (
 	PaymentUsecaseProductPurchase  PaymentUsecase = "product_purchase"
 	PaymentUsecaseDonation         PaymentUsecase = "donation"
 	PaymentUsecaseCreditTopup      PaymentUsecase = "credit_topup"
+	PaymentUsecaseChat             PaymentUsecase = "chat"
 )
 
 type PaymentStatus string

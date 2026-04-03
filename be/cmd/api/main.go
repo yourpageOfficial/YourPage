@@ -85,7 +85,7 @@ func main() {
 		withdrawalRepo, walletRepo, kycRepo, followRepo, platformRepo,
 	)
 	chatRepo := postgres.NewChatRepo(db)
-	chatSvc := service.NewChatService(chatRepo, userRepo, walletRepo, followRepo)
+	chatSvc := service.NewChatService(chatRepo, userRepo, walletRepo, followRepo, paymentRepo)
 
 	paymentSvc := service.NewPaymentService(
 		paymentRepo, postRepo, productRepo, donationRepo,

@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/yourpage/be/internal/entity"
@@ -24,14 +25,15 @@ type SendMessageRequest struct {
 }
 
 type chatService struct {
-	chatRepo   *postgres.ChatRepo
-	userRepo   repository.UserRepository
-	walletRepo repository.WalletRepository
-	followRepo repository.FollowRepository
+	chatRepo    *postgres.ChatRepo
+	userRepo    repository.UserRepository
+	walletRepo  repository.WalletRepository
+	followRepo  repository.FollowRepository
+	paymentRepo repository.PaymentRepository
 }
 
-func NewChatService(chatRepo *postgres.ChatRepo, userRepo repository.UserRepository, walletRepo repository.WalletRepository, followRepo repository.FollowRepository) ChatService {
-	return &chatService{chatRepo: chatRepo, userRepo: userRepo, walletRepo: walletRepo, followRepo: followRepo}
+func NewChatService(chatRepo *postgres.ChatRepo, userRepo repository.UserRepository, walletRepo repository.WalletRepository, followRepo repository.FollowRepository, paymentRepo repository.PaymentRepository) ChatService {
+	return &chatService{chatRepo: chatRepo, userRepo: userRepo, walletRepo: walletRepo, followRepo: followRepo, paymentRepo: paymentRepo}
 }
 
 func (s *chatService) ListConversations(ctx context.Context, userID uuid.UUID) ([]entity.ChatConversation, error) {
@@ -102,10 +104,23 @@ func (s *chatService) SendMessage(ctx context.Context, senderID uuid.UUID, req S
 		feePct := 20
 		if creatorProfile.CustomFeePercent != nil { feePct = *creatorProfile.CustomFeePercent }
 		fee := creatorProfile.ChatPriceIDR * int64(feePct) / 100
-		creatorProfile.BalanceIDR += creatorProfile.ChatPriceIDR - fee
-		creatorProfile.TotalEarnings += creatorProfile.ChatPriceIDR - fee
+		net := creatorProfile.ChatPriceIDR - fee
+		creatorProfile.BalanceIDR += net
+		creatorProfile.TotalEarnings += net
 		creatorProfile.Tier = nil
 		s.userRepo.UpdateCreatorProfile(ctx, creatorProfile)
+
+		now := time.Now()
+		payment := &entity.Payment{
+			ID: uuid.New(), ExternalID: fmt.Sprintf("CHAT-%s", uuid.New()),
+			Provider: entity.PaymentProviderCredits, Usecase: entity.PaymentUsecaseChat,
+			ReferenceID: conv.ID, PayerID: &senderID,
+			AmountIDR: creatorProfile.ChatPriceIDR, FeeIDR: fee, NetAmountIDR: net,
+			Status: entity.PaymentStatusPaid, PaidAt: &now,
+		}
+		if err := s.paymentRepo.Create(ctx, payment); err != nil {
+			_ = err
+		}
 	}
 
 	msg := &entity.ChatMessage{

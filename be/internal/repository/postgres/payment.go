@@ -77,15 +77,16 @@ func (r *paymentRepo) ListByPayer(ctx context.Context, payerID uuid.UUID, cursor
 
 func (r *paymentRepo) ListByReferenceCreator(ctx context.Context, creatorID uuid.UUID, cursor *uuid.UUID, limit int) ([]entity.Payment, error) {
 	var payments []entity.Payment
-	// Collect reference IDs first (faster than 3 subqueries in WHERE)
 	var refIDs []uuid.UUID
 	r.db.WithContext(ctx).Model(&entity.Post{}).Where("creator_id = ? AND deleted_at IS NULL", creatorID).Pluck("id", &refIDs)
 	var prodIDs []uuid.UUID
 	r.db.WithContext(ctx).Model(&entity.Product{}).Where("creator_id = ? AND deleted_at IS NULL", creatorID).Pluck("id", &prodIDs)
 	var donIDs []uuid.UUID
 	r.db.WithContext(ctx).Model(&entity.Donation{}).Where("creator_id = ?", creatorID).Pluck("id", &donIDs)
+	var chatIDs []uuid.UUID
+	r.db.WithContext(ctx).Model(&entity.ChatConversation{}).Where("creator_id = ?", creatorID).Pluck("id", &chatIDs)
 
-	allIDs := append(append(refIDs, prodIDs...), donIDs...)
+	allIDs := append(append(append(refIDs, prodIDs...), donIDs...), chatIDs...)
 	if len(allIDs) == 0 { return payments, nil }
 
 	q := r.db.WithContext(ctx).Preload("Payer").Where("status = 'paid' AND reference_id IN ?", allIDs)
