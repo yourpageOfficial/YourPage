@@ -68,8 +68,8 @@ export default function AnalyticsPage() {
         <Card>
           <CardContent className="p-4">
             <p className="text-sm text-gray-500 dark:text-gray-400">Saldo Tersedia</p>
-            <p className="text-2xl font-bold text-primary">{formatCredit(analytics?.balance_idr ?? 0)} Credit</p>
-            <p className="text-xs text-gray-400 dark:text-gray-500">Fee: {analytics?.fee_percent ?? 15}%</p>
+            <p className="text-2xl font-bold text-primary"><a href="/wallet" className="hover:underline">Lihat Wallet →</a></p>
+            <p className="text-xs text-gray-400 dark:text-gray-500">Fee: {analytics?.fee_percent ?? 20}%</p>
           </CardContent>
         </Card>
       </div>

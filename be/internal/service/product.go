@@ -25,6 +25,8 @@ type CreateProductRequest struct {
 	PriceIDR     int64               `json:"price_idr"    validate:"min=0"`
 	IsActive     bool                `json:"is_active"`
 	ThumbnailURL *string             `json:"thumbnail_url"`
+	DeliveryType string              `json:"delivery_type"` // file, link
+	DeliveryURL  *string             `json:"delivery_url"`
 }
 
 type UpdateProductRequest struct {
@@ -34,6 +36,8 @@ type UpdateProductRequest struct {
 	PriceIDR     *int64               `json:"price_idr"     validate:"omitempty,min=0"`
 	IsActive     *bool                `json:"is_active"`
 	ThumbnailURL *string              `json:"thumbnail_url"`
+	DeliveryType *string              `json:"delivery_type"`
+	DeliveryURL  *string              `json:"delivery_url"`
 }
 
 type AddAssetRequest struct {
