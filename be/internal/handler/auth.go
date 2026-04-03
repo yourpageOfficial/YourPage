@@ -113,14 +113,16 @@ func (h *AuthHandler) UpdateMe(c *gin.Context) {
 		DisplayName *string `json:"display_name"`
 		Bio         *string `json:"bio"`
 		AvatarURL   *string `json:"avatar_url"`
-		PageColor   *string `json:"page_color"`
-		HeaderImage *string `json:"header_image"`
+		PageColor    *string `json:"page_color"`
+		HeaderImage  *string `json:"header_image"`
+		ChatPriceIDR *int64  `json:"chat_price_idr"`
+		AutoReply    *string `json:"auto_reply"`
 	}
 	if err := c.ShouldBindJSON(&body); err != nil {
 		response.BadRequest(c, "invalid request body")
 		return
 	}
-	err := h.svc.UpdateProfile(c.Request.Context(), userID, body.DisplayName, body.Bio, body.AvatarURL, body.PageColor, body.HeaderImage)
+	err := h.svc.UpdateProfile(c.Request.Context(), userID, body.DisplayName, body.Bio, body.AvatarURL, body.PageColor, body.HeaderImage, body.ChatPriceIDR, body.AutoReply)
 	if err != nil {
 		handleServiceError(c, err)
 		return
