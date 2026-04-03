@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { formatIDR, formatDate } from "@/lib/utils";
+import { formatCredit, formatDate } from "@/lib/utils";
 import { Trash2, Plus, Upload, Image } from "lucide-react";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import type { Post, PaginatedResponse } from "@/lib/types";
@@ -151,7 +151,7 @@ export default function DashboardPosts() {
                     <Badge variant="outline" className="text-xs">🕐 {new Date(post.scheduled_at).toLocaleDateString("id-ID")}</Badge>
                   )}
                   <Badge className={post.access_type === "paid" ? "bg-secondary-100 text-secondary-600" : ""}>
-                    {post.access_type === "paid" ? formatIDR(post.price || 0) : "Gratis"}
+                    {post.access_type === "paid" ? formatCredit(post.price || 0) : "Gratis"}
                   </Badge>
                   {post.media?.length > 0 && <Badge className="bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400">{post.media.length} media</Badge>}
                   <span className="text-xs text-gray-500 dark:text-gray-400">{formatDate(post.created_at)}</span>

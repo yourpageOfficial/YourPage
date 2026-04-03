@@ -5,7 +5,7 @@ import api from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { formatIDR, formatDate } from "@/lib/utils";
+import { formatCredit, formatDate } from "@/lib/utils";
 import Link from "next/link";
 import type { Wallet, CreditTransaction, ApiResponse, PaginatedResponse } from "@/lib/types";
 

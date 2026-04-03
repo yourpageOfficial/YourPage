@@ -5,7 +5,7 @@ import { statusColor } from "@/components/ui/standards";
 import api from "@/lib/api";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { formatIDR, formatDate } from "@/lib/utils";
+import { formatCredit, formatDate } from "@/lib/utils";
 import { Heart } from "lucide-react";
 import Link from "next/link";
 
@@ -24,7 +24,7 @@ export default function SupporterDonations() {
         <h1 className="text-2xl font-bold">Donasi Terkirim</h1>
         <div className="text-right">
           <p className="text-sm text-gray-500 dark:text-gray-400">Total Donasi</p>
-          <p className="text-lg font-bold text-primary">{formatIDR(totalDonated)}</p>
+          <p className="text-lg font-bold text-primary">{formatCredit(totalDonated)}</p>
         </div>
       </div>
 
@@ -59,7 +59,7 @@ export default function SupporterDonations() {
                       </Link>
                       <span className="text-xs text-gray-400 ml-1">@{d.creator?.username}</span>
                     </div>
-                    <p className="font-bold text-lg">{formatIDR(d.amount_idr)}</p>
+                    <p className="font-bold text-lg">{formatCredit(d.amount_idr)}</p>
                   </div>
                   {d.message && (
                     <p className="text-sm text-gray-600 mt-1 bg-gray-50 dark:bg-gray-800 rounded px-2 py-1">&ldquo;{d.message}&rdquo;</p>
@@ -68,7 +68,7 @@ export default function SupporterDonations() {
                     <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
                       <span>{formatDate(d.created_at)}</span>
                       <span>·</span>
-                      <span>Net ke kreator: {formatIDR(d.net_amount_idr)}</span>
+                      <span>Net ke kreator: {formatCredit(d.net_amount_idr)}</span>
                       <span>·</span>
                       <span>ID: {d.payment_id?.slice(0, 8)}</span>
                     </div>

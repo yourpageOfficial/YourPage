@@ -5,7 +5,7 @@ import { statusColor } from "@/components/ui/standards";
 import api from "@/lib/api";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { formatIDR, formatDate } from "@/lib/utils";
+import { formatCredit, formatDate } from "@/lib/utils";
 import { Receipt } from "lucide-react";
 import Link from "next/link";
 
@@ -36,7 +36,7 @@ export default function SupporterTransactions() {
         <h1 className="text-2xl font-bold">Riwayat Transaksi</h1>
         <div className="text-right">
           <p className="text-sm text-gray-500 dark:text-gray-400">Total Pengeluaran</p>
-          <p className="text-lg font-bold text-primary">{formatIDR(totalSpent)}</p>
+          <p className="text-lg font-bold text-primary">{formatCredit(totalSpent)}</p>
         </div>
       </div>
 
@@ -60,7 +60,7 @@ export default function SupporterTransactions() {
                     <Link href={txLink(t)} className="font-medium hover:text-primary">
                       {usecaseLabel[t.usecase] || t.usecase}
                     </Link>
-                    <p className="font-bold">{formatIDR(t.amount_idr)}</p>
+                    <p className="font-bold">{formatCredit(t.amount_idr)}</p>
                   </div>
                   <div className="flex items-center justify-between mt-1">
                     <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
@@ -73,8 +73,8 @@ export default function SupporterTransactions() {
                   </div>
                   {t.status === "paid" && (
                     <div className="flex gap-4 mt-1 text-xs text-gray-400 dark:text-gray-400">
-                      <span>Fee: {formatIDR(t.fee_idr)}</span>
-                      <span>Net: {formatIDR(t.net_amount_idr)}</span>
+                      <span>Fee: {formatCredit(t.fee_idr)}</span>
+                      <span>Net: {formatCredit(t.net_amount_idr)}</span>
                     </div>
                   )}
                 </div>

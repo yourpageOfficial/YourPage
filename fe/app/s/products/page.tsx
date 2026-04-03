@@ -5,7 +5,7 @@ import api from "@/lib/api";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { formatIDR, formatDate } from "@/lib/utils";
+import { formatCredit, formatDate } from "@/lib/utils";
 import { Download, FileText, Package } from "lucide-react";
 import Link from "next/link";
 import type { Product, PaginatedResponse } from "@/lib/types";
@@ -52,7 +52,7 @@ export default function SupporterProducts() {
                   </div>
                   {p.description && <p className="text-sm text-gray-600 mt-1 line-clamp-2">{p.description}</p>}
                   <div className="flex items-center gap-3 mt-2 text-xs text-gray-500 dark:text-gray-400">
-                    <span>{formatIDR(p.price_idr)}</span>
+                    <span>{formatCredit(p.price_idr)}</span>
                     <span>{formatDate(p.created_at)}</span>
                     {p.assets?.length > 0 && <span>{p.assets.length} file</span>}
                   </div>

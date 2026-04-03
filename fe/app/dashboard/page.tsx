@@ -122,7 +122,7 @@ export default function DashboardOverview() {
         <Link href={`/c/${user?.username}`}><Button variant="outline" className="w-full text-xs h-9">👁 Lihat Halaman</Button></Link>
       </div>
 
-      <p className="text-xs text-gray-400 dark:text-gray-500">Saldo bisa ditarik via menu Penarikan (min Rp 100.000).</p>
+      <p className="text-xs text-gray-400 dark:text-gray-500">Saldo bisa ditarik via menu Penarikan (min 100 Credit).</p>
     </div>
   );
 }

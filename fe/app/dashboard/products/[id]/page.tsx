@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { formatIDR } from "@/lib/utils";
+import { formatCredit } from "@/lib/utils";
 import { ListSkeleton } from "@/components/ui/skeleton";
 import { Upload, Trash2, Save, ArrowLeft, FileText } from "lucide-react";
 import type { Product, ApiResponse } from "@/lib/types";

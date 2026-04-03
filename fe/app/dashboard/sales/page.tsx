@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import api from "@/lib/api";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { formatIDR, formatDate } from "@/lib/utils";
+import { formatCredit, formatDate } from "@/lib/utils";
 
 const usecaseLabel: Record<string, string> = { post_purchase: "Post", product_purchase: "Produk", donation: "Donasi" };
 
@@ -24,10 +24,10 @@ export default function DashboardSales() {
               <div>
                 <div className="flex items-center gap-2">
                   <Badge>{usecaseLabel[s.usecase] || s.usecase}</Badge>
-                  <span className="font-medium">{formatIDR(s.amount_idr)}</span>
+                  <span className="font-medium">{formatCredit(s.amount_idr)}</span>
                 </div>
                 <p className="text-sm text-gray-500 mt-1">
-                  Buyer: {s.payer?.display_name || s.payer?.username || "-"} · Net: {formatIDR(s.net_amount_idr)} · Fee: {formatIDR(s.fee_idr)}
+                  Buyer: {s.payer?.display_name || s.payer?.username || "-"} · Net: {formatCredit(s.net_amount_idr)} · Fee: {formatCredit(s.fee_idr)}
                 </p>
                 <p className="text-xs text-gray-400 dark:text-gray-400">{formatDate(s.created_at)}</p>
               </div>

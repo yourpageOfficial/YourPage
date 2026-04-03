@@ -5,7 +5,7 @@ import { statusColor } from "@/components/ui/standards";
 import api from "@/lib/api";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { formatIDR, formatDate } from "@/lib/utils";
+import { formatCredit, formatDate } from "@/lib/utils";
 import type { Donation, PaginatedResponse } from "@/lib/types";
 
 
@@ -23,12 +23,12 @@ export default function DashboardDonations() {
           <Card key={d.id}>
             <CardContent className="p-4 space-y-1">
               <div className="flex items-center justify-between">
-                <p className="text-lg font-bold">{formatIDR(d.amount_idr)}</p>
+                <p className="text-lg font-bold">{formatCredit(d.amount_idr)}</p>
                 <Badge className={statusColor[d.status] || ""}>{d.status}</Badge>
               </div>
               <div className="grid grid-cols-2 gap-x-4 text-sm">
                 <div><span className="text-gray-500 dark:text-gray-400">Dari:</span> {d.is_anonymous ? "Anonim" : (d.supporter?.display_name || d.donor_name)}</div>
-                <div><span className="text-gray-500 dark:text-gray-400">Net:</span> {formatIDR(d.net_amount_idr)}</div>
+                <div><span className="text-gray-500 dark:text-gray-400">Net:</span> {formatCredit(d.net_amount_idr)}</div>
                 <div><span className="text-gray-500 dark:text-gray-400">Tanggal:</span> {formatDate(d.created_at)}</div>
                 <div><span className="text-gray-500 dark:text-gray-400">Payment:</span> {d.payment_id?.slice(0, 8)}...</div>
               </div>

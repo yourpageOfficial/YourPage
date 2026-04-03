@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { formatIDR, formatDate } from "@/lib/utils";
+import { formatCredit, formatDate } from "@/lib/utils";
 import { Trash2, Plus, Upload, FileText } from "lucide-react";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import type { Product, PaginatedResponse } from "@/lib/types";
@@ -174,7 +174,7 @@ export default function DashboardProducts() {
                   <p className="font-medium">{p.name}</p>
                   <div className="flex items-center gap-2 mt-1">
                     <Badge>{p.type}</Badge>
-                    <span className="text-sm font-medium">{formatIDR(p.price_idr)}</span>
+                    <span className="text-sm font-medium">{formatCredit(p.price_idr)}</span>
                     <span className="text-xs text-gray-500 dark:text-gray-400">{p.sales_count} terjual</span>
                   </div>
                   {p.description && <p className="text-sm text-gray-600 mt-1">{p.description}</p>}

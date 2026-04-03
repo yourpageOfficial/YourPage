@@ -6,7 +6,7 @@ import { Navbar } from "@/components/navbar";
 import { AuthGuard } from "@/components/auth-guard";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { formatIDR, formatDate } from "@/lib/utils";
+import { formatCredit, formatDate } from "@/lib/utils";
 import type { Donation, PaginatedResponse } from "@/lib/types";
 
 export default function DonationsSent() {
@@ -28,7 +28,7 @@ export default function DonationsSent() {
             <Card key={d.id}>
               <CardContent className="flex items-center justify-between p-4">
                 <div>
-                  <p className="font-medium">{formatIDR(d.amount_idr)}</p>
+                  <p className="font-medium">{formatCredit(d.amount_idr)}</p>
                   {d.message && <p className="text-sm text-gray-600 dark:text-gray-400">&ldquo;{d.message}&rdquo;</p>}
                   <p className="text-xs text-gray-500 dark:text-gray-400">{formatDate(d.created_at)}</p>
                 </div>
