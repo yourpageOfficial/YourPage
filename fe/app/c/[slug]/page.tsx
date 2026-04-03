@@ -222,40 +222,6 @@ export default function CreatorPageView() {
               {products?.length === 0 && <p className="text-gray-500 text-sm col-span-full">Belum ada produk.</p>}
             </div>
           )}
-
-          {tab === "donate" && (
-            <Card className="max-w-md mx-auto">
-              <CardContent className="p-6 space-y-4">
-                {donateSuccess ? (
-                  <div className="text-center">
-                    <p className="text-lg font-semibold text-green-600">🎉 Donasi terkirim!</p>
-                    <p className="text-sm text-gray-500 mt-1">Terima kasih sudah mendukung {creator.display_name}</p>
-                    <Button className="mt-4" onClick={() => setDonateSuccess(false)}>Donasi Lagi</Button>
-                  </div>
-                ) : (
-                  <>
-                    <p className="text-center text-lg font-semibold">Dukung {creator.display_name} ☕</p>
-                    <div className="flex flex-wrap gap-2 justify-center">
-                      {donatePresets.map((p) => (
-                        <Button key={p} size="sm" variant={donateAmount === String(p) ? "default" : "outline"} onClick={() => setDonateAmount(String(p))}>
-                          {p} Credit
-                        </Button>
-                      ))}
-                    </div>
-                    <Input type="number" placeholder="Atau nominal lain (min 1 Credit)" value={donateAmount} onChange={(e) => setDonateAmount(e.target.value)} min={1} />
-                    <Input placeholder="Pesan (opsional)" value={donateMsg} onChange={(e) => setDonateMsg(e.target.value)} maxLength={500} />
-                    {donateError && <p className="text-sm text-red-600">{donateError}</p>}
-                    {donateError.includes("Top-up") && <a href="/wallet/topup" className="text-sm text-primary hover:underline">Top-up Credit →</a>}
-                    <Button className="w-full" onClick={handleDonate} disabled={donating || !donateAmount || parseInt(donateAmount) < 1000}
-                      style={creator.page_color ? { backgroundColor: creator.page_color, borderColor: creator.page_color } : undefined}>
-                      {donating ? "Mengirim..." : `Kirim ${donateAmount ? formatIDR(parseInt(donateAmount)) : "Donasi"}`}
-                    </Button>
-                    <p className="text-xs text-gray-400 text-center">Dibayar dengan Credit. 10% platform fee.</p>
-                  </>
-                )}
-              </CardContent>
-            </Card>
-          )}
         </div>
       </main>
 

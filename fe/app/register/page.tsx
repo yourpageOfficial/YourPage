@@ -15,7 +15,7 @@ export default function RegisterPage() {
   const [role, setRole] = useState<"supporter" | "creator">("supporter");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const { register } = useAuth();
+  const { register, login } = useAuth();
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {

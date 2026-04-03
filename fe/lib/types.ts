@@ -24,6 +24,7 @@ export interface Post {
   price?: number;
   status: "draft" | "published";
   published_at?: string;
+  scheduled_at?: string;
   media: PostMedia[];
   view_count: number;
   like_count: number;
@@ -45,6 +46,7 @@ export interface PostMedia {
 export interface Product {
   id: string;
   creator_id: string;
+  creator?: User;
   name: string;
   slug: string;
   description?: string;
