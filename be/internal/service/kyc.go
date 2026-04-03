@@ -14,7 +14,7 @@ import (
 // ---------------------------------------------------------------------------
 
 type SubmitKYCRequest struct {
-	KTPImageURL string `json:"ktp_image_url" validate:"required,url"`
+	KTPImageURL string `json:"ktp_image_url" validate:"required"`
 	FullName    string `json:"full_name"     validate:"required,max=200"`
 	IDNumber    string `json:"id_number"     validate:"required,min=16,max=16"`
 }
