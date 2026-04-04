@@ -5,6 +5,7 @@ export interface User {
   avatar_url?: string;
   bio?: string;
   role: "supporter" | "creator" | "admin";
+  preferred_language?: "en" | "id";
   creator_profile?: {
     page_slug: string;
     is_monetized: boolean;

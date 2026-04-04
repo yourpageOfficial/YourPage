@@ -5,6 +5,7 @@ import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Bell, LogOut, User, Wallet, Search, Menu, X, Moon, Sun, LayoutDashboard, Rss, MessageCircle } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { LanguageSwitcher } from "@/components/language-switcher";
 import { useEffect, useState } from "react";
 
 function ThemeToggleMobile() {
@@ -73,6 +74,7 @@ export function Navbar() {
               </Link>
               <Button variant="ghost" size="icon" onClick={logout}><LogOut className="h-4 w-4" /></Button>
               <ThemeToggle />
+              <LanguageSwitcher />
             </div>
 
             {/* Mobile nav */}
@@ -87,6 +89,7 @@ export function Navbar() {
           <div className="flex items-center gap-2">
             <Link href="/pricing"><Button variant="ghost" size="sm" className="text-xs sm:text-sm h-8 sm:h-9 hidden sm:inline-flex">Harga</Button></Link>
             <ThemeToggle />
+            <LanguageSwitcher />
             <Link href="/login"><Button variant="outline" size="sm" className="text-xs sm:text-sm h-8 sm:h-9">Masuk</Button></Link>
             <Link href="/register"><Button size="sm" className="text-xs sm:text-sm h-8 sm:h-9">Daftar</Button></Link>
           </div>
@@ -123,6 +126,7 @@ export function Navbar() {
             </button>
             <div className="border-t dark:border-gray-700 mt-1 pt-1">
               <ThemeToggleMobile />
+              <LanguageSwitcher />
             </div>
           </div>
         </div>
