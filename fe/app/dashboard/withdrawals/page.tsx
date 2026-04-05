@@ -34,6 +34,13 @@ export default function DashboardWithdrawals() {
     queryFn: async () => { const { data } = await api.get("/wallet/balance"); return data.data; },
   });
 
+  const { data: settings } = useQuery({
+    queryKey: ["platform-settings-public"],
+    queryFn: async () => { try { const { data } = await api.get("/admin/settings"); return data.data; } catch { return { min_withdrawal_idr: 100000, credit_rate_idr: 1000 }; } },
+  });
+  const rate = settings?.credit_rate_idr || 1000;
+  const minCredits = Math.ceil((settings?.min_withdrawal_idr || 100000) / rate);
+
   const { data: withdrawals } = useQuery({
     queryKey: ["my-withdrawals"],
     queryFn: async () => {
@@ -44,7 +51,7 @@ export default function DashboardWithdrawals() {
 
   const validateWithdrawal = (): string | null => {
     if (!/^\d{10,16}$/.test(accNumber)) return "Nomor rekening harus 10-16 digit angka";
-    if (!amount || parseInt(amount) < 100) return "Minimum penarikan 100 Credit";
+    if (!amount || parseInt(amount) < minCredits) return `Minimum penarikan ${minCredits} Credit`;
     return null;
   };
 
@@ -53,7 +60,7 @@ export default function DashboardWithdrawals() {
       const validationError = validateWithdrawal();
       if (validationError) return Promise.reject(new Error(validationError));
       return api.post("/withdrawals", {
-        amount_idr: Math.floor(parseInt(amount) || 0) * 1000,
+        amount_idr: Math.floor(parseInt(amount) || 0) * rate,
         bank_name: bankName,
         account_number: accNumber,
         account_name: accName,
@@ -92,7 +99,10 @@ export default function DashboardWithdrawals() {
           <div>
             <p className="text-sm text-gray-500 dark:text-gray-400">Saldo Credit</p>
             <p className="text-2xl font-bold text-primary">{wallet?.balance_credits ?? 0} Credit</p>
-            <p className="text-xs text-gray-400 dark:text-gray-400">= {formatIDR((wallet?.balance_credits ?? 0) * 1000)}</p>
+            <p className="text-xs text-gray-400 dark:text-gray-400">= {formatIDR((wallet?.balance_credits ?? 0) * rate)}</p>
+            {(withdrawals || []).filter((w: any) => w.status === "pending" || w.status === "approved").length > 0 && (
+              <p className="text-xs text-yellow-600 mt-1">⏳ {(withdrawals || []).filter((w: any) => w.status === "pending" || w.status === "approved").length} penarikan sedang diproses</p>
+            )}
           </div>
           <div className="text-right">
             <p className="text-sm text-gray-500 dark:text-gray-400">Total Pendapatan</p>
@@ -107,7 +117,7 @@ export default function DashboardWithdrawals() {
           <CardContent className="space-y-3">
             {error && <p className="text-sm text-red-600">{error}</p>}
             <div>
-              <label className="text-sm font-medium">Nominal Credit (min 100 Credit = Rp 100.000)</label>
+              <label className="text-sm font-medium">Nominal Credit (min {minCredits} Credit)</label>
               <Input type="number" placeholder="100" value={amount} onChange={(e) => setAmount(e.target.value)} />
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{amount ? `= Rp ${(parseInt(amount) * 1000).toLocaleString("id-ID")}` : ""}</p>
             </div>
