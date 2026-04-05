@@ -25,6 +25,7 @@ export default function DashboardPosts() {
   const [accessType, setAccessType] = useState<"free" | "paid">("free");
   const [price, setPrice] = useState("");
   const [files, setFiles] = useState<File[]>([]);
+  const [excerpt, setExcerpt] = useState("");
   const [scheduledAt, setScheduledAt] = useState("");
 
   const { data: earnings } = useQuery({
@@ -50,6 +51,7 @@ export default function DashboardPosts() {
         content,
         access_type: accessType,
         price: accessType === "paid" ? parseInt(price) * 1000 : undefined,
+        excerpt: accessType === "paid" && excerpt ? excerpt : undefined,
         status: scheduledAt ? "draft" : "published",
         scheduled_at: scheduledAt || undefined,
       });
@@ -126,6 +128,12 @@ export default function DashboardPosts() {
                 <Input type="number" placeholder="Harga (Credit)" value={price} onChange={(e) => setPrice(e.target.value)} className="w-40" />
               )}
             </div>
+            {accessType === "paid" && (
+              <div>
+                <label className="text-xs text-gray-500 dark:text-gray-400">Preview teks (opsional) — tampil sebelum paywall, hanya teks</label>
+                <Textarea value={excerpt} onChange={(e) => setExcerpt(e.target.value)} placeholder="Tulis teaser singkat untuk menarik pembeli..." className="min-h-[60px]" maxLength={500} />
+              </div>
+            )}
             {isPro && (
               <div>
                 <label className="text-xs text-gray-500 dark:text-gray-400">Jadwalkan (opsional)</label>
