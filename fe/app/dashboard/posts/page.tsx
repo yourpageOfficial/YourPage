@@ -27,6 +27,13 @@ export default function DashboardPosts() {
   const [files, setFiles] = useState<File[]>([]);
   const [excerpt, setExcerpt] = useState("");
   const [scheduledAt, setScheduledAt] = useState("");
+  const [memberTierID, setMemberTierID] = useState("");
+
+  const { data: membershipTiers } = useQuery({
+    queryKey: ["my-membership-tiers"],
+    queryFn: async () => { const { data } = await api.get(`/membership-tiers/${user!.id}`); return data.data as any[]; },
+    enabled: !!user,
+  });
 
   const { data: earnings } = useQuery({
     queryKey: ["creator-earnings"],
@@ -51,6 +58,7 @@ export default function DashboardPosts() {
         content,
         access_type: accessType === "members" ? "free" : accessType,
         visibility: accessType === "members" ? "members" : accessType === "paid" ? "paid" : "public",
+        membership_tier_id: accessType === "members" && memberTierID ? memberTierID : undefined,
         price: accessType === "paid" ? parseInt(price) * 1000 : undefined,
         excerpt: accessType === "paid" && excerpt ? excerpt : undefined,
         status: scheduledAt ? "draft" : "published",
@@ -130,6 +138,20 @@ export default function DashboardPosts() {
                 <Input type="number" placeholder="Harga (Credit)" value={price} onChange={(e) => setPrice(e.target.value)} className="w-40" />
               )}
             </div>
+            {accessType === "members" && membershipTiers && membershipTiers.length > 0 && (
+              <div>
+                <label className="text-xs text-gray-500 dark:text-gray-400">Pilih tier minimum (kosong = semua member)</label>
+                <select value={memberTierID} onChange={(e) => setMemberTierID(e.target.value)} className="w-full mt-1 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm">
+                  <option value="">Semua Member</option>
+                  {membershipTiers.map((t: any) => (
+                    <option key={t.id} value={t.id}>{t.name} ({t.price_credits} Credit/bulan)</option>
+                  ))}
+                </select>
+              </div>
+            )}
+            {accessType === "members" && (!membershipTiers || membershipTiers.length === 0) && (
+              <p className="text-xs text-yellow-600">⚠️ Kamu belum punya membership tier. <a href="/dashboard/membership" className="underline">Buat dulu</a></p>
+            )}
             {accessType === "paid" && (
               <div>
                 <label className="text-xs text-gray-500 dark:text-gray-400">Preview teks (opsional) — tampil sebelum paywall, hanya teks</label>

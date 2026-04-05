@@ -27,6 +27,7 @@ type CreatePostRequest struct {
 	Price       *int64                `json:"price"`
 	Status      entity.PostStatus     `json:"status"      validate:"omitempty,oneof=draft published"`
 	Visibility  string                `json:"visibility"  validate:"omitempty,oneof=public paid members"`
+	MembershipTierID *uuid.UUID       `json:"membership_tier_id"`
 	ScheduledAt *time.Time            `json:"scheduled_at"`
 }
 
@@ -37,6 +38,8 @@ type UpdatePostRequest struct {
 	AccessType *entity.PostAccessType `json:"access_type" validate:"omitempty,oneof=free paid"`
 	Price      *int64                `json:"price"`
 	Status     *entity.PostStatus    `json:"status"      validate:"omitempty,oneof=draft published"`
+	Visibility *string               `json:"visibility"  validate:"omitempty,oneof=public paid members"`
+	MembershipTierID *uuid.UUID      `json:"membership_tier_id"`
 }
 
 type AddMediaRequest struct {
@@ -134,6 +137,7 @@ func (s *postService) Create(ctx context.Context, creatorID uuid.UUID, req Creat
 		Price:       req.Price,
 		Status:      status,
 		Visibility:  func() string { if req.Visibility != "" { return req.Visibility }; return "public" }(),
+		MembershipTierID: req.MembershipTierID,
 		ScheduledAt: req.ScheduledAt,
 	}
 
@@ -231,7 +235,13 @@ func (s *postService) GetByID(ctx context.Context, postID uuid.UUID, viewerID *u
 		if viewerID != nil && *viewerID == post.CreatorID {
 			isMember = true
 		} else if viewerID != nil {
-			isMember = s.postRepo.CheckMembership(ctx, *viewerID, post.CreatorID)
+			if post.MembershipTierID != nil {
+				// Specific tier required — check viewer has that tier or higher
+				isMember = s.postRepo.CheckMembershipTier(ctx, *viewerID, post.CreatorID, *post.MembershipTierID)
+			} else {
+				// Any membership
+				isMember = s.postRepo.CheckMembership(ctx, *viewerID, post.CreatorID)
+			}
 		}
 		if !isMember {
 			post.IsLocked = true
@@ -270,6 +280,10 @@ func (s *postService) Update(ctx context.Context, postID, creatorID uuid.UUID, r
 	if req.Price != nil {
 		post.Price = req.Price
 	}
+	if req.Visibility != nil {
+		post.Visibility = *req.Visibility
+	}
+	post.MembershipTierID = req.MembershipTierID
 	if req.Status != nil {
 		wasPublished := post.Status == entity.PostStatusPublished
 		post.Status = *req.Status

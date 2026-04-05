@@ -235,6 +235,17 @@ func (r *postRepo) CheckMembership(ctx context.Context, supporterID, creatorID u
 	return count > 0
 }
 
+func (r *postRepo) CheckMembershipTier(ctx context.Context, supporterID, creatorID, tierID uuid.UUID) bool {
+	// Check if supporter has the specific tier or a higher-priced tier
+	var count int64
+	r.db.WithContext(ctx).Table("memberships m").
+		Joins("JOIN membership_tiers mt ON mt.id = m.tier_id").
+		Joins("JOIN membership_tiers req ON req.id = ?", tierID).
+		Where("m.supporter_id = ? AND m.creator_id = ? AND m.status = 'active' AND m.expires_at > NOW() AND mt.price_credits >= req.price_credits", supporterID, creatorID).
+		Count(&count)
+	return count > 0
+}
+
 func (r *postRepo) DeletePurchase(ctx context.Context, postID, supporterID uuid.UUID) error {
 	return r.db.WithContext(ctx).Where("post_id = ? AND supporter_id = ?", postID, supporterID).Delete(&entity.PostPurchase{}).Error
 }

@@ -40,6 +40,8 @@ type Post struct {
 	Price       *int64         `json:"price"`
 	Status      PostStatus     `json:"status" gorm:"default:'draft'"`
 	Visibility  string         `json:"visibility" gorm:"default:'public'"` // public, paid, members
+	MembershipTierID *uuid.UUID `json:"membership_tier_id,omitempty" gorm:"type:uuid"`
+	MembershipTier   *MembershipTier `json:"membership_tier,omitempty" gorm:"foreignKey:MembershipTierID"`
 	PublishedAt  *time.Time     `json:"published_at"`
 	ScheduledAt *time.Time     `json:"scheduled_at,omitempty"`
 	Media       []PostMedia    `json:"media,omitempty" gorm:"foreignKey:PostID"`

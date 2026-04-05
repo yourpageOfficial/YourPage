@@ -27,6 +27,7 @@ export default function DashboardPostDetail() {
   const [accessType, setAccessType] = useState<"free" | "paid" | "members">("free");
   const [price, setPrice] = useState("");
   const [status, setStatus] = useState<"draft" | "published">("draft");
+  const [memberTierID, setMemberTierID] = useState("");
 
   const { data: post } = useQuery({
     queryKey: ["my-post", id],
@@ -36,12 +37,18 @@ export default function DashboardPostDetail() {
     },
   });
 
+  const { data: membershipTiers } = useQuery({
+    queryKey: ["my-membership-tiers-edit"],
+    queryFn: async () => { const me = await api.get("/auth/me"); const { data } = await api.get(`/membership-tiers/${me.data.data.id}`); return data.data as any[]; },
+  });
+
   useEffect(() => {
     if (post) {
       setTitle(post.title);
       setContent(post.content || "");
       setExcerpt(post.excerpt || "");
       setAccessType(post.visibility === "members" ? "members" : post.access_type);
+      setMemberTierID((post as any).membership_tier_id || "");
       setPrice(post.price ? String(Math.floor(post.price / 1000)) : "");
       setStatus(post.status);
     }
@@ -52,6 +59,7 @@ export default function DashboardPostDetail() {
       title, content, excerpt: excerpt || undefined,
       access_type: accessType === "members" ? "free" : accessType,
       visibility: accessType === "members" ? "members" : accessType === "paid" ? "paid" : "public",
+      membership_tier_id: accessType === "members" && memberTierID ? memberTierID : undefined,
       price: accessType === "paid" ? parseInt(price) * 1000 : undefined,
       status,
     }),
@@ -94,6 +102,19 @@ export default function DashboardPostDetail() {
             <Button size="sm" variant={accessType === "paid" ? "default" : "outline"} onClick={() => setAccessType("paid")}>Berbayar</Button>
             <Button size="sm" variant={accessType === "members" ? "default" : "outline"} onClick={() => setAccessType("members")}>Members Only</Button>
             {accessType === "paid" && <Input type="number" placeholder="Harga (Credit)" value={price} onChange={(e) => setPrice(e.target.value)} className="w-40" />}
+          </div>
+          {accessType === "members" && membershipTiers && membershipTiers.length > 0 && (
+            <div>
+              <label className="text-xs text-gray-500 dark:text-gray-400">Pilih tier minimum (kosong = semua member)</label>
+              <select value={memberTierID} onChange={(e) => setMemberTierID(e.target.value)} className="w-full mt-1 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm">
+                <option value="">Semua Member</option>
+                {membershipTiers.map((t: any) => (
+                  <option key={t.id} value={t.id}>{t.name} ({t.price_credits} Credit/bulan)</option>
+                ))}
+              </select>
+            </div>
+          )}
+          <div className="flex gap-2 flex-wrap">
             <Button size="sm" variant={status === "draft" ? "outline" : "default"} onClick={() => setStatus(status === "draft" ? "published" : "draft")}>
               {status === "published" ? "✓ Published" : "Draft"}
             </Button>

@@ -57,6 +57,7 @@ type PostRepository interface {
 	IncrementViewCount(ctx context.Context, postID uuid.UUID) error
 	PublishScheduled(ctx context.Context) error
 	CheckMembership(ctx context.Context, supporterID, creatorID uuid.UUID) bool
+	CheckMembershipTier(ctx context.Context, supporterID, creatorID, tierID uuid.UUID) bool
 
 	AddMedia(ctx context.Context, media *entity.PostMedia) error
 	DeleteMedia(ctx context.Context, mediaID uuid.UUID) (*entity.PostMedia, error)
