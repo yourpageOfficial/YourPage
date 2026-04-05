@@ -15,11 +15,13 @@ import { Lock, Eye, Heart, MessageCircle, Share2, Send } from "lucide-react";
 import Link from "next/link";
 import { ReportButton } from "@/components/report-button";
 import { ContentProtection } from "@/components/content-protection";
+import { useAuth } from "@/lib/auth";
 import type { Post, ApiResponse } from "@/lib/types";
 
 export default function PostDetailPage() {
   const { id } = useParams<{ id: string }>();
   const qc = useQueryClient();
+  const { user } = useAuth();
   const [buying, setBuying] = useState(false);
   const [error, setError] = useState("");
   const [liked, setLiked] = useState(false);
@@ -114,12 +116,22 @@ export default function PostDetailPage() {
               <div className="h-20 w-20 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mx-auto">
                 <Lock className="h-10 w-10 text-gray-400 dark:text-gray-500" />
               </div>
-              <p className="mt-4 text-lg font-medium text-gray-700 dark:text-gray-300">Konten Berbayar</p>
-              <p className="mt-1 text-gray-500 dark:text-gray-400">Beli untuk membuka konten ini secara permanen.</p>
+              <p className="mt-4 text-lg font-semibold text-gray-700 dark:text-gray-300">Konten Berbayar</p>
+              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Beli sekali, akses selamanya.</p>
               {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
               <div className="mt-6 flex flex-col items-center gap-3">
-                {error.includes("Credit") ? (
-                  <Link href="/wallet/topup"><Button size="lg">Top-up Credit Sekarang</Button></Link>
+                {!user ? (
+                  <>
+                    <Link href={`/login?redirect=/posts/${id}`}>
+                      <Button size="lg">Masuk untuk Membeli</Button>
+                    </Link>
+                    <p className="text-xs text-gray-400">Belum punya akun? <Link href="/register" className="text-primary hover:underline">Daftar gratis</Link></p>
+                  </>
+                ) : error.includes("Credit") ? (
+                  <>
+                    <Link href="/wallet/topup"><Button size="lg">Top-up Credit Sekarang</Button></Link>
+                    <p className="text-xs text-gray-400">Kamu butuh <span className="font-semibold">{formatCredit(post.price || 0)}</span> untuk membuka konten ini</p>
+                  </>
                 ) : (
                   <Button size="lg" onClick={handleBuy} disabled={buying}>
                     {buying ? "Memproses..." : `Beli — ${formatCredit(post.price || 0)}`}
@@ -155,7 +167,7 @@ export default function PostDetailPage() {
                     )}
                     {m.media_type === "document" && (
                       <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 text-center">
-                        <p className="text-gray-500 dark:text-gray-400">📄 Document attached</p>
+                        <p className="text-gray-500 dark:text-gray-400">📄 Dokumen terlampir</p>
                       </div>
                     )}
                   </div>

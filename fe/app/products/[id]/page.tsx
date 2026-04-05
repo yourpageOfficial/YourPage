@@ -13,10 +13,12 @@ import { ListSkeleton } from "@/components/ui/skeleton";
 import { ShoppingCart, Download, FileText, CheckCircle } from "lucide-react";
 import Link from "next/link";
 import { ReportButton } from "@/components/report-button";
+import { useAuth } from "@/lib/auth";
 import type { Product, ApiResponse } from "@/lib/types";
 
 export default function ProductDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const { user } = useAuth();
   const [buying, setBuying] = useState(false);
   const [purchased, setPurchased] = useState(false);
   const [error, setError] = useState("");
@@ -82,7 +84,7 @@ export default function ProductDetailPage() {
             <div className="flex items-center gap-2 mb-2">
               <Badge className="text-xs">{product.type}</Badge>
               <Badge className="text-xs" variant="outline">{product.delivery_type === "link" ? "🔗 Link" : "📁 File"}</Badge>
-              {!product.is_active && <Badge className="bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400">Inactive</Badge>}
+              {!product.is_active && <Badge className="bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400">Tidak Aktif</Badge>}
             </div>
 
             <h1 className="text-2xl sm:text-3xl font-bold">{product.name}</h1>
@@ -156,14 +158,24 @@ export default function ProductDetailPage() {
                         {product.delivery_note && <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">{product.delivery_note}</p>}
                       </div>
                     ) : (
-                      <p className="text-sm text-gray-500 dark:text-gray-400">Creator belum upload file untuk produk ini.</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Kreator belum mengunggah file untuk produk ini.</p>
                     )}
                   </CardContent>
                 </Card>
+              ) : !user ? (
+                <div className="space-y-2">
+                  <Link href={`/login?redirect=/products/${id}`}>
+                    <Button size="lg" className="w-full"><ShoppingCart className="mr-2 h-5 w-5" />Masuk untuk Membeli</Button>
+                  </Link>
+                  <p className="text-center text-xs text-gray-400">Belum punya akun? <Link href="/register" className="text-primary hover:underline">Daftar gratis</Link></p>
+                </div>
               ) : error.includes("Credit") ? (
-                <Link href="/wallet/topup">
-                  <Button size="lg" className="w-full">Top-up Credit Sekarang</Button>
-                </Link>
+                <div className="space-y-2">
+                  <Link href="/wallet/topup">
+                    <Button size="lg" className="w-full">Top-up Credit Sekarang</Button>
+                  </Link>
+                  <p className="text-center text-xs text-gray-400">Kamu butuh <span className="font-semibold">{formatCredit(product.price_idr)}</span> untuk membeli produk ini</p>
+                </div>
               ) : (
                 <Button size="lg" className="w-full" onClick={handleBuy} disabled={buying}>
                   <ShoppingCart className="mr-2 h-5 w-5" />

@@ -438,8 +438,16 @@ func (s *adminService) ApproveTopup(ctx context.Context, id uuid.UUID, req Appro
 }
 
 func (s *adminService) RejectTopup(ctx context.Context, id uuid.UUID, adminNote *string) error {
+	topup, err := s.walletRepo.FindTopupRequest(ctx, id)
+	if err != nil { return err }
 	status := entity.PaymentStatusFailed
-	return s.walletRepo.UpdateTopupRequest(ctx, id, status, adminNote)
+	if err := s.walletRepo.UpdateTopupRequest(ctx, id, status, adminNote); err != nil { return err }
+	if user, err := s.userRepo.FindByID(ctx, topup.UserID); err == nil {
+		reason := "Tidak memenuhi syarat"
+		if adminNote != nil { reason = *adminNote }
+		go s.mailer.SendTopupRejected(ctx, user.Email, reason)
+	}
+	return nil
 }
 
 // ---- Posts & Products ----

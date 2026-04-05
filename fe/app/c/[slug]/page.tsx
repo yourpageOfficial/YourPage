@@ -198,7 +198,7 @@ export default function CreatorPageView() {
         <div className="mt-6 sm:mt-8 flex gap-1 border-b dark:border-gray-700 overflow-x-auto">
           {[
             { key: "posts", label: `Post (${posts?.length ?? 0})` },
-            { key: "catalog", label: `Catalog (${products?.length ?? 0})` },
+            { key: "catalog", label: `Katalog (${products?.length ?? 0})` },
           ].map(t => (
             <button key={t.key} onClick={() => setTab(t.key as any)}
               className={`px-3 sm:px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${tab === t.key ? "border-primary text-primary" : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"}`}
@@ -267,7 +267,7 @@ export default function CreatorPageView() {
                   {donateSuccess ? (
                     <div className="text-center py-2">
                       <p className="text-green-600 font-semibold">🎉 Donasi terkirim!</p>
-                      <Button size="sm" className="mt-2" onClick={() => setDonateSuccess(false)}>Lagi</Button>
+                      <Button size="sm" className="mt-2" onClick={() => setDonateSuccess(false)}>Donasi Lagi</Button>
                     </div>
                   ) : (
                     <>

@@ -82,8 +82,8 @@ export default function DashboardWithdrawals() {
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Withdrawals</h1>
-        <Button size="sm" onClick={() => setShowForm(!showForm)}>Request Penarikan</Button>
+        <h1 className="text-2xl font-bold">Penarikan Dana</h1>
+        <Button size="sm" onClick={() => setShowForm(!showForm)}>Tarik Dana</Button>
       </div>
 
       <Card className="mb-6">
@@ -102,7 +102,7 @@ export default function DashboardWithdrawals() {
 
       {showForm && (
         <Card className="mb-6">
-          <CardHeader><CardTitle>Request Penarikan</CardTitle></CardHeader>
+          <CardHeader><CardTitle>Form Penarikan Dana</CardTitle></CardHeader>
           <CardContent className="space-y-3">
             {error && <p className="text-sm text-red-600">{error}</p>}
             <div>
@@ -127,7 +127,7 @@ export default function DashboardWithdrawals() {
               <div>
                 <p className="font-medium">{formatIDR(w.amount_idr)}</p>
                 <p className="text-sm text-gray-600 dark:text-gray-400">{w.bank_name} — {w.account_number} ({w.account_name})</p>
-                {w.admin_note && <p className="text-xs text-gray-500 mt-1">Note: {w.admin_note}</p>}
+                {w.admin_note && <p className="text-xs text-gray-500 mt-1">Catatan admin: {w.admin_note}</p>}
                 <p className="text-xs text-gray-400 dark:text-gray-400">{formatDate(w.created_at)}</p>
               </div>
               <Badge className={statusColor[w.status] || ""}>{w.status}</Badge>

@@ -59,7 +59,8 @@ export default function TopupPage() {
         {/* Header */}
         <div className="text-center mb-6">
           <h1 className="text-xl sm:text-2xl font-bold">Top-up Credit</h1>
-          <p className="text-sm text-gray-500 mt-1">Saldo: <span className="font-semibold text-primary">{wallet?.balance_credits ?? 0} Credit</span></p>
+          <p className="text-sm text-gray-500 mt-1">Saldo kamu: <span className="font-semibold text-primary">{wallet?.balance_credits ?? 0} Credit</span></p>
+          <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">1 Credit = Rp 1.000</p>
         </div>
 
         {/* Step indicator */}
@@ -113,17 +114,22 @@ export default function TopupPage() {
               {error && <p className="text-sm text-red-600">{error}</p>}
 
               {/* Amount highlight */}
-              <div className="text-center py-4 bg-primary-50 rounded-xl">
+              <div className="text-center py-4 bg-primary/5 rounded-xl border border-primary/20">
                 <p className="text-xs text-gray-500 dark:text-gray-400">Transfer tepat sebesar</p>
                 <p className="text-2xl sm:text-3xl font-bold text-primary mt-1">{formatIDR(topupData.amount_idr)}</p>
-                <p className="text-xs text-gray-500 mt-1">Kode unik: <span className="font-bold">{topupData.unique_code}</span></p>
+                <div className="mt-2 inline-flex items-center gap-1.5 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-lg px-3 py-1.5">
+                  <span className="text-xs text-yellow-700 dark:text-yellow-400">Kode unik:</span>
+                  <span className="text-sm font-bold text-yellow-700 dark:text-yellow-400">{topupData.unique_code}</span>
+                </div>
+                <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-2 px-4">Nominal harus tepat termasuk kode unik agar transfer kamu bisa dikenali otomatis</p>
               </div>
 
               {/* QRIS */}
               {qrisData?.platform_qris_url ? (
                 <div className="text-center">
-                  <p className="text-xs text-gray-500 mb-2">Scan QRIS:</p>
-                  <img src={qrisData.platform_qris_url} alt="QRIS" className="mx-auto max-h-48 sm:max-h-64 rounded-lg" />
+                  <p className="text-xs text-gray-500 mb-1">Scan QRIS di bawah:</p>
+                  <p className="text-[11px] text-gray-400 dark:text-gray-500 mb-2">GoPay · OVO · Dana · ShopeePay · QRIS · M-Banking</p>
+                  <img src={qrisData.platform_qris_url} alt="QRIS" className="mx-auto max-h-48 sm:max-h-64 rounded-lg shadow" />
                 </div>
               ) : (
                 <p className="text-center text-sm text-gray-400 py-4">QRIS belum diatur admin</p>
