@@ -188,6 +188,8 @@ func main() {
 		for range ticker.C {
 			handleTierExpiry(context.Background(), userRepo, productRepo, platformRepo)
 			handleMembershipRenewal(context.Background(), db)
+			// 9.9: Cleanup old read notifications (>90 days)
+			db.Exec("DELETE FROM notifications WHERE is_read = true AND created_at < NOW() - INTERVAL '90 days'")
 		}
 	}()
 

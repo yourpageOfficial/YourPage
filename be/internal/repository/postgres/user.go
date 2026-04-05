@@ -109,7 +109,7 @@ func (r *userRepo) IncrementFollowerCount(ctx context.Context, creatorID uuid.UU
 	return r.db.WithContext(ctx).
 		Model(&entity.CreatorProfile{}).
 		Where("id = ?", creatorID).
-		Update("follower_count", gorm.Expr("follower_count + ?", delta)).Error
+		Update("follower_count", gorm.Expr("GREATEST(follower_count + ?, 0)", delta)).Error
 }
 
 func (r *userRepo) SearchCreators(ctx context.Context, query string, category string, cursor *uuid.UUID, limit int) ([]entity.CreatorProfile, error) {

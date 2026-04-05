@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"fmt"
-	"log"
 
 	"github.com/google/uuid"
 	"github.com/yourpage/be/internal/entity"
@@ -41,20 +40,20 @@ func (s *followService) Follow(ctx context.Context, followerID, creatorID uuid.U
 	if followerID == creatorID {
 		return entity.ErrForbidden // can't follow yourself
 	}
-	// Verify creator exists.
 	profile, err := s.userRepo.FindCreatorByUserID(ctx, creatorID)
 	if err != nil {
 		return fmt.Errorf("follow: creator not found: %w", err)
 	}
 
+	// 9.4: Check already following
+	already, _ := s.followRepo.IsFollowing(ctx, followerID, creatorID)
+	if already { return nil } // idempotent
+
 	if err := s.followRepo.Follow(ctx, followerID, creatorID); err != nil {
 		return err
 	}
-	if err := s.userRepo.IncrementFollowerCount(ctx, profile.ID, 1); err != nil {
-		log.Printf("follow: increment follower count for profile %s: %v", profile.ID, err)
-	}
+	_ = s.userRepo.IncrementFollowerCount(ctx, profile.ID, 1)
 
-	// Notify creator
 	follower, _ := s.userRepo.FindByID(ctx, followerID)
 	name := "Seseorang"
 	if follower != nil { name = follower.DisplayName }
@@ -71,12 +70,14 @@ func (s *followService) Unfollow(ctx context.Context, followerID, creatorID uuid
 		return fmt.Errorf("unfollow: creator not found: %w", err)
 	}
 
+	// 9.5: Check actually following before decrement
+	following, _ := s.followRepo.IsFollowing(ctx, followerID, creatorID)
+	if !following { return nil } // idempotent
+
 	if err := s.followRepo.Unfollow(ctx, followerID, creatorID); err != nil {
 		return err
 	}
-	if err := s.userRepo.IncrementFollowerCount(ctx, profile.ID, -1); err != nil {
-		log.Printf("unfollow: decrement follower count for profile %s: %v", profile.ID, err)
-	}
+	_ = s.userRepo.IncrementFollowerCount(ctx, profile.ID, -1)
 	return nil
 }
 
