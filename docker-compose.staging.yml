@@ -1,0 +1,101 @@
+# Staging environment — runs alongside production on different ports
+# Usage: docker compose -f docker-compose.staging.yml up -d
+
+services:
+  postgres-stg:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: yourpage_stg
+      POSTGRES_PASSWORD: ${STG_DB_PASSWORD:-staging123}
+      POSTGRES_DB: yourpage_stg
+    volumes:
+      - pgdata_stg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U yourpage_stg"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  redis-stg:
+    image: redis:7-alpine
+    command: redis-server --requirepass ${STG_REDIS_PASSWORD:-staging123}
+    volumes:
+      - redisdata_stg:/data
+
+  minio-stg:
+    image: minio/minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: ${STG_MINIO_PASSWORD:-staging123}
+    volumes:
+      - miniodata_stg:/data
+
+  minio-init-stg:
+    image: minio/mc
+    depends_on: [minio-stg]
+    entrypoint: >
+      /bin/sh -c "
+      sleep 5;
+      mc alias set local http://minio-stg:9000 minioadmin $${STG_MINIO_PASSWORD:-staging123};
+      mc mb --ignore-existing local/public-media;
+      mc mb --ignore-existing local/private-media;
+      mc anonymous set download local/public-media;
+      exit 0;"
+
+  migrate-stg:
+    build:
+      context: ./be
+      dockerfile: Dockerfile.migrate
+    environment:
+      DATABASE_URL: postgres://yourpage_stg:${STG_DB_PASSWORD:-staging123}@postgres-stg:5432/yourpage_stg?sslmode=disable
+    depends_on:
+      postgres-stg:
+        condition: service_healthy
+
+  be-stg:
+    build:
+      context: ./be
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: postgres://yourpage_stg:${STG_DB_PASSWORD:-staging123}@postgres-stg:5432/yourpage_stg?sslmode=disable
+      REDIS_URL: redis://:${STG_REDIS_PASSWORD:-staging123}@redis-stg:6379/0
+      JWT_SECRET: ${STG_JWT_SECRET:-staging-jwt-secret-change-me}
+      MINIO_ENDPOINT: minio-stg:9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: ${STG_MINIO_PASSWORD:-staging123}
+      MINIO_USE_SSL: "false"
+      MINIO_PUBLIC_BUCKET: public-media
+      MINIO_PRIVATE_BUCKET: private-media
+      GIN_MODE: release
+      PORT: "8080"
+      ADMIN_EMAIL: admin@staging.urpage.online
+      ADMIN_PASSWORD: ${STG_ADMIN_PASSWORD:-staging-admin-123}
+      DOMAIN: staging.urpage.online
+    depends_on:
+      postgres-stg:
+        condition: service_healthy
+      migrate-stg:
+        condition: service_completed_successfully
+
+  fe-stg:
+    build:
+      context: ./fe
+      dockerfile: Dockerfile
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_API_URL: /api/v1
+    depends_on: [be-stg]
+
+  nginx-stg:
+    image: nginx:alpine
+    ports:
+      - "8888:80"
+    volumes:
+      - ./nginx/nginx.staging.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on: [be-stg, fe-stg]
+
+volumes:
+  pgdata_stg:
+  redisdata_stg:
+  miniodata_stg:
