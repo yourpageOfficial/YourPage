@@ -100,14 +100,18 @@ func NewPaymentService(
 
 // getCreatorFeePercent returns the fee % for a creator based on their tier
 func (s *paymentService) getCreatorFeePercent(ctx context.Context, creatorID uuid.UUID) int {
+	// M-01: Read default from platform settings
+	defaultFee := 20
+	if settings, err := s.platformRepo.GetSettings(ctx); err == nil && settings.FeePercent > 0 {
+		defaultFee = settings.FeePercent
+	}
 	profile, err := s.userRepo.FindCreatorByUserID(ctx, creatorID)
-	if err != nil { return 20 }
-	// Promo fee takes priority if still active
+	if err != nil { return defaultFee }
 	if profile.PromoFeePercent != nil && profile.PromoFeeExpiresAt != nil && profile.PromoFeeExpiresAt.After(time.Now()) {
 		return *profile.PromoFeePercent
 	}
 	if profile.CustomFeePercent != nil { return *profile.CustomFeePercent }
-	return 20
+	return defaultFee
 }
 
 func (s *paymentService) CheckoutPost(ctx context.Context, buyerID uuid.UUID, req CheckoutPostRequest) (*CheckoutResponse, error) {

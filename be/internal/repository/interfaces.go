@@ -170,6 +170,7 @@ type FollowRepository interface {
 type KYCRepository interface {
 	CreateKYC(ctx context.Context, kyc *entity.UserKYC) error
 	FindKYCByUserID(ctx context.Context, userID uuid.UUID) (*entity.UserKYC, error)
+	FindKYCByID(ctx context.Context, id uuid.UUID) (*entity.UserKYC, error)
 	UpdateKYCStatus(ctx context.Context, id uuid.UUID, status entity.KYCStatus, adminNote *string) error
 	ListKYC(ctx context.Context, status string, cursor *uuid.UUID, limit int) ([]entity.UserKYC, error) // admin
 	CountPending(ctx context.Context) (int64, error)

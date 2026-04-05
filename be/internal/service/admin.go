@@ -327,12 +327,9 @@ func (s *adminService) ListKYC(ctx context.Context, status string, cursor *uuid.
 }
 
 func (s *adminService) UpdateKYCStatus(ctx context.Context, id uuid.UUID, req UpdateKYCStatusRequest) error {
-	// Get KYC to find user_id before updating
-	kycs, _ := s.kycRepo.ListKYC(ctx, "", nil, 10000)
-	var userID uuid.UUID
-	for _, k := range kycs {
-		if k.ID == id { userID = k.UserID; break }
-	}
+	kyc, err := s.kycRepo.FindKYCByID(ctx, id)
+	if err != nil { return entity.ErrNotFound }
+	userID := kyc.UserID
 
 	if err := s.kycRepo.UpdateKYCStatus(ctx, id, req.Status, req.AdminNote); err != nil {
 		return err

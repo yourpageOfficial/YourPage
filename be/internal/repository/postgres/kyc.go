@@ -101,3 +101,9 @@ func (r *kycRepo) CountPending(ctx context.Context) (int64, error) {
 	err := r.db.WithContext(ctx).Model(&entity.UserKYC{}).Where("status = 'pending'").Count(&c).Error
 	return c, err
 }
+
+func (r *kycRepo) FindKYCByID(ctx context.Context, id uuid.UUID) (*entity.UserKYC, error) {
+	var kyc entity.UserKYC
+	if err := r.db.WithContext(ctx).Where("id = ?", id).First(&kyc).Error; err != nil { return nil, err }
+	return &kyc, nil
+}
