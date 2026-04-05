@@ -118,7 +118,7 @@ func (s *productService) Create(ctx context.Context, creatorID uuid.UUID, req Cr
 		if count >= int64(profile.Tier.MaxProducts) {
 			return nil, fmt.Errorf("batas produk untuk tier %s adalah %d. Upgrade tier untuk menambah produk", profile.Tier.Name, profile.Tier.MaxProducts)
 		}
-	} else if profile != nil && profile.TierID == nil {
+	} else if profile != nil && (profile.Tier == nil || profile.Tier.MaxProducts == 0) {
 		count, _ := s.productRepo.CountByCreator(ctx, creatorID)
 		if count >= 3 { return nil, fmt.Errorf("batas produk untuk tier Free adalah 3. Upgrade tier untuk menambah produk") }
 	}

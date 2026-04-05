@@ -135,8 +135,12 @@ func (s *postService) Create(ctx context.Context, creatorID uuid.UUID, req Creat
 		ScheduledAt: req.ScheduledAt,
 	}
 
-	// If scheduled, override status to draft
+	// If scheduled, check tier (Pro+ only)
 	if req.ScheduledAt != nil && req.ScheduledAt.After(time.Now()) {
+		cp, _ := s.userRepo.FindCreatorByUserID(ctx, creatorID)
+		if cp == nil || cp.Tier == nil || cp.Tier.PriceIDR == 0 {
+			return nil, fmt.Errorf("Fitur jadwal post hanya tersedia untuk tier Pro ke atas")
+		}
 		post.Status = entity.PostStatusDraft
 		post.PublishedAt = nil
 	} else if status == entity.PostStatusPublished {

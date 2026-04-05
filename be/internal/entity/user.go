@@ -67,6 +67,8 @@ type CreatorProfile struct {
 	WelcomeMessage     *string    `json:"welcome_message,omitempty"`
 	OverlayStyle       string     `json:"overlay_style" gorm:"default:'bounce'"`
 	OverlayTextTemplate string    `json:"overlay_text_template" gorm:"default:'{donor} donated {amount} Credit!'"`
+	LastBroadcastAt    *time.Time `json:"last_broadcast_at,omitempty"`
+	Category           *string    `json:"category,omitempty"`
 	CreatedAt          time.Time  `json:"created_at"`
 	UpdatedAt          time.Time  `json:"updated_at"`
 }
@@ -79,8 +81,9 @@ type CreatorTier struct {
 	FeePercent  int       `json:"fee_percent"`
 	Badge       string    `json:"badge"`
 	Features     string `json:"features" gorm:"type:jsonb;default:'[]'"`
-	StorageBytes int64  `json:"storage_bytes" gorm:"default:1073741824"`
-	SortOrder    int    `json:"sort_order"`
+	StorageBytes    int64  `json:"storage_bytes" gorm:"default:1073741824"`
+	MaxOverlayTiers int    `json:"max_overlay_tiers" gorm:"default:3"`
+	SortOrder       int    `json:"sort_order"`
 }
 
 // JSONMap is a helper type for PostgreSQL jsonb columns

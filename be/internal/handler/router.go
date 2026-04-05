@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"fmt"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
@@ -262,7 +263,16 @@ func NewRouter(cfg *config.Config, rdb *redis.Client, h Handlers) *gin.Engine {
 			Label      *string `json:"label"`
 		}
 		if err := c.ShouldBindJSON(&body); err != nil { c.JSON(400, gin.H{"error": "invalid body"}); return }
-		t := &entity.OverlayTier{ID: uuid.New(), CreatorID: getUserID(c), MinCredits: body.MinCredits, ImageURL: body.ImageURL, SoundURL: body.SoundURL, Label: body.Label}
+		uid := getUserID(c)
+		// Check overlay tier limit
+		existing, _ := h.UserRepo.ListOverlayTiers(c.Request.Context(), uid)
+		cp, _ := h.UserRepo.FindCreatorByUserID(c.Request.Context(), uid)
+		maxTiers := 3
+		if cp != nil && cp.Tier != nil { maxTiers = cp.Tier.MaxOverlayTiers }
+		if maxTiers > 0 && len(existing) >= maxTiers {
+			c.JSON(422, gin.H{"error": fmt.Sprintf("Batas overlay tier untuk tier kamu adalah %d. Upgrade untuk menambah.", maxTiers)}); return
+		}
+		t := &entity.OverlayTier{ID: uuid.New(), CreatorID: uid, MinCredits: body.MinCredits, ImageURL: body.ImageURL, SoundURL: body.SoundURL, Label: body.Label}
 		if err := h.UserRepo.CreateOverlayTier(c.Request.Context(), t); err != nil { c.JSON(500, gin.H{"error": "internal"}); return }
 		c.JSON(201, gin.H{"success": true, "data": t})
 	})
@@ -271,6 +281,36 @@ func NewRouter(cfg *config.Config, rdb *redis.Client, h Handlers) *gin.Engine {
 		if err != nil { c.JSON(400, gin.H{"error": "invalid id"}); return }
 		h.UserRepo.DeleteOverlayTier(c.Request.Context(), id, getUserID(c))
 		c.JSON(200, gin.H{"success": true, "message": "deleted"})
+	})
+
+	// ---- Broadcast ----
+	api.POST("/creator/broadcast", auth, creatorOnly, func(c *gin.Context) {
+		var body struct { Message string `json:"message"` }
+		if err := c.ShouldBindJSON(&body); err != nil || body.Message == "" { c.JSON(400, gin.H{"error": "message required"}); return }
+		uid := getUserID(c)
+		cp, err := h.UserRepo.FindCreatorByUserID(c.Request.Context(), uid)
+		if err != nil { c.JSON(404, gin.H{"error": "not found"}); return }
+		// Check tier + rate limit
+		tierName := "Free"
+		if cp.Tier != nil { tierName = cp.Tier.Name }
+		if tierName == "Free" { c.JSON(403, gin.H{"error": "Broadcast hanya untuk Pro ke atas"}); return }
+		if cp.LastBroadcastAt != nil {
+			limit := 7 * 24 * time.Hour // Pro: 1x/week
+			if tierName == "Business" { limit = 24 * time.Hour } // Business: 1x/day
+			if time.Since(*cp.LastBroadcastAt) < limit {
+				c.JSON(429, gin.H{"error": "Kamu sudah broadcast baru-baru ini. Coba lagi nanti."}); return
+			}
+		}
+		// Send to all followers
+		followers, _ := h.UserRepo.ListFollowerIDs(c.Request.Context(), uid)
+		for _, fid := range followers {
+			h.UserRepo.CreateNotification(c.Request.Context(), fid, "broadcast", "📢 Broadcast", body.Message, &uid)
+		}
+		now := time.Now()
+		cp.LastBroadcastAt = &now
+		cp.Tier = nil
+		h.UserRepo.UpdateCreatorProfile(c.Request.Context(), cp)
+		c.JSON(200, gin.H{"success": true, "message": fmt.Sprintf("Broadcast terkirim ke %d follower", len(followers))})
 	})
 
 	// ---- Chat ----

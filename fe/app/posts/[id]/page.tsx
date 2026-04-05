@@ -111,23 +111,31 @@ export default function PostDetailPage() {
 
         {/* Content */}
         {post.is_locked ? (
-          <Card className="mt-8">
-            <CardContent className="p-10 text-center">
-              <div className="h-20 w-20 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mx-auto">
-                <Lock className="h-10 w-10 text-gray-400 dark:text-gray-500" />
+          <div className="mt-8">
+            {/* Preview/teaser */}
+            {post.excerpt && (
+              <div className="mb-6">
+                <p className="text-lg text-gray-600 dark:text-gray-400 italic border-l-4 border-primary pl-4">{post.excerpt}</p>
+                <p className="text-xs text-gray-400 mt-2">👆 Preview — beli untuk baca selengkapnya</p>
               </div>
-              <p className="mt-4 text-lg font-semibold text-gray-700 dark:text-gray-300">Konten Berbayar</p>
-              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Beli sekali, akses selamanya.</p>
-              {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
-              <div className="mt-6 flex flex-col items-center gap-3">
-                {!user ? (
-                  <>
-                    <Link href={`/login?redirect=/posts/${id}`}>
-                      <Button size="lg">Masuk untuk Membeli</Button>
-                    </Link>
-                    <p className="text-xs text-gray-400">Belum punya akun? <Link href="/register" className="text-primary hover:underline">Daftar gratis</Link></p>
-                  </>
-                ) : error.includes("Credit") ? (
+            )}
+            <Card>
+              <CardContent className="p-10 text-center">
+                <div className="h-20 w-20 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mx-auto">
+                  <Lock className="h-10 w-10 text-gray-400 dark:text-gray-500" />
+                </div>
+                <p className="mt-4 text-lg font-semibold text-gray-700 dark:text-gray-300">Konten Berbayar</p>
+                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Beli sekali, akses selamanya.</p>
+                {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
+                <div className="mt-6 flex flex-col items-center gap-3">
+                  {!user ? (
+                    <>
+                      <Link href={`/login?redirect=/posts/${id}`}>
+                        <Button size="lg">Masuk untuk Membeli</Button>
+                      </Link>
+                      <p className="text-xs text-gray-400">Belum punya akun? <Link href="/register" className="text-primary hover:underline">Daftar gratis</Link></p>
+                    </>
+                  ) : error.includes("Credit") ? (
                   <>
                     <Link href="/wallet/topup"><Button size="lg">Top-up Credit Sekarang</Button></Link>
                     <p className="text-xs text-gray-400">Kamu butuh <span className="font-semibold">{formatCredit(post.price || 0)}</span> untuk membuka konten ini</p>
@@ -140,6 +148,7 @@ export default function PostDetailPage() {
               </div>
             </CardContent>
           </Card>
+          </div>
         ) : (
           <ContentProtection enabled={post.access_type === "paid"}>
           <div className="mt-8">

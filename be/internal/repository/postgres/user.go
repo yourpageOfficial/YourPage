@@ -179,3 +179,15 @@ func (r *userRepo) CreateOverlayTier(ctx context.Context, t *entity.OverlayTier)
 func (r *userRepo) DeleteOverlayTier(ctx context.Context, id, creatorID uuid.UUID) error {
 	return r.db.WithContext(ctx).Where("id = ? AND creator_id = ?", id, creatorID).Delete(&entity.OverlayTier{}).Error
 }
+
+func (r *userRepo) ListFollowerIDs(ctx context.Context, creatorID uuid.UUID) ([]uuid.UUID, error) {
+	var ids []uuid.UUID
+	err := r.db.WithContext(ctx).Model(&entity.Follow{}).Where("creator_id = ?", creatorID).Pluck("follower_id", &ids).Error
+	return ids, err
+}
+
+func (r *userRepo) CreateNotification(ctx context.Context, userID uuid.UUID, ntype, title, body string, refID *uuid.UUID) error {
+	return r.db.WithContext(ctx).Create(&entity.Notification{
+		ID: uuid.New(), UserID: userID, Type: entity.NotificationType(ntype), Title: title, Body: body, ReferenceID: refID,
+	}).Error
+}
