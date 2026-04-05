@@ -3,6 +3,7 @@ package mailer
 import (
 	"context"
 	"fmt"
+	"net/mail"
 	"net/smtp"
 	"strings"
 
@@ -44,11 +45,17 @@ func (m *SMTPMailer) SendPasswordReset(_ context.Context, toEmail, token string)
 		body,
 	}, "\r\n")
 
+	// Extract plain email address from "Name <email>" format for SMTP envelope
+	fromAddr := m.cfg.From
+	if parsed, err := mail.ParseAddress(m.cfg.From); err == nil {
+		fromAddr = parsed.Address
+	}
+
 	addr := fmt.Sprintf("%s:%d", m.cfg.Host, m.cfg.Port)
 	var auth smtp.Auth
 	if m.cfg.User != "" {
 		auth = smtp.PlainAuth("", m.cfg.User, m.cfg.Pass, m.cfg.Host)
 	}
 
-	return smtp.SendMail(addr, auth, m.cfg.From, []string{toEmail}, []byte(msg))
+	return smtp.SendMail(addr, auth, fromAddr, []string{toEmail}, []byte(msg))
 }
