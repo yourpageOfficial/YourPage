@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/crypto/bcrypt"
+	"gorm.io/gorm"
 	"github.com/yourpage/be/internal/config"
 	"github.com/yourpage/be/internal/entity"
 	"github.com/yourpage/be/internal/handler"
@@ -186,6 +187,7 @@ func main() {
 		defer ticker.Stop()
 		for range ticker.C {
 			handleTierExpiry(context.Background(), userRepo, productRepo, platformRepo)
+			handleMembershipRenewal(context.Background(), db)
 		}
 	}()
 
@@ -305,5 +307,28 @@ func handleTierExpiry(ctx context.Context, userRepo repository.UserRepository, p
 		if freeMaxProducts > 0 {
 			productRepo.DeactivateExcess(ctx, cp.UserID, freeMaxProducts)
 		}
+	}
+}
+
+func handleMembershipRenewal(ctx context.Context, db *gorm.DB) {
+	var expired []entity.Membership
+	db.Preload("Tier").Where("status = 'active' AND expires_at < NOW()").Find(&expired)
+	for _, m := range expired {
+		if !m.AutoRenew || m.Tier == nil {
+			db.Model(&m).Update("status", "expired")
+			continue
+		}
+		// Try auto-renew
+		result := db.Model(&entity.UserWallet{}).Where("user_id = ? AND balance_credits >= ?", m.SupporterID, m.Tier.PriceCredits).
+			Update("balance_credits", gorm.Expr("balance_credits - ?", m.Tier.PriceCredits))
+		if result.RowsAffected == 0 {
+			db.Model(&m).Update("status", "expired")
+			continue
+		}
+		// Credit creator
+		db.Model(&entity.UserWallet{}).Where("user_id = ?", m.CreatorID).Update("balance_credits", gorm.Expr("balance_credits + ?", m.Tier.PriceCredits))
+		// Extend 1 month
+		db.Model(&m).Updates(map[string]interface{}{"started_at": time.Now(), "expires_at": time.Now().AddDate(0, 1, 0)})
+		log.Info().Str("supporter", m.SupporterID.String()).Msg("membership renewed")
 	}
 }

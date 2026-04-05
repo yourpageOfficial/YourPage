@@ -53,6 +53,12 @@ export default function CreatorPageView() {
     queryFn: async () => { const { data } = await api.get(`/donations/creator/${creator!.user_id}/top`); return data.data as any[]; },
   });
 
+  const { data: membershipTiers } = useQuery({
+    queryKey: ["membership-tiers", creator?.user_id],
+    enabled: !!creator?.user_id,
+    queryFn: async () => { const { data } = await api.get(`/membership-tiers/${creator!.user_id}`); return data.data as any[]; },
+  });
+
   const { data: products } = useQuery({
     queryKey: ["creator-products", creator?.user_id],
     enabled: !!creator?.user_id,
@@ -211,6 +217,30 @@ export default function CreatorPageView() {
                     <span className="font-bold text-primary w-5">{i + 1}</span>
                     <span className="flex-1">{s.donor_name}</span>
                     <span className="text-xs text-gray-500 dark:text-gray-400">{formatCredit(s.total_idr)} · {s.donation_count}x</span>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Membership Tiers */}
+        {membershipTiers && membershipTiers.length > 0 && (
+          <Card className="mt-4 mx-2 sm:mx-0">
+            <CardContent className="p-4">
+              <p className="text-sm font-medium mb-3">⭐ Jadi Member</p>
+              <div className="space-y-2">
+                {membershipTiers.map((t: any) => (
+                  <div key={t.id} className="flex items-center justify-between p-2 rounded-lg bg-gray-50 dark:bg-gray-800">
+                    <div>
+                      <p className="font-medium text-sm">{t.name}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{t.price_credits} Credit/bulan</p>
+                    </div>
+                    {user && !isOwn && (
+                      <Button size="sm" variant="outline" onClick={async () => {
+                        try { await api.post("/memberships/subscribe", { tier_id: t.id }); alert("Berhasil subscribe!"); } catch (e: any) { alert(e.response?.data?.error || "Gagal"); }
+                      }}>{t.price_credits} Credit</Button>
+                    )}
                   </div>
                 ))}
               </div>

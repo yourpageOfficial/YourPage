@@ -13,6 +13,7 @@ import (
 	"github.com/yourpage/be/internal/handler/middleware"
 	"github.com/yourpage/be/internal/repository"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 	"os"
 	"time"
 )
@@ -281,6 +282,61 @@ func NewRouter(cfg *config.Config, rdb *redis.Client, h Handlers) *gin.Engine {
 		if err != nil { c.JSON(400, gin.H{"error": "invalid id"}); return }
 		h.UserRepo.DeleteOverlayTier(c.Request.Context(), id, getUserID(c))
 		c.JSON(200, gin.H{"success": true, "message": "deleted"})
+	})
+
+	// ---- Membership ----
+	api.GET("/membership-tiers/:creatorId", func(c *gin.Context) {
+		cid, err := uuid.Parse(c.Param("creatorId"))
+		if err != nil { c.JSON(400, gin.H{"error": "invalid id"}); return }
+		var tiers []entity.MembershipTier
+		h.AuditDB.Where("creator_id = ?", cid).Order("sort_order").Find(&tiers)
+		c.JSON(200, gin.H{"success": true, "data": tiers})
+	})
+	api.POST("/membership-tiers", auth, creatorOnly, func(c *gin.Context) {
+		var body struct {
+			Name string `json:"name"`; PriceCredits int `json:"price_credits"`
+			Description *string `json:"description"`; Perks *string `json:"perks"`
+		}
+		if err := c.ShouldBindJSON(&body); err != nil || body.Name == "" || body.PriceCredits < 1 { c.JSON(400, gin.H{"error": "name and price_credits required"}); return }
+		t := entity.MembershipTier{ID: uuid.New(), CreatorID: getUserID(c), Name: body.Name, PriceCredits: body.PriceCredits, Description: body.Description, Perks: body.Perks}
+		h.AuditDB.Create(&t)
+		c.JSON(201, gin.H{"success": true, "data": t})
+	})
+	api.DELETE("/membership-tiers/:id", auth, creatorOnly, func(c *gin.Context) {
+		id, _ := uuid.Parse(c.Param("id"))
+		h.AuditDB.Where("id = ? AND creator_id = ?", id, getUserID(c)).Delete(&entity.MembershipTier{})
+		c.JSON(200, gin.H{"success": true})
+	})
+	api.POST("/memberships/subscribe", auth, func(c *gin.Context) {
+		var body struct { TierID string `json:"tier_id"` }
+		if err := c.ShouldBindJSON(&body); err != nil { c.JSON(400, gin.H{"error": "tier_id required"}); return }
+		tierID, _ := uuid.Parse(body.TierID)
+		var tier entity.MembershipTier
+		if err := h.AuditDB.Where("id = ?", tierID).First(&tier).Error; err != nil { c.JSON(404, gin.H{"error": "tier not found"}); return }
+		uid := getUserID(c)
+		if uid == tier.CreatorID { c.JSON(400, gin.H{"error": "Tidak bisa subscribe ke diri sendiri"}); return }
+		bal := int64(0)
+		var w entity.UserWallet
+		if err := h.AuditDB.Where("user_id = ?", uid).First(&w).Error; err == nil { bal = w.BalanceCredits }
+		if bal < int64(tier.PriceCredits) { c.JSON(422, gin.H{"error": "Credit tidak cukup"}); return }
+		// Deduct + create membership
+		h.AuditDB.Model(&entity.UserWallet{}).Where("user_id = ? AND balance_credits >= ?", uid, tier.PriceCredits).Update("balance_credits", gorm.Expr("balance_credits - ?", tier.PriceCredits))
+		// Credit creator
+		h.AuditDB.Model(&entity.UserWallet{}).Where("user_id = ?", tier.CreatorID).Update("balance_credits", gorm.Expr("balance_credits + ?", tier.PriceCredits))
+		now := time.Now()
+		mem := entity.Membership{ID: uuid.New(), SupporterID: uid, CreatorID: tier.CreatorID, TierID: tierID, Status: "active", StartedAt: now, ExpiresAt: now.AddDate(0, 1, 0)}
+		h.AuditDB.Clauses(clause.OnConflict{Columns: []clause.Column{{Name: "supporter_id"}, {Name: "creator_id"}}, DoUpdates: clause.AssignmentColumns([]string{"tier_id", "status", "started_at", "expires_at"})}).Create(&mem)
+		c.JSON(200, gin.H{"success": true, "data": mem})
+	})
+	api.GET("/memberships/my", auth, func(c *gin.Context) {
+		var mems []entity.Membership
+		h.AuditDB.Preload("Tier").Where("supporter_id = ? AND status = 'active'", getUserID(c)).Find(&mems)
+		c.JSON(200, gin.H{"success": true, "data": mems})
+	})
+	api.GET("/memberships/creator", auth, creatorOnly, func(c *gin.Context) {
+		var mems []entity.Membership
+		h.AuditDB.Preload("Tier").Where("creator_id = ? AND status = 'active'", getUserID(c)).Find(&mems)
+		c.JSON(200, gin.H{"success": true, "data": mems})
 	})
 
 	// ---- Referral ----
