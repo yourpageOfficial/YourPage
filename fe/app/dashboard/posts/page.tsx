@@ -32,7 +32,7 @@ export default function DashboardPosts() {
     queryKey: ["creator-earnings"],
     queryFn: async () => { try { const { data } = await api.get("/creator/earnings"); return data.data; } catch { return {}; } },
   });
-  const isPro = earnings?.tier_name === "Pro" || earnings?.tier_name === "Business";
+  const isPro = (earnings?.tier_name === "Pro" || earnings?.tier_name === "Business") && (!earnings?.tier_expires_at || new Date(earnings.tier_expires_at) > new Date());
 
   const { data: posts } = useQuery({
     queryKey: ["my-posts"],
