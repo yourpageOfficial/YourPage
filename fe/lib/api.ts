@@ -13,6 +13,10 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// F1.12: Mutex to prevent parallel refresh race
+let isRefreshing = false;
+let refreshQueue: ((token: string) => void)[] = [];
+
 api.interceptors.response.use(
   (res) => res,
   async (error) => {
@@ -20,21 +24,39 @@ api.interceptors.response.use(
     if (error.response?.status === 401 && !original._retry) {
       original._retry = true;
       const refreshToken = localStorage.getItem("refresh_token");
-      if (refreshToken) {
-        try {
-          const { data } = await axios.post(
-            `${api.defaults.baseURL}/auth/refresh`,
-            { refresh_token: refreshToken }
-          );
-          localStorage.setItem("access_token", data.data.access_token);
-          localStorage.setItem("refresh_token", data.data.refresh_token);
-          original.headers.Authorization = `Bearer ${data.data.access_token}`;
-          return api(original);
-        } catch {
-          localStorage.removeItem("access_token");
-          localStorage.removeItem("refresh_token");
-          window.location.href = "/login";
-        }
+      if (!refreshToken) return Promise.reject(error);
+
+      if (isRefreshing) {
+        // Queue this request — wait for ongoing refresh
+        return new Promise((resolve) => {
+          refreshQueue.push((newToken: string) => {
+            original.headers.Authorization = `Bearer ${newToken}`;
+            resolve(api(original));
+          });
+        });
+      }
+
+      isRefreshing = true;
+      try {
+        const { data } = await axios.post(
+          `${api.defaults.baseURL}/auth/refresh`,
+          { refresh_token: refreshToken }
+        );
+        const newToken = data.data.access_token;
+        localStorage.setItem("access_token", newToken);
+        localStorage.setItem("refresh_token", data.data.refresh_token);
+        original.headers.Authorization = `Bearer ${newToken}`;
+        // Resolve queued requests
+        refreshQueue.forEach(cb => cb(newToken));
+        refreshQueue = [];
+        return api(original);
+      } catch {
+        localStorage.removeItem("access_token");
+        localStorage.removeItem("refresh_token");
+        refreshQueue = [];
+        window.location.href = "/login";
+      } finally {
+        isRefreshing = false;
       }
     }
     return Promise.reject(error);

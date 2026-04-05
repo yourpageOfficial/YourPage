@@ -45,6 +45,7 @@ export const useAuth = create<AuthState>((set) => ({
     if (rt) api.post("/auth/logout", { refresh_token: rt }).catch(() => {});
     localStorage.removeItem("access_token");
     localStorage.removeItem("refresh_token");
+    localStorage.removeItem("has_logged_in");
     // Clear session cookie
     document.cookie = "auth-role=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
     set({ user: null });

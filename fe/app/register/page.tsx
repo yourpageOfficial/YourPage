@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,15 +23,27 @@ const ROLE_OPTIONS = [
 ];
 
 export default function RegisterPage() {
+  return <Suspense fallback={<div className="p-8 text-center">Memuat...</div>}><RegisterContent /></Suspense>;
+}
+
+function RegisterContent() {
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [role, setRole] = useState<"supporter" | "creator">("supporter");
+  const [referralCode, setReferralCode] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const { register, login } = useAuth();
   const router = useRouter();
+
+  // F1.1: Read ?ref= from URL
+  useEffect(() => {
+    const ref = searchParams.get("ref");
+    if (ref) setReferralCode(ref);
+  }, [searchParams]);
 
   const emailRegex = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/;
 
@@ -47,7 +60,7 @@ export default function RegisterPage() {
     }
     setLoading(true);
     try {
-      await register(email, username, password, role);
+      await register(email, username, password, role, referralCode || undefined);
       await login(email, password);
     } catch (err: any) {
       setError(err.response?.data?.error || "Registrasi gagal");
@@ -67,7 +80,7 @@ export default function RegisterPage() {
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && <p className="text-sm text-red-600">{error}</p>}
             <Input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-            <Input placeholder="Username (huruf kecil, tanpa spasi)" value={username} onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/\s/g, ""))} required />
+            <Input placeholder="Username (huruf & angka saja)" value={username} onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9]/g, ""))} required maxLength={30} />
             <Input type="password" placeholder="Password (min 8 karakter)" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} />
             <Input type="password" placeholder="Ulangi password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required />
             <div>
@@ -90,6 +103,8 @@ export default function RegisterPage() {
                 ))}
               </div>
             </div>
+            <Input placeholder="Kode Referral (opsional)" value={referralCode} onChange={(e) => setReferralCode(e.target.value.trim())} />
+            {referralCode && <p className="text-xs text-green-600">🎁 Kamu dan teman yang mengajak akan dapat 10 Credit gratis!</p>}
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? "Memproses..." : "Daftar Sekarang"}
             </Button>
