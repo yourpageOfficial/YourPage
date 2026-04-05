@@ -298,13 +298,23 @@ func NewRouter(cfg *config.Config, rdb *redis.Client, h Handlers) *gin.Engine {
 			Description *string `json:"description"`; Perks *string `json:"perks"`
 		}
 		if err := c.ShouldBindJSON(&body); err != nil || body.Name == "" || body.PriceCredits < 1 { c.JSON(400, gin.H{"error": "name and price_credits required"}); return }
+		// 8.4: Limit tiers
+		var count int64
+		h.AuditDB.Model(&entity.MembershipTier{}).Where("creator_id = ?", getUserID(c)).Count(&count)
+		if count >= 5 { c.JSON(422, gin.H{"error": "Maksimal 5 tier membership"}); return }
 		t := entity.MembershipTier{ID: uuid.New(), CreatorID: getUserID(c), Name: body.Name, PriceCredits: body.PriceCredits, Description: body.Description, Perks: body.Perks}
-		h.AuditDB.Create(&t)
+		if err := h.AuditDB.Create(&t).Error; err != nil { c.JSON(500, gin.H{"error": "Gagal membuat tier"}); return }
 		c.JSON(201, gin.H{"success": true, "data": t})
 	})
 	api.DELETE("/membership-tiers/:id", auth, creatorOnly, func(c *gin.Context) {
-		id, _ := uuid.Parse(c.Param("id"))
-		h.AuditDB.Where("id = ? AND creator_id = ?", id, getUserID(c)).Delete(&entity.MembershipTier{})
+		id, err := uuid.Parse(c.Param("id"))
+		if err != nil { c.JSON(400, gin.H{"error": "invalid id"}); return }
+		// 8.6: Check active members
+		var memberCount int64
+		h.AuditDB.Model(&entity.Membership{}).Where("tier_id = ? AND status = 'active'", id).Count(&memberCount)
+		if memberCount > 0 { c.JSON(422, gin.H{"error": fmt.Sprintf("Tidak bisa hapus tier yang masih punya %d member aktif", memberCount)}); return }
+		result := h.AuditDB.Where("id = ? AND creator_id = ?", id, getUserID(c)).Delete(&entity.MembershipTier{})
+		if result.RowsAffected == 0 { c.JSON(404, gin.H{"error": "Tier tidak ditemukan"}); return }
 		c.JSON(200, gin.H{"success": true})
 	})
 	api.POST("/memberships/subscribe", auth, func(c *gin.Context) {
@@ -328,6 +338,8 @@ func NewRouter(cfg *config.Config, rdb *redis.Client, h Handlers) *gin.Engine {
 		now := time.Now()
 		mem := entity.Membership{ID: uuid.New(), SupporterID: uid, CreatorID: tier.CreatorID, TierID: tierID, Status: "active", StartedAt: now, ExpiresAt: now.AddDate(0, 1, 0)}
 		h.AuditDB.Clauses(clause.OnConflict{Columns: []clause.Column{{Name: "supporter_id"}, {Name: "creator_id"}}, DoUpdates: clause.AssignmentColumns([]string{"tier_id", "status", "started_at", "expires_at"})}).Create(&mem)
+		// 8.21: Notify creator
+		h.UserRepo.CreateNotification(c.Request.Context(), tier.CreatorID, "membership", "Member Baru! ⭐", fmt.Sprintf("Seseorang subscribe tier %s (%d Credit/bulan)", tier.Name, tier.PriceCredits), nil)
 		c.JSON(200, gin.H{"success": true, "data": mem})
 	})
 	api.GET("/memberships/my", auth, func(c *gin.Context) {

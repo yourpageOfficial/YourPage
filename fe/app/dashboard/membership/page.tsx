@@ -28,6 +28,7 @@ export default function MembershipPage() {
   const { data: members } = useQuery({
     queryKey: ["my-members"],
     queryFn: async () => { const { data } = await api.get("/memberships/creator"); return data.data as any[]; },
+    enabled: !!user,
   });
 
   const create = useMutation({
@@ -39,6 +40,7 @@ export default function MembershipPage() {
   const del = useMutation({
     mutationFn: (id: string) => api.delete(`/membership-tiers/${id}`),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["my-membership-tiers"] }); toast.success("Tier dihapus"); },
+    onError: (e: any) => toast.error(e.response?.data?.error || "Gagal menghapus tier"),
   });
 
   return (
@@ -60,7 +62,7 @@ export default function MembershipPage() {
                 {t.description && <p className="text-sm text-gray-500 dark:text-gray-400">{t.description}</p>}
                 {t.perks && <p className="text-xs text-gray-400 mt-1">{t.perks}</p>}
               </div>
-              <Button size="sm" variant="ghost" onClick={() => del.mutate(t.id)}><Trash2 className="h-4 w-4 text-red-500" /></Button>
+              <Button size="sm" variant="ghost" onClick={() => { if (confirm("Hapus tier ini?")) del.mutate(t.id); }}><Trash2 className="h-4 w-4 text-red-500" /></Button>
             </CardContent>
           </Card>
         ))}
