@@ -17,22 +17,23 @@ type Mailer interface {
 
 // SMTPMailer is the production SMTP implementation.
 type SMTPMailer struct {
-	cfg config.SMTPConfig
+	cfg         config.SMTPConfig
+	frontendURL string
 }
 
 // New returns a ready SMTPMailer.
-func New(cfg config.SMTPConfig) *SMTPMailer {
-	return &SMTPMailer{cfg: cfg}
+func New(cfg config.SMTPConfig, frontendURL string) *SMTPMailer {
+	return &SMTPMailer{cfg: cfg, frontendURL: frontendURL}
 }
 
 // SendPasswordReset sends a password-reset link to the user's email address.
-// The link embeds the raw token; the frontend is responsible for the full URL.
 func (m *SMTPMailer) SendPasswordReset(_ context.Context, toEmail, token string) error {
-	subject := "Reset your YourPage password"
+	resetLink := fmt.Sprintf("%s/reset-password?token=%s", m.frontendURL, token)
+	subject := "Reset Password YourPage"
 	body := fmt.Sprintf(
-		"Use the token below to reset your password (valid 15 minutes):\n\n%s\n\n"+
-			"If you did not request this, please ignore this email.",
-		token,
+		"Klik link berikut untuk reset password kamu (berlaku 15 menit):\n\n%s\n\n"+
+			"Jika kamu tidak meminta reset password, abaikan email ini.",
+		resetLink,
 	)
 
 	msg := strings.Join([]string{

@@ -56,7 +56,7 @@ func main() {
 	}
 
 	// ---- Mailer ----
-	mailSvc := mailer.New(cfg.SMTP)
+	mailSvc := mailer.New(cfg.SMTP, cfg.App.FrontendURL)
 
 	// ---- Xendit (stub) ----
 	xenditClient := xendit.New(cfg.Xendit.SecretKey, cfg.Xendit.WebhookToken)

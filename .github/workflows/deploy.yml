@@ -40,4 +40,6 @@ jobs:
             git fetch --tags
             git checkout ${{ github.ref_name }}
             docker compose -f docker-compose.production.yml up -d --build
+            sleep 10
+            docker compose -f docker-compose.production.yml restart nginx
             echo "✅ Deployed ${{ github.ref_name }} at $(date)"
