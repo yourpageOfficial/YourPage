@@ -186,6 +186,13 @@ func NewRouter(cfg *config.Config, rdb *redis.Client, h Handlers) *gin.Engine {
 		c.JSON(200, gin.H{"success": true, "data": tiers})
 	})
 
+	// Public platform settings (non-sensitive)
+	api.GET("/settings/public", func(c *gin.Context) {
+		s, err := h.PlatformRepo.GetSettings(c.Request.Context())
+		if err != nil { c.JSON(200, gin.H{"success": true, "data": gin.H{"min_withdrawal_idr": 100000, "credit_rate_idr": 1000}}); return }
+		c.JSON(200, gin.H{"success": true, "data": gin.H{"min_withdrawal_idr": s.MinWithdrawalIDR, "credit_rate_idr": s.CreditRateIDR, "fee_percent": s.FeePercent}})
+	})
+
 	// ---- Supporter Transactions ----
 	api.GET("/my/transactions", auth, h.Payment.ListMyTransactions)
 

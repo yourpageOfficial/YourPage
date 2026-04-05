@@ -123,7 +123,7 @@ func (s *paymentService) CheckoutPost(ctx context.Context, buyerID uuid.UUID, re
 		return nil, entity.ErrForbidden
 	}
 	if post.Status != entity.PostStatusPublished {
-		return nil, fmt.Errorf("post belum dipublikasikan")
+		return nil, fmt.Errorf("⚠ Post belum dipublikasikan")
 	}
 	if post.CreatorID == buyerID {
 		return nil, entity.ErrForbidden // can't buy own content

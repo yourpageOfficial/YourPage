@@ -36,7 +36,7 @@ export default function DashboardWithdrawals() {
 
   const { data: settings } = useQuery({
     queryKey: ["platform-settings-public"],
-    queryFn: async () => { try { const { data } = await api.get("/admin/settings"); return data.data; } catch { return { min_withdrawal_idr: 100000, credit_rate_idr: 1000 }; } },
+    queryFn: async () => { try { const { data } = await api.get("/settings/public"); return data.data; } catch { return { min_withdrawal_idr: 100000, credit_rate_idr: 1000 }; } },
   });
   const rate = settings?.credit_rate_idr || 1000;
   const minCredits = Math.ceil((settings?.min_withdrawal_idr || 100000) / rate);

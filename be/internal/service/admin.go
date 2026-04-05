@@ -252,7 +252,7 @@ func (s *adminService) UpdateWithdrawalStatus(ctx context.Context, id uuid.UUID,
 
 	// C-05 + 6.7: Status guard + state machine
 	if w.Status == entity.WithdrawalStatusProcessed || w.Status == entity.WithdrawalStatusRejected {
-		return fmt.Errorf("withdrawal sudah diproses sebelumnya")
+		return fmt.Errorf("⚠ Withdrawal sudah diproses sebelumnya")
 	}
 	validTransitions := map[entity.WithdrawalStatus][]entity.WithdrawalStatus{
 		entity.WithdrawalStatusPending:  {entity.WithdrawalStatusApproved, entity.WithdrawalStatusRejected},

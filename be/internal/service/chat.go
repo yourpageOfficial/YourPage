@@ -77,7 +77,7 @@ func (s *chatService) SendMessage(ctx context.Context, senderID uuid.UUID, req S
 	}
 
 	// Starting new chat (supporter or creator → target creator)
-	if req.CreatorID == uuid.Nil { return nil, fmt.Errorf("creator_id required") }
+	if req.CreatorID == uuid.Nil { return nil, fmt.Errorf("⚠ creator_id required") }
 	if req.CreatorID == senderID { return nil, entity.ErrForbidden }
 
 	creatorProfile, err := s.userRepo.FindCreatorByUserID(ctx, req.CreatorID)
