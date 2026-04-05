@@ -40,7 +40,9 @@ export default function SubscriptionPage() {
 
   const currentTierID = profile?.creator_profile?.tier_id;
   const tierExpires = profile?.creator_profile?.tier_expires_at;
-  const freeTierID = (tiers || []).find((t: any) => t.price_idr === 0)?.id;
+  const isExpired = tierExpires ? new Date(tierExpires) < new Date() : false;
+  const freeTier = (tiers || []).find((t: any) => t.price_idr === 0);
+  const freeTierID = freeTier?.id;
 
   return (
     <div>
@@ -53,13 +55,15 @@ export default function SubscriptionPage() {
 
       <div className="grid sm:grid-cols-3 gap-4">
         {(tiers || []).map((t: any, i: number) => {
-          const isCurrent = t.id === currentTierID || (!currentTierID && t.price_idr === 0);
-          const icons = [null, <Zap key="z" className="h-5 w-5" />, <Crown key="c" className="h-5 w-5" />];
+          const isCurrent = isExpired
+            ? t.price_idr === 0
+            : (t.id === currentTierID || (!currentTierID && t.price_idr === 0));
+          const icon = t.price_idr >= 149000 ? <Crown className="h-5 w-5" /> : t.price_idr > 0 ? <Zap className="h-5 w-5" /> : null;
           return (
             <Card key={t.id} className={`${isCurrent ? "border-primary ring-2 ring-primary/20" : ""}`}>
               <CardHeader className="pb-2">
                 <div className="flex items-center gap-2">
-                  {icons[i]}
+                  {icon}
                   <CardTitle className="text-lg">{t.name}</CardTitle>
                   {isCurrent && <Badge>Aktif</Badge>}
                 </div>
@@ -73,7 +77,7 @@ export default function SubscriptionPage() {
                   )}
                 </div>
                 <div className="space-y-1.5">
-                  {JSON.parse(t.features || "[]").map((f: string) => (
+                  {(() => { try { return JSON.parse(t.features || "[]"); } catch { return []; } })().map((f: string) => (
                     <div key={f} className="flex items-start gap-2 text-sm">
                       <Check className="h-4 w-4 text-green-500 mt-0.5 shrink-0" />
                       <span>{f}</span>
@@ -84,7 +88,7 @@ export default function SubscriptionPage() {
                 {isCurrent ? (
                   <Button disabled className="w-full">Paket Saat Ini</Button>
                 ) : (
-                  <Button className="w-full" variant={i === 1 ? "default" : "outline"} onClick={() => setConfirmTier(t)}>
+                  <Button className="w-full" variant={t.price_idr > 0 && t.price_idr < 149000 ? "default" : "outline"} onClick={() => setConfirmTier(t)}>
                     {t.price_idr === 0 ? "Downgrade" : "Upgrade"}
                   </Button>
                 )}
@@ -100,7 +104,7 @@ export default function SubscriptionPage() {
         onConfirm={() => confirmTier && subscribe.mutate(confirmTier.id)}
         title={confirmTier?.price_idr === 0 ? "Downgrade ke Free?" : `Upgrade ke ${confirmTier?.name}?`}
         description={confirmTier?.price_idr === 0
-          ? "Fee akan kembali ke 15% dan limit produk 3."
+          ? `Fee akan kembali ke ${freeTier?.fee_percent ?? 20}% dan limit produk ${freeTier?.max_products ?? 3}.`
           : `${formatCredit(confirmTier?.price_idr || 0)} Credit akan dipotong dari wallet kamu untuk 1 bulan.`}
         confirmText={confirmTier?.price_idr === 0 ? "Downgrade" : "Bayar & Upgrade"}
         variant={confirmTier?.price_idr === 0 ? "destructive" : "default"}

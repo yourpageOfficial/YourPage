@@ -6,23 +6,29 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { formatCredit, formatIDR } from "@/lib/utils";
+import { toast } from "@/lib/toast";
 import { TrendingUp, FileText, Package, Heart, Users, ShoppingCart, Lock } from "lucide-react";
 import Link from "next/link";
 
 export default function AnalyticsPage() {
-  const { data: earnings } = useQuery({
+  const { data: earnings, isError: earningsError } = useQuery({
     queryKey: ["creator-earnings"],
-    queryFn: async () => { try { const { data } = await api.get("/creator/earnings"); return data.data; } catch { return {}; } },
+    queryFn: async () => { const { data } = await api.get("/creator/earnings"); return data.data; },
   });
 
-  const isPro = earnings?.tier_name === "Pro" || earnings?.tier_name === "Business";
-  const isBusiness = earnings?.tier_name === "Business";
+  const tierExpired = earnings?.tier_expires_at ? new Date(earnings.tier_expires_at) < new Date() : false;
+  const isPro = !tierExpired && (earnings?.tier_name === "Pro" || earnings?.tier_name === "Business");
+  const isBusiness = !tierExpired && earnings?.tier_name === "Business";
 
   const { data: analytics } = useQuery({
     queryKey: ["creator-analytics"],
     queryFn: async () => { const { data } = await api.get("/creator/analytics"); return data.data; },
     enabled: isPro,
   });
+
+  if (earningsError) {
+    return <div className="text-center py-12 text-sm text-red-500">Gagal memuat data. Coba refresh halaman.</div>;
+  }
 
   if (!isPro) {
     return (
@@ -41,9 +47,11 @@ export default function AnalyticsPage() {
         <h1 className="text-xl sm:text-2xl font-bold">Analytics</h1>
         {isBusiness && (
           <Button size="sm" variant="outline" onClick={async () => {
-            const res = await api.get("/creator/sales/export", { responseType: "blob" });
-            const url = URL.createObjectURL(res.data);
-            const a = document.createElement("a"); a.href = url; a.download = "sales.csv"; a.click();
+            try {
+              const res = await api.get("/creator/sales/export", { responseType: "blob" });
+              const url = URL.createObjectURL(res.data);
+              const a = document.createElement("a"); a.href = url; a.download = "sales.csv"; a.click();
+            } catch { toast.error("Gagal export. Pastikan tier Business aktif."); }
           }}>📥 Export CSV</Button>
         )}
       </div>
