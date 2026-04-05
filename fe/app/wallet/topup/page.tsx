@@ -34,7 +34,7 @@ export default function TopupPage() {
   });
 
   const createTopup = useMutation({
-    mutationFn: () => api.post("/wallet/topup", { amount_idr: amount }),
+    mutationFn: () => api.post("/wallet/topup", { amount_idr: String(Math.floor(parseInt(amount) || 0)) }),
     onSuccess: (res) => { setTopupData(res.data.data); setStep(2); setError(""); },
     onError: (err: any) => setError(err.response?.data?.error || "Gagal"),
   });
@@ -143,7 +143,11 @@ export default function TopupPage() {
                 </div>
                 <div>
                   <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Bukti Transfer</label>
-                  <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => setProofFile(e.target.files?.[0] || null)} />
+                  <input ref={fileRef} type="file" accept="image/*,.pdf" className="hidden" onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f && f.size > 10 * 1024 * 1024) { alert("Maksimal 10MB"); return; }
+                    setProofFile(f || null);
+                  }} />
                   <div
                     onClick={() => fileRef.current?.click()}
                     className="mt-1 border-2 border-dashed rounded-lg p-4 text-center cursor-pointer hover:border-primary transition-colors"

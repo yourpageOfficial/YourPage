@@ -53,7 +53,7 @@ export default function DashboardWithdrawals() {
       const validationError = validateWithdrawal();
       if (validationError) return Promise.reject(new Error(validationError));
       return api.post("/withdrawals", {
-        amount_idr: parseInt(amount) * 1000,
+        amount_idr: Math.floor(parseInt(amount) || 0) * 1000,
         bank_name: bankName,
         account_number: accNumber,
         account_name: accName,

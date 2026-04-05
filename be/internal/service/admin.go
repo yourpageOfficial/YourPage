@@ -236,10 +236,18 @@ func (s *adminService) UpdateWithdrawalStatus(ctx context.Context, id uuid.UUID,
 		return err
 	}
 
-	// C-05: Prevent double processing
+	// C-05 + 6.7: Status guard + state machine
 	if w.Status == entity.WithdrawalStatusProcessed || w.Status == entity.WithdrawalStatusRejected {
 		return fmt.Errorf("withdrawal sudah diproses sebelumnya")
 	}
+	validTransitions := map[entity.WithdrawalStatus][]entity.WithdrawalStatus{
+		entity.WithdrawalStatusPending:  {entity.WithdrawalStatusApproved, entity.WithdrawalStatusRejected},
+		entity.WithdrawalStatusApproved: {entity.WithdrawalStatusProcessed, entity.WithdrawalStatusRejected},
+	}
+	allowed := validTransitions[w.Status]
+	valid := false
+	for _, s := range allowed { if s == req.Status { valid = true; break } }
+	if !valid { return fmt.Errorf("Tidak bisa ubah status dari %s ke %s", w.Status, req.Status) }
 
 	// Deduct credits BEFORE updating status to keep state consistent.
 	// If deduction fails, abort so status stays unchanged.

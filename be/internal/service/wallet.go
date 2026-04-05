@@ -65,8 +65,18 @@ func (s *walletService) ListTransactions(ctx context.Context, userID uuid.UUID, 
 func (s *walletService) CreateTopupRequest(ctx context.Context, userID uuid.UUID, amountStr string) (*entity.CreditTopupRequest, error) {
 	amount, err := strconv.ParseInt(amountStr, 10, 64)
 	if err != nil || amount < 10000 {
-		return nil, fmt.Errorf("minimum top-up is Rp 10.000")
+		return nil, fmt.Errorf("Minimum top-up Rp 10.000. Masukkan angka bulat.")
 	}
+
+	// 5.7: Limit pending requests
+	pendingCount, _ := s.walletRepo.CountPendingTopups(ctx)
+	_ = pendingCount // global count — for per-user, need new method
+	// Simple: count user's pending
+	var userPending int64
+	if w, err := s.walletRepo.FindOrCreateWallet(ctx, userID); err == nil { _ = w }
+	topups, _ := s.walletRepo.ListTopupRequests(ctx, "pending", nil, 100)
+	for _, t := range topups { if t.UserID == userID { userPending++ } }
+	if userPending >= 3 { return nil, fmt.Errorf("Maksimal 3 topup pending. Tunggu yang sebelumnya diproses.") }
 
 	settings, err := s.platformRepo.GetSettings(ctx)
 	if err != nil {
