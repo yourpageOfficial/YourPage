@@ -43,9 +43,10 @@ export default function LoginPage() {
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? "Memproses..." : "Masuk"}
             </Button>
-            <p className="text-center text-sm text-gray-600 dark:text-gray-400">
-              Belum punya akun? <Link href="/register" className="text-primary hover:underline">Daftar</Link>
-            </p>
+            <div className="flex items-center justify-between text-sm">
+              <Link href="/forgot-password" className="text-gray-500 hover:text-primary hover:underline">Lupa password?</Link>
+              <span className="text-gray-600 dark:text-gray-400">Belum punya akun? <Link href="/register" className="text-primary hover:underline">Daftar</Link></span>
+            </div>
           </form>
         </CardContent>
       </Card>

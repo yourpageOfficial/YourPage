@@ -150,18 +150,18 @@ export default function CreatorPageView() {
             <div className="mt-3 flex items-center justify-center sm:justify-start gap-2">
               {isOwn ? (
                 <>
-                  <Link href="/dashboard/profile"><Button size="sm" variant="outline">Edit Profile</Button></Link>
+                  <Link href="/dashboard/profile"><Button size="sm" variant="outline">Edit Profil</Button></Link>
                   <Button size="sm" variant="ghost" onClick={() => {
                     const url = window.location.href + "?ref=" + creator.username;
                     navigator.share ? navigator.share({ title: creator.display_name, url }) : navigator.clipboard.writeText(url).then(() => alert("Referral link disalin!"));
-                  }}>Share</Button>
+                  }}>Bagikan</Button>
                 </>
               ) : user ? (
                 <>
                   <Button size="sm" onClick={() => toggleFollow.mutate()}
                     style={!followStatus && creator.page_color ? { backgroundColor: creator.page_color, borderColor: creator.page_color, color: 'white' } : undefined}
                     variant={followStatus ? "outline" : "default"}>
-                    {followStatus ? "Unfollow" : "Follow"}
+                    {followStatus ? "Batal Follow" : "Follow"}
                   </Button>
                   <ReportButton targetType="user" targetId={creator.user_id} />
                   <Link href={`/chat?creator=${creator.user_id}&price=${creator.chat_price_idr || 0}`}>

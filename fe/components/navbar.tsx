@@ -19,7 +19,7 @@ function ThemeToggleMobile() {
   return (
     <button onClick={toggle} className="px-4 py-3 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md flex items-center gap-2 text-left w-full">
       {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-      {dark ? "Light Mode" : "Dark Mode"}
+      {dark ? "Mode Terang" : "Mode Gelap"}
     </button>
   );
 }
@@ -119,7 +119,7 @@ export function Navbar() {
               <User className="h-4 w-4" /> Profil
             </Link>
             <button onClick={logout} className="px-4 py-3 text-sm font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md flex items-center gap-2 text-left w-full">
-              <LogOut className="h-4 w-4" /> Logout
+              <LogOut className="h-4 w-4" /> Keluar
             </button>
             <div className="border-t dark:border-gray-700 mt-1 pt-1">
               <ThemeToggleMobile />

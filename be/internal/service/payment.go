@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/yourpage/be/internal/entity"
+	"github.com/yourpage/be/internal/pkg/mailer"
 	"github.com/yourpage/be/internal/pkg/validator"
 	"github.com/yourpage/be/internal/repository"
 )
@@ -66,6 +67,7 @@ type paymentService struct {
 	userRepo     repository.UserRepository
 	followRepo   repository.FollowRepository
 	platformRepo repository.PlatformRepository
+	mailer       mailer.Mailer
 }
 
 func NewPaymentService(
@@ -77,6 +79,7 @@ func NewPaymentService(
 	userRepo repository.UserRepository,
 	followRepo repository.FollowRepository,
 	platformRepo repository.PlatformRepository,
+	m mailer.Mailer,
 ) PaymentService {
 	return &paymentService{
 		paymentRepo:  paymentRepo,
@@ -87,6 +90,7 @@ func NewPaymentService(
 		userRepo:     userRepo,
 		followRepo:   followRepo,
 		platformRepo: platformRepo,
+		mailer:       m,
 	}
 }
 
@@ -319,6 +323,16 @@ func (s *paymentService) payWithCredits(
 			Body:  fmt.Sprintf("Seseorang membeli kontenmu. Kamu menerima %d Credit.", netIDR/1000),
 			ReferenceID: &referenceID,
 		})
+
+		// Send emails
+		if creatorUser, err := s.userRepo.FindByID(ctx, creatorID); err == nil {
+			if usecase == entity.PaymentUsecaseDonation {
+				go s.mailer.SendDonationReceived(ctx, creatorUser.Email, "Supporter", netIDR/1000, "")
+			}
+		}
+		if buyer, err := s.userRepo.FindByID(ctx, buyerID); err == nil {
+			go s.mailer.SendPurchaseReceipt(ctx, buyer.Email, string(usecase), creditsNeeded)
+		}
 	}
 
 	return &CheckoutResponse{PaymentID: paymentID, Status: string(entity.PaymentStatusPaid)}, nil

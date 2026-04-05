@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/yourpage/be/internal/entity"
+	"github.com/yourpage/be/internal/pkg/mailer"
 	"github.com/yourpage/be/internal/repository"
 )
 
@@ -110,6 +111,7 @@ type adminService struct {
 	kycRepo        repository.KYCRepository
 	followRepo     repository.FollowRepository
 	platformRepo   repository.PlatformRepository
+	mailer         mailer.Mailer
 }
 
 func NewAdminService(
@@ -123,6 +125,7 @@ func NewAdminService(
 	kycRepo repository.KYCRepository,
 	followRepo repository.FollowRepository,
 	platformRepo repository.PlatformRepository,
+	m mailer.Mailer,
 ) AdminService {
 	return &adminService{
 		userRepo:       userRepo,
@@ -135,6 +138,7 @@ func NewAdminService(
 		kycRepo:        kycRepo,
 		followRepo:     followRepo,
 		platformRepo:   platformRepo,
+		mailer:         m,
 	}
 }
 
@@ -275,6 +279,18 @@ func (s *adminService) UpdateWithdrawalStatus(ctx context.Context, id uuid.UUID,
 		}
 	}
 
+	// Send email
+	if user, err := s.userRepo.FindByID(ctx, w.CreatorID); err == nil {
+		switch req.Status {
+		case entity.WithdrawalStatusProcessed:
+			go s.mailer.SendWithdrawalProcessed(ctx, user.Email, w.AmountIDR, w.BankName)
+		case entity.WithdrawalStatusRejected:
+			reason := "Tidak memenuhi syarat"
+			if req.AdminNote != nil { reason = *req.AdminNote }
+			go s.mailer.SendWithdrawalRejected(ctx, user.Email, reason)
+		}
+	}
+
 	return nil
 }
 
@@ -316,6 +332,19 @@ func (s *adminService) UpdateKYCStatus(ctx context.Context, id uuid.UUID, req Up
 			Title: "Status KYC Diperbarui", Body: body,
 		}); err != nil {
 			fmt.Printf("admin: create KYC notification: %v\n", err)
+		}
+	}
+
+	// Send email
+	if userID != uuid.Nil {
+		if user, err := s.userRepo.FindByID(ctx, userID); err == nil {
+			if req.Status == entity.KYCStatusApproved {
+				go s.mailer.SendKYCApproved(ctx, user.Email)
+			} else if req.Status == entity.KYCStatusRejected {
+				reason := "Dokumen tidak valid"
+				if req.AdminNote != nil { reason = *req.AdminNote }
+				go s.mailer.SendKYCRejected(ctx, user.Email, reason)
+			}
 		}
 	}
 	return nil
@@ -398,6 +427,11 @@ func (s *adminService) ApproveTopup(ctx context.Context, id uuid.UUID, req Appro
 	}
 	if err := s.followRepo.CreateNotification(ctx, &notif); err != nil {
 		fmt.Printf("admin: create topup notification: %v\n", err)
+	}
+
+	// Send email
+	if user, err := s.userRepo.FindByID(ctx, topup.UserID); err == nil {
+		go s.mailer.SendTopupApproved(ctx, user.Email, topup.Credits)
 	}
 
 	return nil

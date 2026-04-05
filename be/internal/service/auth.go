@@ -169,6 +169,9 @@ func (s *authService) Register(ctx context.Context, req RegisterRequest) (*Regis
 		}
 	}
 
+	// Send welcome email
+	go s.mailer.SendWelcome(ctx, user.Email, user.DisplayName)
+
 	return &RegisterResponse{
 		ID:          user.ID,
 		Username:    user.Username,
@@ -511,5 +514,11 @@ func (s *authService) SubscribeTier(ctx context.Context, userID uuid.UUID, tierI
 	feeP := tier.FeePercent
 	profile.CustomFeePercent = &feeP
 	profile.StorageQuotaBytes = tier.StorageBytes
-	return s.userRepo.UpdateCreatorProfile(ctx, profile)
+	if err := s.userRepo.UpdateCreatorProfile(ctx, profile); err != nil { return err }
+
+	// Send tier upgrade email
+	if user, err := s.userRepo.FindByID(ctx, userID); err == nil {
+		go s.mailer.SendTierUpgrade(ctx, user.Email, tier.Name)
+	}
+	return nil
 }
