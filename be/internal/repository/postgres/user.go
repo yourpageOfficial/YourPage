@@ -156,7 +156,7 @@ func (r *userRepo) CountCreatorSales(ctx context.Context, userID uuid.UUID) (int
 
 func (r *userRepo) ListFeaturedCreators(ctx context.Context) ([]entity.CreatorProfile, error) {
 	var profiles []entity.CreatorProfile
-	err := r.db.WithContext(ctx).Preload("Tier").Where("is_featured = true").Order("featured_order, created_at DESC").Find(&profiles).Error
+	err := r.db.WithContext(ctx).Preload("Tier").Preload("User", "deleted_at IS NULL AND is_banned = false").Where("is_featured = true").Order("featured_order, created_at DESC").Find(&profiles).Error
 	return profiles, err
 }
 

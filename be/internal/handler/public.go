@@ -30,13 +30,14 @@ func (h *PublicHandler) GetCreatorPage(c *gin.Context) {
 	}
 
 	user, err := h.userRepo.FindByID(c.Request.Context(), profile.UserID)
-	if err != nil {
+	if err != nil || user.IsBanned {
 		response.NotFound(c, "creator not found")
 		return
 	}
 
 	tierBadge := ""
-	if profile.Tier != nil { tierBadge = profile.Tier.Badge }
+	isPriority := false
+	if profile.Tier != nil { tierBadge = profile.Tier.Badge; isPriority = profile.Tier.PriceIDR >= 149000 }
 
 	// Check if authenticated user is following this creator
 	isFollowing := false
@@ -59,7 +60,7 @@ func (h *PublicHandler) GetCreatorPage(c *gin.Context) {
 		"is_verified":    profile.IsVerified,
 		"tier_badge":     tierBadge,
 		"page_color":    profile.PageColor,
-		"is_priority":    profile.Tier != nil && profile.Tier.Name == "Business",
+		"is_priority":    isPriority,
 		"chat_price_idr":    profile.ChatPriceIDR,
 		"chat_allow_from":   profile.ChatAllowFrom,
 		"donation_goal_title":   profile.DonationGoalTitle,
@@ -67,6 +68,7 @@ func (h *PublicHandler) GetCreatorPage(c *gin.Context) {
 		"donation_goal_current": profile.DonationGoalCurrent,
 		"overlay_style":        profile.OverlayStyle,
 		"is_following":         isFollowing,
+		"welcome_message":     profile.WelcomeMessage,
 	})
 }
 
@@ -87,6 +89,8 @@ func (h *PublicHandler) GetMyEarnings(c *gin.Context) {
 		feePct = *profile.CustomFeePercent
 	}
 
+	postCount, _ := h.userRepo.CountCreatorPosts(c.Request.Context(), userID)
+
 	response.OK(c, gin.H{
 		"total_earnings":     profile.TotalEarnings,
 		"balance_idr":        0, // deprecated, use wallet
@@ -97,6 +101,7 @@ func (h *PublicHandler) GetMyEarnings(c *gin.Context) {
 		"tier_id":            profile.TierID,
 		"tier_expires_at":    profile.TierExpiresAt,
 		"fee_percent":        feePct,
+		"post_count":         postCount,
 		"page_color":         profile.PageColor,
 		"header_image":       profile.HeaderImageURL,
 		"social_links":      profile.SocialLinks,
@@ -151,11 +156,10 @@ func (h *PublicHandler) ListFeaturedCreators(c *gin.Context) {
 	if err != nil { response.InternalError(c); return }
 	var result []gin.H
 	for _, p := range profiles {
-		u, _ := h.userRepo.FindByID(c.Request.Context(), p.UserID)
-		if u == nil { continue }
+		if p.User.ID == uuid.Nil { continue }
 		result = append(result, gin.H{
-			"user_id": u.ID, "username": u.Username, "display_name": u.DisplayName,
-			"avatar_url": u.AvatarURL, "page_slug": p.PageSlug, "bio": u.Bio,
+			"user_id": p.UserID, "username": p.User.Username, "display_name": p.User.DisplayName,
+			"avatar_url": p.User.AvatarURL, "page_slug": p.PageSlug, "bio": p.User.Bio,
 			"follower_count": p.FollowerCount, "is_verified": p.IsVerified,
 		})
 	}

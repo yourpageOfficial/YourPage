@@ -20,7 +20,7 @@ export default function DashboardOverview() {
 
   const { data: sales } = useQuery({
     queryKey: ["creator-sales-chart"],
-    queryFn: async () => { try { const { data } = await api.get("/creator/sales?limit=30"); return data.data as any[]; } catch { return []; } },
+    queryFn: async () => { try { const { data } = await api.get("/creator/sales?limit=7"); return data.data as any[]; } catch { return []; } },
   });
 
   const { data: kyc } = useQuery({
@@ -37,7 +37,7 @@ export default function DashboardOverview() {
   const checks = [
     { done: !!user?.avatar_url, label: "Upload avatar", href: "/dashboard/profile" },
     { done: !!user?.bio, label: "Tulis bio", href: "/dashboard/profile" },
-    { done: true, label: "Buat post pertama", href: "/dashboard/posts" },
+    { done: (data?.post_count ?? 0) > 0, label: "Buat post pertama", href: "/dashboard/posts" },
     { done: !!kyc, label: "Verifikasi KYC", href: "/dashboard/kyc" },
   ];
   const allDone = checks.every((c) => c.done);
@@ -119,7 +119,7 @@ export default function DashboardOverview() {
         <Link href="/dashboard/posts"><Button variant="outline" className="w-full text-xs h-9">✏️ Buat Post</Button></Link>
         <Link href="/dashboard/products"><Button variant="outline" className="w-full text-xs h-9">📦 Buat Produk</Button></Link>
         <Link href="/dashboard/withdrawals"><Button variant="outline" className="w-full text-xs h-9">💰 Tarik Saldo</Button></Link>
-        <Link href={`/c/${user?.username}`}><Button variant="outline" className="w-full text-xs h-9">👁 Lihat Halaman</Button></Link>
+        <Link href={`/c/${user?.creator_profile?.page_slug || user?.username}`}><Button variant="outline" className="w-full text-xs h-9">👁 Lihat Halaman</Button></Link>
       </div>
 
       <p className="text-xs text-gray-400 dark:text-gray-500">Saldo bisa ditarik via menu Penarikan (min 100 Credit).</p>
