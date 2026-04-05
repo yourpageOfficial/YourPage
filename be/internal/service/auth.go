@@ -27,6 +27,7 @@ type RegisterRequest struct {
 	Username string          `json:"username" validate:"required,min=3,max=30,alphanum"`
 	Password string          `json:"password" validate:"required,min=8"`
 	Role     entity.UserRole `json:"role"     validate:"required,oneof=creator supporter"`
+	ReferralCode string          `json:"referral_code"`
 }
 
 type LoginRequest struct {
@@ -169,6 +170,19 @@ func (s *authService) Register(ctx context.Context, req RegisterRequest) (*Regis
 			// Rollback — delete the user we just created
 			_ = s.userRepo.SoftDelete(ctx, user.ID)
 			return nil, fmt.Errorf("register: create creator profile: %w", err)
+		}
+	}
+
+	// Process referral code
+	if req.ReferralCode != "" {
+		if ref, err := s.userRepo.FindReferralCode(ctx, req.ReferralCode); err == nil {
+			user.ReferredBy = &ref.UserID
+			s.userRepo.Update(ctx, user)
+			s.walletRepo.FindOrCreateWallet(ctx, ref.UserID)
+			s.walletRepo.AddCredits(ctx, ref.UserID, int64(ref.RewardCredits))
+			s.walletRepo.FindOrCreateWallet(ctx, user.ID)
+			s.walletRepo.AddCredits(ctx, user.ID, int64(ref.RewardCredits))
+			s.userRepo.IncrementReferralUsed(ctx, ref.ID)
 		}
 	}
 

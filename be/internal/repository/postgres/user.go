@@ -194,3 +194,17 @@ func (r *userRepo) CreateNotification(ctx context.Context, userID uuid.UUID, nty
 		ID: uuid.New(), UserID: userID, Type: entity.NotificationType(ntype), Title: title, Body: body, ReferenceID: refID,
 	}).Error
 }
+
+func (r *userRepo) FindReferralCode(ctx context.Context, code string) (*entity.ReferralCode, error) {
+	var ref entity.ReferralCode
+	if err := r.db.WithContext(ctx).Where("code = ?", code).First(&ref).Error; err != nil { return nil, err }
+	return &ref, nil
+}
+
+func (r *userRepo) CreateReferralCode(ctx context.Context, ref *entity.ReferralCode) error {
+	return r.db.WithContext(ctx).Create(ref).Error
+}
+
+func (r *userRepo) IncrementReferralUsed(ctx context.Context, id uuid.UUID) error {
+	return r.db.WithContext(ctx).Model(&entity.ReferralCode{}).Where("id = ?", id).Update("used_count", gorm.Expr("used_count + 1")).Error
+}

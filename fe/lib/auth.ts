@@ -6,7 +6,7 @@ interface AuthState {
   user: User | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, username: string, password: string, role: string) => Promise<void>;
+  register: (email: string, username: string, password: string, role: string, referralCode?: string) => Promise<void>;
   logout: () => void;
   fetchMe: () => Promise<void>;
 }
@@ -37,8 +37,8 @@ export const useAuth = create<AuthState>((set) => ({
       window.location.href = "/s";
     }
   },
-  register: async (email, username, password, role) => {
-    await api.post("/auth/register", { email, username, password, role });
+  register: async (email, username, password, role, referralCode) => {
+    await api.post("/auth/register", { email, username, password, role, referral_code: referralCode || undefined });
   },
   logout: () => {
     const rt = localStorage.getItem("refresh_token");

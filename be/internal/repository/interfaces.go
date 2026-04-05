@@ -31,6 +31,9 @@ type UserRepository interface {
 	DeleteOverlayTier(ctx context.Context, id, creatorID uuid.UUID) error
 	ListFollowerIDs(ctx context.Context, creatorID uuid.UUID) ([]uuid.UUID, error)
 	CreateNotification(ctx context.Context, userID uuid.UUID, ntype, title, body string, refID *uuid.UUID) error
+	FindReferralCode(ctx context.Context, code string) (*entity.ReferralCode, error)
+	CreateReferralCode(ctx context.Context, r *entity.ReferralCode) error
+	IncrementReferralUsed(ctx context.Context, id uuid.UUID) error
 
 	// Analytics
 	CountCreatorPosts(ctx context.Context, userID uuid.UUID) (int64, error)

@@ -283,6 +283,22 @@ func NewRouter(cfg *config.Config, rdb *redis.Client, h Handlers) *gin.Engine {
 		c.JSON(200, gin.H{"success": true, "message": "deleted"})
 	})
 
+	// ---- Referral ----
+	api.GET("/referral", auth, func(c *gin.Context) {
+		uid := getUserID(c)
+		ref, err := h.UserRepo.FindReferralCode(c.Request.Context(), "")
+		_ = ref; _ = err
+		// Find by user_id instead
+		var codes []entity.ReferralCode
+		h.AuditDB.Where("user_id = ?", uid).Find(&codes)
+		if len(codes) == 0 {
+			code := &entity.ReferralCode{ID: uuid.New(), UserID: uid, Code: uuid.NewString()[:8], RewardCredits: 10}
+			h.UserRepo.CreateReferralCode(c.Request.Context(), code)
+			codes = append(codes, *code)
+		}
+		c.JSON(200, gin.H{"success": true, "data": codes[0]})
+	})
+
 	// ---- Broadcast ----
 	api.POST("/creator/broadcast", auth, creatorOnly, func(c *gin.Context) {
 		var body struct { Message string `json:"message"` }

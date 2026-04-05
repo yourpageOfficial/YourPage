@@ -28,6 +28,7 @@ type User struct {
 	Bio          *string    `json:"bio"`
 	Role          UserRole   `json:"role" gorm:"default:'supporter'"`
 	EmailVerified bool       `json:"email_verified" gorm:"default:false"`
+	ReferredBy    *uuid.UUID `json:"referred_by,omitempty" gorm:"type:uuid"`
 	IsBanned     bool       `json:"is_banned" gorm:"default:false"`
 	CreatedAt    time.Time  `json:"created_at"`
 	UpdatedAt    time.Time  `json:"updated_at"`
@@ -106,4 +107,13 @@ func (j *JSONMap) Scan(value interface{}) error {
 		return fmt.Errorf("JSONMap: expected []byte, got %T", value)
 	}
 	return json.Unmarshal(b, j)
+}
+
+type ReferralCode struct {
+	ID            uuid.UUID `json:"id" gorm:"type:uuid;primaryKey"`
+	UserID        uuid.UUID `json:"user_id" gorm:"type:uuid"`
+	Code          string    `json:"code" gorm:"uniqueIndex"`
+	RewardCredits int       `json:"reward_credits" gorm:"default:10"`
+	UsedCount     int       `json:"used_count" gorm:"default:0"`
+	CreatedAt     time.Time `json:"created_at"`
 }
