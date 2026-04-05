@@ -123,6 +123,7 @@ type WithdrawalRepository interface {
 	ListByCreator(ctx context.Context, creatorID uuid.UUID, cursor *uuid.UUID, limit int) ([]entity.Withdrawal, error)
 	ListAll(ctx context.Context, status string, cursor *uuid.UUID, limit int) ([]entity.Withdrawal, error) // admin
 	HasPreviousApproved(ctx context.Context, creatorID uuid.UUID) (bool, error)
+	CountPending(ctx context.Context) (int64, error)
 }
 
 // WalletRepository handles credit wallets
@@ -139,6 +140,7 @@ type WalletRepository interface {
 	UpdateTopupRequest(ctx context.Context, id uuid.UUID, status entity.PaymentStatus, adminNote *string) error
 	UpdateTopupProof(ctx context.Context, id uuid.UUID, donorName, proofURL string) error
 	ListTopupRequests(ctx context.Context, status string, cursor *uuid.UUID, limit int) ([]entity.CreditTopupRequest, error) // admin
+	CountPendingTopups(ctx context.Context) (int64, error)
 }
 
 // FollowRepository handles follows and notifications
@@ -162,6 +164,7 @@ type KYCRepository interface {
 	FindKYCByUserID(ctx context.Context, userID uuid.UUID) (*entity.UserKYC, error)
 	UpdateKYCStatus(ctx context.Context, id uuid.UUID, status entity.KYCStatus, adminNote *string) error
 	ListKYC(ctx context.Context, status string, cursor *uuid.UUID, limit int) ([]entity.UserKYC, error) // admin
+	CountPending(ctx context.Context) (int64, error)
 
 	CreateReport(ctx context.Context, r *entity.ContentReport) error
 	FindReport(ctx context.Context, id uuid.UUID) (*entity.ContentReport, error)

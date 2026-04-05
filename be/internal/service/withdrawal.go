@@ -6,7 +6,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/yourpage/be/internal/entity"
-	"github.com/yourpage/be/internal/pkg/mailer"
 	"github.com/yourpage/be/internal/repository"
 )
 
@@ -40,8 +39,6 @@ type withdrawalService struct {
 	walletRepo     repository.WalletRepository
 	kycRepo        repository.KYCRepository
 	platformRepo   repository.PlatformRepository
-	mailer         mailer.Mailer
-	adminEmail     string
 }
 
 func NewWithdrawalService(
@@ -50,8 +47,6 @@ func NewWithdrawalService(
 	walletRepo repository.WalletRepository,
 	kycRepo repository.KYCRepository,
 	platformRepo repository.PlatformRepository,
-	mailer mailer.Mailer,
-	adminEmail string,
 ) WithdrawalService {
 	return &withdrawalService{
 		withdrawalRepo: withdrawalRepo,
@@ -59,8 +54,6 @@ func NewWithdrawalService(
 		walletRepo:     walletRepo,
 		kycRepo:        kycRepo,
 		platformRepo:   platformRepo,
-		mailer:         mailer,
-		adminEmail:     adminEmail,
 	}
 }
 

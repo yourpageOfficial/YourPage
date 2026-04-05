@@ -83,3 +83,9 @@ func (r *withdrawalRepo) HasPreviousApproved(ctx context.Context, creatorID uuid
 	}
 	return count > 0, nil
 }
+
+func (r *withdrawalRepo) CountPending(ctx context.Context) (int64, error) {
+	var c int64
+	err := r.db.WithContext(ctx).Model(&entity.Withdrawal{}).Where("status = 'pending'").Count(&c).Error
+	return c, err
+}

@@ -80,7 +80,7 @@ func main() {
 	donationSvc := service.NewDonationService(donationRepo, paymentRepo, userRepo, platformRepo)
 	walletSvc := service.NewWalletService(walletRepo, platformRepo, userRepo, storageSvc, cfg, mailSvc, os.Getenv("ADMIN_EMAIL"))
 	followSvc := service.NewFollowService(followRepo, userRepo)
-	withdrawalSvc := service.NewWithdrawalService(withdrawalRepo, userRepo, walletRepo, kycRepo, platformRepo, mailSvc, os.Getenv("ADMIN_EMAIL"))
+	withdrawalSvc := service.NewWithdrawalService(withdrawalRepo, userRepo, walletRepo, kycRepo, platformRepo)
 	kycSvc := service.NewKYCService(kycRepo)
 	adminSvc := service.NewAdminService(
 		userRepo, postRepo, productRepo, paymentRepo, donationRepo,
@@ -169,6 +169,32 @@ func main() {
 		}
 	}()
 
+	// Admin pending digest — every 5 minutes
+	go func() {
+		adminEmail := os.Getenv("ADMIN_EMAIL")
+		if adminEmail == "" { return }
+		ticker := time.NewTicker(5 * time.Minute)
+		defer ticker.Stop()
+		for range ticker.C {
+			ctx := context.Background()
+			pendingTopups, _ := walletRepo.CountPendingTopups(ctx)
+			pendingWithdrawals, _ := withdrawalRepo.CountPending(ctx)
+			pendingKYC, _ := kycRepo.CountPending(ctx)
+			if pendingTopups+pendingWithdrawals+pendingKYC > 0 {
+				mailSvc.SendAdminPendingDigest(ctx, adminEmail, int(pendingWithdrawals), int(pendingTopups), int(pendingKYC))
+			}
+		}
+	}()
+
+	// Admin pending digest — every 5 minutes
+	go func() {
+		ticker := time.NewTicker(5 * time.Minute)
+		defer ticker.Stop()
+		for range ticker.C {
+			handleAdminDigest(context.Background(), withdrawalRepo, walletRepo, kycRepo, mailSvc, cfg.App.AdminEmail)
+		}
+	}()
+
 	go func() {
 		log.Info().Str("port", port).Msg("server starting")
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
@@ -189,6 +215,32 @@ func main() {
 	}
 
 	log.Info().Msg("server exited")
+}
+
+func handleAdminDigest(
+	ctx context.Context,
+	withdrawalRepo repository.WithdrawalRepository,
+	walletRepo repository.WalletRepository,
+	kycRepo repository.KYCRepository,
+	mailSvc mailer.Mailer,
+	adminEmail string,
+) {
+	if adminEmail == "" {
+		return
+	}
+
+	withdrawals, _ := withdrawalRepo.ListAll(ctx, "pending", nil, 1000)
+	topups, _ := walletRepo.ListTopupRequests(ctx, "pending", nil, 1000)
+	kycs, _ := kycRepo.ListKYC(ctx, "pending", nil, 1000)
+
+	total := len(withdrawals) + len(topups) + len(kycs)
+	if total == 0 {
+		return
+	}
+
+	if err := mailSvc.SendAdminPendingDigest(ctx, adminEmail, len(withdrawals), len(topups), len(kycs)); err != nil {
+		log.Warn().Err(err).Msg("admin digest email failed")
+	}
 }
 
 func handleTierExpiry(ctx context.Context, userRepo repository.UserRepository, productRepo repository.ProductRepository, platformRepo repository.PlatformRepository) {

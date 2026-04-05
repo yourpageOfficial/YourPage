@@ -115,3 +115,9 @@ func (r *walletRepo) UpdateTopupProof(ctx context.Context, id uuid.UUID, donorNa
 		Where("id = ?", id).
 		Updates(map[string]interface{}{"donor_name": donorName, "proof_image_url": proofURL}).Error
 }
+
+func (r *walletRepo) CountPendingTopups(ctx context.Context) (int64, error) {
+	var c int64
+	err := r.db.WithContext(ctx).Model(&entity.CreditTopupRequest{}).Where("status = 'pending'").Count(&c).Error
+	return c, err
+}

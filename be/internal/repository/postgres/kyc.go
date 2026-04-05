@@ -95,3 +95,9 @@ func (r *kycRepo) ListReports(ctx context.Context, status string, cursor *uuid.U
 	err := q.Order("created_at DESC").Limit(limit).Find(&reports).Error
 	return reports, err
 }
+
+func (r *kycRepo) CountPending(ctx context.Context) (int64, error) {
+	var c int64
+	err := r.db.WithContext(ctx).Model(&entity.UserKYC{}).Where("status = 'pending'").Count(&c).Error
+	return c, err
+}
