@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { statusColor } from "@/components/ui/standards";
+import { statusColor, statusLabel } from "@/components/ui/standards";
 import api from "@/lib/api";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -24,7 +24,7 @@ export default function DashboardDonations() {
             <CardContent className="p-4 space-y-1">
               <div className="flex items-center justify-between">
                 <p className="text-lg font-bold">{formatCredit(d.amount_idr)}</p>
-                <Badge className={statusColor[d.status] || ""}>{d.status}</Badge>
+                <Badge className={statusColor[d.status] || ""}>{statusLabel[d.status] || d.status}</Badge>
               </div>
               <div className="grid grid-cols-2 gap-x-4 text-sm">
                 <div><span className="text-gray-500 dark:text-gray-400">Dari:</span> {d.is_anonymous ? "Anonim" : (d.supporter?.display_name || d.donor_name)}</div>

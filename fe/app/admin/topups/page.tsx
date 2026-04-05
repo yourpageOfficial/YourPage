@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { statusColor } from "@/components/ui/standards";
+import { statusColor, statusLabel } from "@/components/ui/standards";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/api";
 import { useAdminList } from "@/lib/use-admin-list";
@@ -14,7 +14,7 @@ import { useBulkSelect } from "@/lib/use-bulk-select";
 import { toast } from "@/lib/toast";
 import { formatIDR, formatDate } from "@/lib/utils";
 
-const filters = [{ label: "Pending", value: "pending" }, { label: "Paid", value: "paid" }, { label: "Failed", value: "failed" }];
+const filters = [{ label: "Menunggu", value: "pending" }, { label: "Dibayar", value: "paid" }, { label: "Gagal", value: "failed" }];
 const sorts = [{ label: "Amount", key: "amount_idr" }, { label: "Credits", key: "credits" }, { label: "Donor", key: "donor_name" }, { label: "Date", key: "created_at" }, { label: "Status", key: "status" }];
 
 export default function AdminTopups() {
@@ -33,7 +33,7 @@ export default function AdminTopups() {
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin-topups"] }); toast.success(`${bulk.count} topup rejected`); bulk.clear(); },
   });
   const approve = useMutation({ mutationFn: (id: string) => api.post(`/admin/credit-topups/${id}/approve`, { admin_note: notes[id] }), onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-topups"] }) });
-  const reject = useMutation({ mutationFn: (id: string) => api.post(`/admin/credit-topups/${id}/reject`, { admin_note: notes[id] || "Rejected" }), onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-topups"] }) });
+  const reject = useMutation({ mutationFn: (id: string) => api.post(`/admin/credit-topups/${id}/reject`, { admin_note: notes[id] || "Ditolak" }), onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-topups"] }) });
 
   return (
     <div>
@@ -41,8 +41,8 @@ export default function AdminTopups() {
       {bulk.count > 0 && (
         <div className="mb-4 flex items-center gap-3 p-3 bg-primary/10 rounded-lg">
           <span className="text-sm font-medium">{bulk.count} dipilih</span>
-          <Button size="sm" onClick={() => bulkApprove.mutate()} disabled={bulkApprove.isPending}>✅ Approve All</Button>
-          <Button size="sm" variant="destructive" onClick={() => bulkReject.mutate()} disabled={bulkReject.isPending}>❌ Reject All</Button>
+          <Button size="sm" onClick={() => bulkApprove.mutate()} disabled={bulkApprove.isPending}>✅ Setujui Semua</Button>
+          <Button size="sm" variant="destructive" onClick={() => bulkReject.mutate()} disabled={bulkReject.isPending}>❌ Tolak Semua</Button>
           <Button size="sm" variant="ghost" onClick={bulk.clear}>Batal</Button>
         </div>
       )}
@@ -68,7 +68,7 @@ export default function AdminTopups() {
                     {t.status === "pending" && <input type="checkbox" checked={bulk.selected.has(t.id)} onChange={() => bulk.toggle(t.id)} className="rounded" />}
                     <p className="text-xl font-bold">{formatIDR(t.amount_idr)} → {t.credits} credit</p>
                   </div>
-                  <Badge className={statusColor[t.status] || ""}>{t.status}</Badge>
+                  <Badge className={statusColor[t.status] || ""}>{statusLabel[t.status] || t.status}</Badge>
                 </div>
                 <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
                   <div><span className="text-gray-500 dark:text-gray-400">Donor:</span> {t.donor_name}</div>
@@ -81,8 +81,8 @@ export default function AdminTopups() {
                 {t.status === "pending" && <>
                   <Input placeholder="Catatan (opsional)" value={notes[t.id] || ""} onChange={(e) => setNotes({ ...notes, [t.id]: e.target.value })} />
                   <div className="flex gap-2">
-                    <Button size="sm" onClick={() => approve.mutate(t.id)}>Approve</Button>
-                    <Button size="sm" variant="destructive" onClick={() => reject.mutate(t.id)}>Reject</Button>
+                    <Button size="sm" onClick={() => approve.mutate(t.id)}>Setujui</Button>
+                    <Button size="sm" variant="destructive" onClick={() => reject.mutate(t.id)}>Tolak</Button>
                   </div>
                 </>}
               </CardContent>

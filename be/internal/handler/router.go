@@ -111,6 +111,8 @@ func NewRouter(cfg *config.Config, rdb *redis.Client, h Handlers) *gin.Engine {
 		authG.PUT("/me", auth, h.Auth.UpdateMe)
 		authG.POST("/upgrade-creator", auth, h.Auth.UpgradeToCreator)
 		authG.POST("/change-password", auth, h.Auth.ChangePassword)
+		authG.POST("/verify-email", h.Auth.VerifyEmail)
+		authG.POST("/resend-verification", auth, h.Auth.ResendVerification)
 		authG.POST("/subscribe-tier", auth, creatorOnly, h.Auth.SubscribeTier)
 	}
 

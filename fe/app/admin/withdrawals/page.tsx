@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { statusColor } from "@/components/ui/standards";
+import { statusColor, statusLabel } from "@/components/ui/standards";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/api";
 import { useAdminList } from "@/lib/use-admin-list";
@@ -14,7 +14,7 @@ import { formatIDR, formatDate } from "@/lib/utils";
 import { useBulkSelect } from "@/lib/use-bulk-select";
 import { toast } from "@/lib/toast";
 
-const filters = [{ label: "Pending", value: "pending" }, { label: "Approved", value: "approved" }, { label: "Processed", value: "processed" }, { label: "Rejected", value: "rejected" }];
+const filters = [{ label: "Menunggu", value: "pending" }, { label: "Disetujui", value: "approved" }, { label: "Diproses", value: "processed" }, { label: "Ditolak", value: "rejected" }];
 const sorts = [{ label: "Amount", key: "amount_idr" }, { label: "Bank", key: "bank_name" }, { label: "Date", key: "created_at" }, { label: "Status", key: "status" }];
 
 export default function AdminWithdrawals() {
@@ -42,8 +42,8 @@ export default function AdminWithdrawals() {
       {bulk.count > 0 && (
         <div className="mb-4 flex items-center gap-3 p-3 bg-primary/10 rounded-lg">
           <span className="text-sm font-medium">{bulk.count} dipilih</span>
-          <Button size="sm" onClick={() => bulkApprove.mutate()}>✅ Approve All</Button>
-          <Button size="sm" variant="destructive" onClick={() => bulkReject.mutate()}>❌ Reject All</Button>
+          <Button size="sm" onClick={() => bulkApprove.mutate()}>✅ Setujui Semua</Button>
+          <Button size="sm" variant="destructive" onClick={() => bulkReject.mutate()}>❌ Tolak Semua</Button>
           <Button size="sm" variant="ghost" onClick={bulk.clear}>Batal</Button>
         </div>
       )}
@@ -69,7 +69,7 @@ export default function AdminWithdrawals() {
                     {w.status === "pending" && <input type="checkbox" checked={bulk.selected.has(w.id)} onChange={() => bulk.toggle(w.id)} className="rounded" />}
                     <p className="text-xl font-bold">{formatIDR(w.amount_idr)}</p>
                   </div>
-                  <Badge className={statusColor[w.status] || ""}>{w.status}</Badge>
+                  <Badge className={statusColor[w.status] || ""}>{statusLabel[w.status] || w.status}</Badge>
                 </div>
                 <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
                   <div><span className="text-gray-500 dark:text-gray-400">Bank:</span> {w.bank_name}</div>
@@ -83,10 +83,10 @@ export default function AdminWithdrawals() {
                   <Input placeholder="Catatan (opsional)" value={notes[w.id] || ""} onChange={(e) => setNotes({ ...notes, [w.id]: e.target.value })} />
                   <div className="flex gap-2">
                     {w.status === "pending" && <>
-                      <Button size="sm" onClick={() => update.mutate({ id: w.id, status: "approved" })}>Approve</Button>
-                      <Button size="sm" variant="destructive" onClick={() => update.mutate({ id: w.id, status: "rejected" })}>Reject</Button>
+                      <Button size="sm" onClick={() => update.mutate({ id: w.id, status: "approved" })}>Setujui</Button>
+                      <Button size="sm" variant="destructive" onClick={() => update.mutate({ id: w.id, status: "rejected" })}>Tolak</Button>
                     </>}
-                    {w.status === "approved" && <Button size="sm" onClick={() => update.mutate({ id: w.id, status: "processed" })}>Mark Processed</Button>}
+                    {w.status === "approved" && <Button size="sm" onClick={() => update.mutate({ id: w.id, status: "processed" })}>Tandai Diproses</Button>}
                   </div>
                 </>}
               </CardContent>

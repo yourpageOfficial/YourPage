@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { statusColor } from "@/components/ui/standards";
+import { statusColor, statusLabel } from "@/components/ui/standards";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/api";
 import { useAdminList } from "@/lib/use-admin-list";
@@ -81,7 +81,7 @@ export default function AdminReports() {
                     <Badge className="bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400">{r.reason}</Badge>
                     <Badge variant="outline">{r.target_type}</Badge>
                   </div>
-                  <Badge className={statusColor[r.status] || ""}>{r.status}</Badge>
+                  <Badge className={statusColor[r.status] || ""}>{statusLabel[r.status] || r.status}</Badge>
                 </div>
 
                 {/* Details */}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { statusColor } from "@/components/ui/standards";
+import { statusColor, statusLabel } from "@/components/ui/standards";
 import api from "@/lib/api";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -69,7 +69,7 @@ export default function SupporterTransactions() {
                       <span>{formatDate(t.created_at)}</span>
                       {t.unique_code > 0 && <><span>·</span><span>Kode: {t.unique_code}</span></>}
                     </div>
-                    <Badge className={statusColor[t.status] || ""}>{t.status}</Badge>
+                    <Badge className={statusColor[t.status] || ""}>{statusLabel[t.status] || t.status}</Badge>
                   </div>
                   {t.status === "paid" && (
                     <div className="flex gap-4 mt-1 text-xs text-gray-400 dark:text-gray-400">

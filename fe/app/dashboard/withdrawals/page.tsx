@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { statusColor } from "@/components/ui/standards";
+import { statusColor, statusLabel } from "@/components/ui/standards";
 import { useState } from "react";
 import api from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -130,7 +130,7 @@ export default function DashboardWithdrawals() {
                 {w.admin_note && <p className="text-xs text-gray-500 mt-1">Catatan admin: {w.admin_note}</p>}
                 <p className="text-xs text-gray-400 dark:text-gray-400">{formatDate(w.created_at)}</p>
               </div>
-              <Badge className={statusColor[w.status] || ""}>{w.status}</Badge>
+              <Badge className={statusColor[w.status] || ""}>{statusLabel[w.status] || w.status}</Badge>
             </CardContent>
           </Card>
         ))}

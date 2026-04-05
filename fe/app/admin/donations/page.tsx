@@ -1,13 +1,13 @@
 "use client";
 
 import { useAdminList } from "@/lib/use-admin-list";
-import { statusColor } from "@/components/ui/standards";
+import { statusColor, statusLabel } from "@/components/ui/standards";
 import { AdminList } from "@/components/admin-list";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatIDR, formatDate } from "@/lib/utils";
 
-const filters = [{ label: "Pending", value: "pending" }, { label: "Paid", value: "paid" }, { label: "Failed", value: "failed" }];
+const filters = [{ label: "Menunggu", value: "pending" }, { label: "Dibayar", value: "paid" }, { label: "Gagal", value: "failed" }];
 const sorts = [{ label: "Amount", key: "amount_idr" }, { label: "Donor", key: "donor_name" }, { label: "Date", key: "created_at" }, { label: "Status", key: "status" }];
 
 export default function AdminDonations() {
@@ -29,7 +29,7 @@ export default function AdminDonations() {
               <CardContent className="p-4 space-y-1">
                 <div className="flex items-center justify-between">
                   <p className="text-lg font-bold">{formatIDR(d.amount_idr)}</p>
-                  <Badge className={statusColor[d.status] || ""}>{d.status}</Badge>
+                  <Badge className={statusColor[d.status] || ""}>{statusLabel[d.status] || d.status}</Badge>
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 text-sm">
                   <div><span className="text-gray-500 dark:text-gray-400">Dari:</span> {d.is_anonymous ? "Anonim" : (d.supporter?.username || d.donor_name)}</div>

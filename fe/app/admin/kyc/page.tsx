@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { statusColor } from "@/components/ui/standards";
+import { statusColor, statusLabel } from "@/components/ui/standards";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/api";
 import { useAdminList } from "@/lib/use-admin-list";
@@ -12,7 +12,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@/lib/utils";
 
-const filters = [{ label: "Pending", value: "pending" }, { label: "Approved", value: "approved" }, { label: "Rejected", value: "rejected" }];
+const filters = [{ label: "Menunggu", value: "pending" }, { label: "Disetujui", value: "approved" }, { label: "Ditolak", value: "rejected" }];
 const sorts = [{ label: "Name", key: "full_name" }, { label: "Date", key: "created_at" }, { label: "Status", key: "status" }];
 
 export default function AdminKYC() {
@@ -40,7 +40,7 @@ export default function AdminKYC() {
               <CardContent className="p-4 space-y-2">
                 <div className="flex items-center justify-between">
                   <p className="text-lg font-medium">{k.full_name}</p>
-                  <Badge className={statusColor[k.status] || ""}>{k.status}</Badge>
+                  <Badge className={statusColor[k.status] || ""}>{statusLabel[k.status] || k.status}</Badge>
                 </div>
                 <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
                   <div><span className="text-gray-500 dark:text-gray-400">User:</span> {k.user?.username || k.user_id?.slice(0, 8) + "..."}</div>
@@ -51,8 +51,8 @@ export default function AdminKYC() {
                 {k.status === "pending" && <>
                   <Input placeholder="Catatan (opsional)" value={notes[k.id] || ""} onChange={(e) => setNotes({ ...notes, [k.id]: e.target.value })} />
                   <div className="flex gap-2">
-                    <Button size="sm" onClick={() => update.mutate({ id: k.id, status: "approved" })}>Approve</Button>
-                    <Button size="sm" variant="destructive" onClick={() => update.mutate({ id: k.id, status: "rejected" })}>Reject</Button>
+                    <Button size="sm" onClick={() => update.mutate({ id: k.id, status: "approved" })}>Setujui</Button>
+                    <Button size="sm" variant="destructive" onClick={() => update.mutate({ id: k.id, status: "rejected" })}>Tolak</Button>
                   </div>
                 </>}
               </CardContent>

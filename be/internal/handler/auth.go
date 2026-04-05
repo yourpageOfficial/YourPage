@@ -195,6 +195,22 @@ func (h *AuthHandler) SubscribeTier(c *gin.Context) {
 	response.OKMessage(c, "tier updated")
 }
 
+func (h *AuthHandler) VerifyEmail(c *gin.Context) {
+	var body struct { Token string `json:"token" validate:"required"` }
+	if err := c.ShouldBindJSON(&body); err != nil { response.BadRequest(c, "token required"); return }
+	if err := h.svc.VerifyEmail(c.Request.Context(), body.Token); err != nil {
+		handleServiceError(c, err); return
+	}
+	response.OKMessage(c, "email verified")
+}
+
+func (h *AuthHandler) ResendVerification(c *gin.Context) {
+	if err := h.svc.ResendVerification(c.Request.Context(), getUserID(c)); err != nil {
+		handleServiceError(c, err); return
+	}
+	response.OKMessage(c, "verification email sent")
+}
+
 func (h *AuthHandler) UpgradeToCreator(c *gin.Context) {
 	userID := getUserID(c)
 	var req service.UpgradeCreatorRequest

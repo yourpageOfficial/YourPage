@@ -37,7 +37,7 @@ export default function AdminProducts() {
                     <Badge>{p.type}</Badge>
                     <span className="text-sm font-medium">{formatIDR(p.price_idr)}</span>
                     <span className="text-xs text-gray-500 dark:text-gray-400">{p.sales_count} sold</span>
-                    {!p.is_active && <Badge className="bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400">Inactive</Badge>}
+                    {!p.is_active && <Badge className="bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400">Nonaktif</Badge>}
                   </div>
                   <p className="text-xs text-gray-400 mt-1">by @{p.creator?.username || "?"} · {formatDate(p.created_at)}</p>
                 </div>

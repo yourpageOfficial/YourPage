@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { statusColor } from "@/components/ui/standards";
+import { statusColor, statusLabel } from "@/components/ui/standards";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/api";
 import { useAdminList } from "@/lib/use-admin-list";
@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { formatIDR, formatDate } from "@/lib/utils";
 import { Undo2, Edit } from "lucide-react";
 
-const filters = [{ label: "Pending", value: "pending" }, { label: "Paid", value: "paid" }, { label: "Failed", value: "failed" }, { label: "Refunded", value: "refunded" }];
+const filters = [{ label: "Menunggu", value: "pending" }, { label: "Dibayar", value: "paid" }, { label: "Gagal", value: "failed" }, { label: "Dikembalikan", value: "refunded" }];
 const sorts = [{ label: "Amount", key: "amount_idr" }, { label: "Provider", key: "provider" }, { label: "Usecase", key: "usecase" }, { label: "Date", key: "created_at" }, { label: "Status", key: "status" }];
 
 export default function AdminPayments() {
@@ -59,7 +59,7 @@ export default function AdminPayments() {
                     <p className="text-lg font-bold">{formatIDR(p.amount_idr)}</p>
                     {p.unique_code > 0 && <span className="text-xs text-primary font-medium ml-1">Kode: {p.unique_code}</span>}
                   </div>
-                  <Badge className={statusColor[p.status] || ""}>{p.status}</Badge>
+                  <Badge className={statusColor[p.status] || ""}>{statusLabel[p.status] || p.status}</Badge>
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-1 text-sm">
                   <div><span className="text-gray-500 dark:text-gray-400">Provider:</span> {p.provider}</div>

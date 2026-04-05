@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { statusColor } from "@/components/ui/standards";
+import { statusColor, statusLabel } from "@/components/ui/standards";
 import api from "@/lib/api";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -72,7 +72,7 @@ export default function SupporterDonations() {
                       <span>·</span>
                       <span>ID: {d.payment_id?.slice(0, 8)}</span>
                     </div>
-                    <Badge className={statusColor[d.status] || ""}>{d.status}</Badge>
+                    <Badge className={statusColor[d.status] || ""}>{statusLabel[d.status] || d.status}</Badge>
                   </div>
                 </div>
               </div>

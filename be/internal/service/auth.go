@@ -61,8 +61,9 @@ type UserProfileResponse struct {
 	DisplayName string           `json:"display_name"`
 	AvatarURL   *string          `json:"avatar_url"`
 	Bio         *string          `json:"bio"`
-	Role        entity.UserRole  `json:"role"`
-	Creator     *creatorSnapshot `json:"creator_profile,omitempty"`
+	Role          entity.UserRole  `json:"role"`
+	EmailVerified bool             `json:"email_verified"`
+	Creator       *creatorSnapshot `json:"creator_profile,omitempty"`
 }
 
 type creatorSnapshot struct {
@@ -89,6 +90,8 @@ type AuthService interface {
 	UpgradeToCreator(ctx context.Context, userID uuid.UUID, req UpgradeCreatorRequest) error
 	UpdateProfile(ctx context.Context, userID uuid.UUID, displayName, bio, avatarURL, pageColor, headerImage *string, chatPrice *int64, chatAllowFrom *string, autoReply *string, socialLinks map[string]interface{}, goalTitle *string, goalAmount *int64, welcomeMsg, overlayStyle, overlayText *string) error
 	ChangePassword(ctx context.Context, userID uuid.UUID, oldPassword, newPassword string) error
+	VerifyEmail(ctx context.Context, token string) error
+	ResendVerification(ctx context.Context, userID uuid.UUID) error
 	SubscribeTier(ctx context.Context, userID uuid.UUID, tierID uuid.UUID) error
 }
 
@@ -169,8 +172,11 @@ func (s *authService) Register(ctx context.Context, req RegisterRequest) (*Regis
 		}
 	}
 
-	// Send welcome email
+	// Send welcome + verification email
 	go s.mailer.SendWelcome(ctx, user.Email, user.DisplayName)
+	verifyToken, _ := randomHex(32)
+	s.rdb.Set(ctx, "verify:"+verifyToken, user.Email, 24*time.Hour)
+	go s.mailer.SendEmailVerification(ctx, user.Email, verifyToken)
 
 	return &RegisterResponse{
 		ID:          user.ID,
@@ -253,12 +259,13 @@ func (s *authService) GetMe(ctx context.Context, userID uuid.UUID) (*UserProfile
 	}
 
 	resp := &UserProfileResponse{
-		ID:          user.ID,
-		Username:    user.Username,
-		DisplayName: user.DisplayName,
-		AvatarURL:   user.AvatarURL,
-		Bio:         user.Bio,
-		Role:        user.Role,
+		ID:            user.ID,
+		Username:      user.Username,
+		DisplayName:   user.DisplayName,
+		AvatarURL:     user.AvatarURL,
+		Bio:           user.Bio,
+		Role:          user.Role,
+		EmailVerified: user.EmailVerified,
 	}
 
 	if user.Role == entity.RoleCreator || user.Role == entity.RoleAdmin {
@@ -469,6 +476,27 @@ func randomHex(n int) (string, error) {
 		return "", err
 	}
 	return hex.EncodeToString(b), nil
+}
+
+func (s *authService) VerifyEmail(ctx context.Context, token string) error {
+	email, err := s.rdb.Get(ctx, "verify:"+token).Result()
+	if err != nil { return entity.ErrInvalidToken }
+	user, err := s.userRepo.FindByEmail(ctx, email)
+	if err != nil { return entity.ErrNotFound }
+	user.EmailVerified = true
+	if err := s.userRepo.Update(ctx, user); err != nil { return err }
+	s.rdb.Del(ctx, "verify:"+token)
+	return nil
+}
+
+func (s *authService) ResendVerification(ctx context.Context, userID uuid.UUID) error {
+	user, err := s.userRepo.FindByID(ctx, userID)
+	if err != nil { return err }
+	if user.EmailVerified { return fmt.Errorf("Email sudah terverifikasi") }
+	token, _ := randomHex(32)
+	s.rdb.Set(ctx, "verify:"+token, user.Email, 24*time.Hour)
+	go s.mailer.SendEmailVerification(ctx, user.Email, token)
+	return nil
 }
 
 // SubscribeTier upgrades a creator's tier by deducting credits.

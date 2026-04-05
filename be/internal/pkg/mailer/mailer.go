@@ -13,6 +13,7 @@ import (
 
 type Mailer interface {
 	SendPasswordReset(ctx context.Context, toEmail, token string) error
+	SendEmailVerification(ctx context.Context, toEmail, token string) error
 	SendWelcome(ctx context.Context, toEmail, displayName string) error
 	SendTopupApproved(ctx context.Context, toEmail string, credits int64) error
 	SendTopupRejected(ctx context.Context, toEmail, reason string) error
@@ -88,6 +89,15 @@ func (m *SMTPMailer) SendPasswordReset(_ context.Context, toEmail, token string)
 		<p>Klik tombol di bawah untuk reset password kamu (berlaku 15 menit):</p>
 		<p style="text-align:center;padding:16px 0"><a href="%s" style="background:#2563EB;color:white;padding:12px 32px;border-radius:8px;text-decoration:none;font-weight:bold">Reset Password</a></p>
 		<p style="color:#999;font-size:13px">Jika kamu tidak meminta reset password, abaikan email ini.</p>`, link))
+}
+
+func (m *SMTPMailer) SendEmailVerification(_ context.Context, toEmail, token string) error {
+	link := fmt.Sprintf("%s/verify-email?token=%s", m.frontendURL, token)
+	return m.send(toEmail, "Verifikasi Email — YourPage", fmt.Sprintf(
+		`<h2>Verifikasi Email Kamu</h2>
+		<p>Klik tombol di bawah untuk memverifikasi email kamu:</p>
+		<p style="text-align:center;padding:16px 0"><a href="%s" style="background:#2563EB;color:white;padding:12px 32px;border-radius:8px;text-decoration:none;font-weight:bold">Verifikasi Email</a></p>
+		<p style="color:#999;font-size:13px">Link berlaku 24 jam.</p>`, link))
 }
 
 func (m *SMTPMailer) SendWelcome(_ context.Context, toEmail, displayName string) error {

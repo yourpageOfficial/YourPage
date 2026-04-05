@@ -25,7 +25,8 @@ type User struct {
 	DisplayName  string     `json:"display_name"`
 	AvatarURL    *string    `json:"avatar_url"`
 	Bio          *string    `json:"bio"`
-	Role         UserRole   `json:"role" gorm:"default:'supporter'"`
+	Role          UserRole   `json:"role" gorm:"default:'supporter'"`
+	EmailVerified bool       `json:"email_verified" gorm:"default:false"`
 	IsBanned     bool       `json:"is_banned" gorm:"default:false"`
 	CreatedAt    time.Time  `json:"created_at"`
 	UpdatedAt    time.Time  `json:"updated_at"`

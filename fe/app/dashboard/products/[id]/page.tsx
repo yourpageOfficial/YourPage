@@ -95,7 +95,7 @@ export default function DashboardProductDetail() {
               <option value="other">Lainnya</option>
             </select>
             <Button size="sm" variant={isActive ? "default" : "outline"} onClick={() => setIsActive(!isActive)}>
-              {isActive ? "✓ Active" : "Inactive"}
+              {isActive ? "✓ Aktif" : "Nonaktif"}
             </Button>
           </div>
           <div>

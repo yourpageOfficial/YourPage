@@ -59,6 +59,24 @@ export const statusColors: Record<string, string> = {
 // Alias for backward compat
 export const statusColor = statusColors;
 
+// Indonesian labels for status values
+export const statusLabel: Record<string, string> = {
+  pending:    "Menunggu",
+  paid:       "Dibayar",
+  approved:   "Disetujui",
+  processed:  "Diproses",
+  failed:     "Gagal",
+  rejected:   "Ditolak",
+  expired:    "Kedaluwarsa",
+  refunded:   "Dikembalikan",
+  resolved:   "Selesai",
+  dismissed:  "Diabaikan",
+  draft:      "Draft",
+  published:  "Dipublikasi",
+  scheduled:  "Terjadwal",
+  free:       "Gratis",
+};
+
 // Standard role colors
 export const roleColors: Record<string, string> = {
   admin: "bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400",
