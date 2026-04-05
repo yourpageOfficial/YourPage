@@ -176,7 +176,7 @@ func (h *PublicHandler) SearchCreators(c *gin.Context) {
 		limit = l
 	}
 
-	profiles, err := h.userRepo.SearchCreators(c.Request.Context(), query, cursor, limit+1)
+	profiles, err := h.userRepo.SearchCreators(c.Request.Context(), query, c.Query("category"), cursor, limit+1)
 	if err != nil {
 		response.InternalError(c)
 		return

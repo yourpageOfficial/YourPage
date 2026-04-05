@@ -17,6 +17,7 @@ export default function DashboardWithdrawals() {
   const [amount, setAmount] = useState("");
   const [bankName, setBankName] = useState("");
   const [accNumber, setAccNumber] = useState("");
+  const [accNumberConfirm, setAccNumberConfirm] = useState("");
   const [accName, setAccName] = useState("");
   const [error, setError] = useState("");
 
@@ -112,8 +113,12 @@ export default function DashboardWithdrawals() {
             </div>
             <Input placeholder="Nama Bank (BCA, BNI, Mandiri, dll)" value={bankName} onChange={(e) => setBankName(e.target.value)} />
             <Input placeholder="Nomor Rekening (10-16 digit)" value={accNumber} onChange={(e) => setAccNumber(e.target.value.replace(/\D/g, ""))} inputMode="numeric" maxLength={16} />
+            <div>
+              <Input placeholder="Konfirmasi Nomor Rekening" value={accNumberConfirm} onChange={(e) => setAccNumberConfirm(e.target.value.replace(/\D/g, ""))} inputMode="numeric" maxLength={16} />
+              {accNumberConfirm && accNumber !== accNumberConfirm && <p className="text-xs text-red-500 mt-1">Nomor rekening tidak cocok</p>}
+            </div>
             <Input placeholder="Nama Pemilik Rekening (sesuai KTP)" value={accName} onChange={(e) => setAccName(e.target.value)} />
-            <Button onClick={() => create.mutate()} disabled={create.isPending || !amount || !bankName || !accNumber || !accName}>
+            <Button onClick={() => create.mutate()} disabled={create.isPending || !amount || !bankName || !accNumber || accNumber !== accNumberConfirm || !accName}>
               {create.isPending ? "Memproses..." : "Kirim Request"}
             </Button>
           </CardContent>

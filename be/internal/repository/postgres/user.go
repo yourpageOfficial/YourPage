@@ -112,13 +112,16 @@ func (r *userRepo) IncrementFollowerCount(ctx context.Context, creatorID uuid.UU
 		Update("follower_count", gorm.Expr("follower_count + ?", delta)).Error
 }
 
-func (r *userRepo) SearchCreators(ctx context.Context, query string, cursor *uuid.UUID, limit int) ([]entity.CreatorProfile, error) {
+func (r *userRepo) SearchCreators(ctx context.Context, query string, category string, cursor *uuid.UUID, limit int) ([]entity.CreatorProfile, error) {
 	var profiles []entity.CreatorProfile
 	q := r.db.WithContext(ctx).Preload("User", "deleted_at IS NULL")
 	if query != "" {
 		like := "%" + query + "%"
 		q = q.Joins("JOIN users ON users.id = creator_profiles.user_id AND users.deleted_at IS NULL").
 			Where("users.username ILIKE ? OR users.display_name ILIKE ? OR creator_profiles.page_slug ILIKE ?", like, like, like)
+	}
+	if category != "" {
+		q = q.Where("creator_profiles.category = ?", category)
 	}
 	if cursor != nil {
 		q = q.Where("creator_profiles.id > ?", *cursor)

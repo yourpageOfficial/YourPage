@@ -47,6 +47,12 @@ export default function CreatorPageView() {
     },
   });
 
+  const { data: topSupporters } = useQuery({
+    queryKey: ["top-supporters", creator?.user_id],
+    enabled: !!creator?.user_id,
+    queryFn: async () => { const { data } = await api.get(`/donations/creator/${creator!.user_id}/top`); return data.data as any[]; },
+  });
+
   const { data: products } = useQuery({
     queryKey: ["creator-products", creator?.user_id],
     enabled: !!creator?.user_id,
@@ -190,6 +196,24 @@ export default function CreatorPageView() {
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                 {formatCredit(creator.donation_goal_current)} / {formatCredit(creator.donation_goal_amount)} Credit ({Math.min(Math.round((creator.donation_goal_current / creator.donation_goal_amount) * 100), 100)}%)
               </p>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Top Supporters */}
+        {topSupporters && topSupporters.length > 0 && (
+          <Card className="mt-4 mx-2 sm:mx-0">
+            <CardContent className="p-4">
+              <p className="text-sm font-medium mb-3">🏆 Top Supporter</p>
+              <div className="space-y-2">
+                {topSupporters.map((s: any, i: number) => (
+                  <div key={i} className="flex items-center gap-2 text-sm">
+                    <span className="font-bold text-primary w-5">{i + 1}</span>
+                    <span className="flex-1">{s.donor_name}</span>
+                    <span className="text-xs text-gray-500 dark:text-gray-400">{formatCredit(s.total_idr)} · {s.donation_count}x</span>
+                  </div>
+                ))}
+              </div>
             </CardContent>
           </Card>
         )}

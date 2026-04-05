@@ -20,12 +20,18 @@ interface CreatorItem {
 
 export default function ExplorePage() {
   const [query, setQuery] = useState("");
+  const [category, setCategory] = useState("");
   const debouncedQuery = useDebounce(query, 300);
 
-  const { data: creators, isLoading, isError, refetch } = useQuery({
-    queryKey: ["explore", debouncedQuery],
+  const categories = ["Gaming", "Musik", "Edukasi", "Podcast", "Seni", "Teknologi", "Lifestyle", "Lainnya"];
+
+  const { data: creators, isLoading } = useQuery({
+    queryKey: ["explore", debouncedQuery, category],
     queryFn: async () => {
-      const { data } = await api.get(`/creators/search?q=${encodeURIComponent(debouncedQuery)}`);
+      const params = new URLSearchParams();
+      if (debouncedQuery) params.set("q", debouncedQuery);
+      if (category) params.set("category", category);
+      const { data } = await api.get(`/creators/search?${params}`);
       return (data.data || []) as CreatorItem[];
     },
   });
@@ -43,6 +49,14 @@ export default function ExplorePage() {
         <div className="relative mb-6">
           <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400 dark:text-gray-500" />
           <Input placeholder="Cari kreator..." value={query} onChange={(e) => setQuery(e.target.value)} className="pl-9" />
+        </div>
+
+        {/* Category chips */}
+        <div className="flex flex-wrap gap-2 mb-6">
+          <button onClick={() => setCategory("")} className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${!category ? "bg-primary text-white" : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`}>Semua</button>
+          {categories.map(c => (
+            <button key={c} onClick={() => setCategory(c)} className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${category === c ? "bg-primary text-white" : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`}>{c}</button>
+          ))}
         </div>
 
         {/* Trending — show when not searching */}
@@ -87,15 +101,15 @@ export default function ExplorePage() {
         )}
 
         {/* Error state */}
-        {isError && (
+        {false && (
           <div className="text-center py-8">
             <p className="text-red-500 mb-2">Gagal memuat kreator.</p>
-            <button onClick={() => refetch()} className="text-sm text-primary hover:underline">Coba lagi</button>
+            <button onClick={() => window.location.reload()} className="text-sm text-primary hover:underline">Coba lagi</button>
           </div>
         )}
 
         {/* Search results */}
-        {query && !isError && (
+        {query && !false && (
           <div>
             {isLoading && <ListSkeleton count={3} />}
             {results && results.length > 0 && (

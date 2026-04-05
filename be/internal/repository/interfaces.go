@@ -23,7 +23,7 @@ type UserRepository interface {
 	UpdateCreatorProfile(ctx context.Context, p *entity.CreatorProfile) error
 	IncrementCreatorStorage(ctx context.Context, creatorID uuid.UUID, bytes int64) error
 	IncrementFollowerCount(ctx context.Context, creatorID uuid.UUID, delta int) error
-	SearchCreators(ctx context.Context, query string, cursor *uuid.UUID, limit int) ([]entity.CreatorProfile, error)
+	SearchCreators(ctx context.Context, query string, category string, cursor *uuid.UUID, limit int) ([]entity.CreatorProfile, error)
 	ListFeaturedCreators(ctx context.Context) ([]entity.CreatorProfile, error)
 	ListExpiredTierCreators(ctx context.Context) ([]entity.CreatorProfile, error)
 	ListOverlayTiers(ctx context.Context, creatorID uuid.UUID) ([]entity.OverlayTier, error)
