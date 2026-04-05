@@ -13,6 +13,7 @@ type UserRole string
 
 const (
 	RoleAdmin     UserRole = "admin"
+	RoleFinance   UserRole = "finance"
 	RoleCreator   UserRole = "creator"
 	RoleSupporter UserRole = "supporter"
 )

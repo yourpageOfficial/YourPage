@@ -108,6 +108,26 @@ func main() {
 			log.Info().Str("email", adminEmail).Msg("admin password updated from env")
 		}
 	}
+
+	// Seed/update finance user from env
+	if financeEmail := os.Getenv("FINANCE_EMAIL"); financeEmail != "" {
+		financePass := os.Getenv("FINANCE_PASSWORD")
+		if financePass == "" { financePass = "changeme123" }
+		hash, _ := bcrypt.GenerateFromPassword([]byte(financePass), 12)
+		existing, err := userRepo.FindByEmail(context.Background(), financeEmail)
+		if err != nil {
+			userRepo.Create(context.Background(), &entity.User{
+				ID: uuid.New(), Email: financeEmail, Username: "finance",
+				PasswordHash: string(hash), DisplayName: "Finance", Role: entity.RoleFinance,
+			})
+			log.Info().Str("email", financeEmail).Msg("finance user created")
+		} else {
+			existing.PasswordHash = string(hash)
+			existing.Role = entity.RoleFinance
+			userRepo.Update(context.Background(), existing)
+		}
+	}
+
 	chatSvc := service.NewChatService(chatRepo, userRepo, walletRepo, followRepo, paymentRepo)
 
 	paymentSvc := service.NewPaymentService(
@@ -169,10 +189,13 @@ func main() {
 		}
 	}()
 
-	// Admin pending digest — every 5 minutes
+	// Admin pending digest — every 5 minutes, send to finance
 	go func() {
+		financeEmail := os.Getenv("FINANCE_EMAIL")
 		adminEmail := os.Getenv("ADMIN_EMAIL")
-		if adminEmail == "" { return }
+		if financeEmail == "" && adminEmail == "" { return }
+		recipient := financeEmail
+		if recipient == "" { recipient = adminEmail }
 		ticker := time.NewTicker(5 * time.Minute)
 		defer ticker.Stop()
 		for range ticker.C {
@@ -181,7 +204,7 @@ func main() {
 			pendingWithdrawals, _ := withdrawalRepo.CountPending(ctx)
 			pendingKYC, _ := kycRepo.CountPending(ctx)
 			if pendingTopups+pendingWithdrawals+pendingKYC > 0 {
-				mailSvc.SendAdminPendingDigest(ctx, adminEmail, int(pendingWithdrawals), int(pendingTopups), int(pendingKYC))
+				mailSvc.SendAdminPendingDigest(ctx, recipient, int(pendingWithdrawals), int(pendingTopups), int(pendingKYC))
 			}
 		}
 	}()

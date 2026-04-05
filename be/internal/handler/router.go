@@ -289,13 +289,14 @@ func NewRouter(cfg *config.Config, rdb *redis.Client, h Handlers) *gin.Engine {
 
 	// ---- Admin ----
 	adminG := api.Group("/admin", auth, h.Admin.RequireAdmin, middleware.AdminAudit(h.AuditDB))
+	adminOnly := h.Admin.RequireAdminOnly
 	{
-		adminG.GET("/users", h.Admin.ListUsers)
+		adminG.GET("/users", adminOnly, h.Admin.ListUsers)
 		adminG.GET("/analytics", h.Admin.GetAnalytics)
-		adminG.POST("/users/:id/ban", h.Admin.BanUser)
-		adminG.POST("/users/:id/unban", h.Admin.UnbanUser)
-		adminG.POST("/users/:id/verify", h.Admin.VerifyCreator)
-		adminG.POST("/users/:id/promo", h.Admin.SetCreatorPromo)
+		adminG.POST("/users/:id/ban", adminOnly, h.Admin.BanUser)
+		adminG.POST("/users/:id/unban", adminOnly, h.Admin.UnbanUser)
+		adminG.POST("/users/:id/verify", adminOnly, h.Admin.VerifyCreator)
+		adminG.POST("/users/:id/promo", adminOnly, h.Admin.SetCreatorPromo)
 
 		adminG.GET("/withdrawals", h.Admin.ListWithdrawals)
 		adminG.PATCH("/withdrawals/:id", h.Admin.UpdateWithdrawalStatus)
@@ -303,17 +304,17 @@ func NewRouter(cfg *config.Config, rdb *redis.Client, h Handlers) *gin.Engine {
 		adminG.GET("/kyc", h.Admin.ListKYC)
 		adminG.PATCH("/kyc/:id", h.Admin.UpdateKYCStatus)
 
-		adminG.GET("/reports", h.Admin.ListReports)
-		adminG.PATCH("/reports/:id", h.Admin.UpdateReportStatus)
+		adminG.GET("/reports", adminOnly, h.Admin.ListReports)
+		adminG.PATCH("/reports/:id", adminOnly, h.Admin.UpdateReportStatus)
 
 		adminG.GET("/credit-topups", h.Admin.ListTopupRequests)
 		adminG.POST("/credit-topups/:id/approve", h.Admin.ApproveTopup)
 		adminG.POST("/credit-topups/:id/reject", h.Admin.RejectTopup)
 
-		adminG.GET("/posts", h.Admin.ListAllPosts)
-		adminG.DELETE("/posts/:id", h.Admin.DeletePost)
-		adminG.GET("/products", h.Admin.ListAllProducts)
-		adminG.DELETE("/products/:id", h.Admin.DeleteProduct)
+		adminG.GET("/posts", adminOnly, h.Admin.ListAllPosts)
+		adminG.DELETE("/posts/:id", adminOnly, h.Admin.DeletePost)
+		adminG.GET("/products", adminOnly, h.Admin.ListAllProducts)
+		adminG.DELETE("/products/:id", adminOnly, h.Admin.DeleteProduct)
 
 		adminG.GET("/payments", h.Admin.ListPayments)
 		adminG.POST("/payments/:id/refund", h.Admin.RefundPayment)
@@ -321,7 +322,7 @@ func NewRouter(cfg *config.Config, rdb *redis.Client, h Handlers) *gin.Engine {
 		adminG.GET("/donations", h.Admin.ListDonations)
 
 		adminG.GET("/settings", h.Admin.GetSettings)
-		adminG.PUT("/settings", h.Admin.UpdateSettings)
+		adminG.PUT("/settings", adminOnly, h.Admin.UpdateSettings)
 		adminG.GET("/export/payments", h.Admin.ExportPayments)
 		adminG.GET("/profit", h.Admin.GetProfitSummary)
 		adminG.POST("/profit/withdraw", h.Admin.CreateProfitWithdrawal)

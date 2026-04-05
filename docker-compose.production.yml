@@ -83,6 +83,8 @@ services:
       GIN_MODE: release
       ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@yourpage.id}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      FINANCE_EMAIL: ${FINANCE_EMAIL:-}
+      FINANCE_PASSWORD: ${FINANCE_PASSWORD:-}
       DOMAIN: ${DOMAIN:-_}
       SMTP_HOST: ${SMTP_HOST:-}
       SMTP_PORT: ${SMTP_PORT:-587}

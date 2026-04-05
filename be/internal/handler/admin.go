@@ -24,6 +24,16 @@ func NewAdminHandler(svc service.AdminService) *AdminHandler {
 
 func (h *AdminHandler) RequireAdmin(c *gin.Context) {
 	role := getUserRole(c)
+	if role != entity.RoleAdmin && role != entity.RoleFinance {
+		response.Forbidden(c)
+		c.Abort()
+		return
+	}
+	c.Next()
+}
+
+func (h *AdminHandler) RequireAdminOnly(c *gin.Context) {
+	role := getUserRole(c)
 	if role != entity.RoleAdmin {
 		response.Forbidden(c)
 		c.Abort()
