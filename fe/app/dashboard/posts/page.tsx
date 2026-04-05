@@ -22,7 +22,7 @@ export default function DashboardPosts() {
   const [showForm, setShowForm] = useState(false);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
-  const [accessType, setAccessType] = useState<"free" | "paid">("free");
+  const [accessType, setAccessType] = useState<"free" | "paid" | "members">("free");
   const [price, setPrice] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [excerpt, setExcerpt] = useState("");
@@ -49,7 +49,8 @@ export default function DashboardPosts() {
       const { data } = await api.post("/posts", {
         title,
         content,
-        access_type: accessType,
+        access_type: accessType === "members" ? "free" : accessType,
+        visibility: accessType === "members" ? "members" : accessType === "paid" ? "paid" : "public",
         price: accessType === "paid" ? parseInt(price) * 1000 : undefined,
         excerpt: accessType === "paid" && excerpt ? excerpt : undefined,
         status: scheduledAt ? "draft" : "published",
@@ -124,6 +125,7 @@ export default function DashboardPosts() {
             <div className="flex gap-2">
               <Button size="sm" variant={accessType === "free" ? "default" : "outline"} onClick={() => setAccessType("free")}>Gratis</Button>
               <Button size="sm" variant={accessType === "paid" ? "default" : "outline"} onClick={() => setAccessType("paid")}>Berbayar</Button>
+              <Button size="sm" variant={accessType === "members" ? "default" : "outline"} onClick={() => setAccessType("members")}>Members Only</Button>
               {accessType === "paid" && (
                 <Input type="number" placeholder="Harga (Credit)" value={price} onChange={(e) => setPrice(e.target.value)} className="w-40" />
               )}

@@ -24,7 +24,7 @@ export default function DashboardPostDetail() {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [excerpt, setExcerpt] = useState("");
-  const [accessType, setAccessType] = useState<"free" | "paid">("free");
+  const [accessType, setAccessType] = useState<"free" | "paid" | "members">("free");
   const [price, setPrice] = useState("");
   const [status, setStatus] = useState<"draft" | "published">("draft");
 
@@ -41,7 +41,7 @@ export default function DashboardPostDetail() {
       setTitle(post.title);
       setContent(post.content || "");
       setExcerpt(post.excerpt || "");
-      setAccessType(post.access_type);
+      setAccessType(post.visibility === "members" ? "members" : post.access_type);
       setPrice(post.price ? String(Math.floor(post.price / 1000)) : "");
       setStatus(post.status);
     }
@@ -50,7 +50,8 @@ export default function DashboardPostDetail() {
   const save = useMutation({
     mutationFn: () => api.put(`/posts/${id}`, {
       title, content, excerpt: excerpt || undefined,
-      access_type: accessType,
+      access_type: accessType === "members" ? "free" : accessType,
+      visibility: accessType === "members" ? "members" : accessType === "paid" ? "paid" : "public",
       price: accessType === "paid" ? parseInt(price) * 1000 : undefined,
       status,
     }),
@@ -91,6 +92,7 @@ export default function DashboardPostDetail() {
           <div className="flex gap-2 flex-wrap">
             <Button size="sm" variant={accessType === "free" ? "default" : "outline"} onClick={() => setAccessType("free")}>Gratis</Button>
             <Button size="sm" variant={accessType === "paid" ? "default" : "outline"} onClick={() => setAccessType("paid")}>Berbayar</Button>
+            <Button size="sm" variant={accessType === "members" ? "default" : "outline"} onClick={() => setAccessType("members")}>Members Only</Button>
             {accessType === "paid" && <Input type="number" placeholder="Harga (Credit)" value={price} onChange={(e) => setPrice(e.target.value)} className="w-40" />}
             <Button size="sm" variant={status === "draft" ? "outline" : "default"} onClick={() => setStatus(status === "draft" ? "published" : "draft")}>
               {status === "published" ? "✓ Published" : "Draft"}
