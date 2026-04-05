@@ -316,6 +316,8 @@ func (s *paymentService) payWithCredits(
 	// 5. Credit creator wallet + update earnings + notify
 	profile, err := s.userRepo.FindCreatorByUserID(ctx, creatorID)
 	if err == nil {
+		// 4.8: Ensure creator wallet exists
+		s.walletRepo.FindOrCreateWallet(ctx, creatorID)
 		_ = s.walletRepo.AddCredits(ctx, creatorID, netIDR/settings.CreditRateIDR)
 		profile.TotalEarnings += netIDR
 		if usecase == entity.PaymentUsecaseDonation { profile.DonationGoalCurrent += netIDR }

@@ -63,7 +63,7 @@ type PostRepository interface {
 
 	CreatePurchase(ctx context.Context, p *entity.PostPurchase) error
 	FindPurchase(ctx context.Context, postID, supporterID uuid.UUID) (*entity.PostPurchase, error)
-	// Batch check: returns set of postIDs that the supporter has purchased
+	DeletePurchase(ctx context.Context, postID, supporterID uuid.UUID) error
 	FindPurchasedPostIDs(ctx context.Context, supporterID uuid.UUID, postIDs []uuid.UUID) (map[uuid.UUID]bool, error)
 	ListPurchasedPosts(ctx context.Context, supporterID uuid.UUID, cursor *uuid.UUID, limit int) ([]entity.Post, error)
 
@@ -96,6 +96,7 @@ type ProductRepository interface {
 
 	CreatePurchase(ctx context.Context, p *entity.ProductPurchase) error
 	FindPurchase(ctx context.Context, productID, supporterID uuid.UUID) (*entity.ProductPurchase, error)
+	DeletePurchase(ctx context.Context, productID, supporterID uuid.UUID) error
 	ListPurchasedProducts(ctx context.Context, supporterID uuid.UUID, cursor *uuid.UUID, limit int) ([]entity.Product, error)
 }
 

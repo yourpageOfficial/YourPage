@@ -152,3 +152,7 @@ func (r *productRepo) ListPurchasedProducts(ctx context.Context, supporterID uui
 	err := q.Order("products.created_at DESC").Limit(limit).Find(&products).Error
 	return products, err
 }
+
+func (r *productRepo) DeletePurchase(ctx context.Context, productID, supporterID uuid.UUID) error {
+	return r.db.WithContext(ctx).Where("product_id = ? AND supporter_id = ?", productID, supporterID).Delete(&entity.ProductPurchase{}).Error
+}

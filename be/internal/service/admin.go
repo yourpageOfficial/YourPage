@@ -540,53 +540,51 @@ func (s *adminService) RefundPayment(ctx context.Context, id uuid.UUID, adminNot
 	// Refund credits to buyer if paid via credits
 	if payment.Provider == entity.PaymentProviderCredits && payment.PayerID != nil {
 		settings, _ := s.platformRepo.GetSettings(ctx)
-		creditsToRefund := payment.AmountIDR / settings.CreditRateIDR
-		if err := s.walletRepo.AddCredits(ctx, *payment.PayerID, creditsToRefund); err != nil {
-			return err
-		}
-
-		// Record refund transaction
-		tx := &entity.CreditTransaction{
-			ID:          uuid.New(),
-			UserID:      *payment.PayerID,
-			Type:        entity.CreditTransactionRefund,
-			Credits:     creditsToRefund,
-			IDRAmount:   payment.AmountIDR,
-			PaymentID:   &id,
+		rate := settings.CreditRateIDR
+		if rate <= 0 { rate = 1000 } // 4.24: div-by-zero guard
+		creditsToRefund := payment.AmountIDR / rate
+		_ = s.walletRepo.AddCredits(ctx, *payment.PayerID, creditsToRefund)
+		_ = s.walletRepo.CreateTransaction(ctx, &entity.CreditTransaction{
+			ID: uuid.New(), UserID: *payment.PayerID, Type: entity.CreditTransactionRefund,
+			Credits: creditsToRefund, IDRAmount: payment.AmountIDR, PaymentID: &id,
 			Description: fmt.Sprintf("Refund: %s", adminNote),
-		}
-		_ = s.walletRepo.CreateTransaction(ctx, tx)
-
-		// Notify buyer
-		notif := entity.Notification{
-			ID:     uuid.New(),
-			UserID: *payment.PayerID,
-			Type:   entity.NotificationPurchaseSuccess,
-			Title:  "Refund Diterima",
-			Body:   fmt.Sprintf("Transaksi Rp %d telah di-refund. %d credit dikembalikan.", payment.AmountIDR, creditsToRefund),
-		}
-		_ = s.followRepo.CreateNotification(ctx, &notif)
+		})
+		_ = s.followRepo.CreateNotification(ctx, &entity.Notification{
+			ID: uuid.New(), UserID: *payment.PayerID, Type: entity.NotificationPurchaseSuccess,
+			Title: "Refund Diterima", Body: fmt.Sprintf("%d credit dikembalikan.", creditsToRefund),
+		})
 	}
 
-	// Deduct from creator balance
-	if payment.Usecase != entity.PaymentUsecaseCreditTopup {
-		// Find creator from reference
-		switch payment.Usecase {
-		case entity.PaymentUsecasePostPurchase:
-			post, err := s.postRepo.FindByID(ctx, payment.ReferenceID)
-			if err == nil {
-				_ = s.walletRepo.DeductCredits(ctx, post.CreatorID, payment.NetAmountIDR/1000)
-				if p, err := s.userRepo.FindCreatorByUserID(ctx, post.CreatorID); err == nil {
-					p.TotalEarnings -= payment.NetAmountIDR; p.Tier = nil; _ = s.userRepo.UpdateCreatorProfile(ctx, p)
-				}
+	// Deduct from creator + revoke access
+	settings, _ := s.platformRepo.GetSettings(ctx)
+	rate := settings.CreditRateIDR
+	if rate <= 0 { rate = 1000 }
+
+	switch payment.Usecase {
+	case entity.PaymentUsecasePostPurchase:
+		if post, err := s.postRepo.FindByID(ctx, payment.ReferenceID); err == nil {
+			_ = s.walletRepo.DeductCredits(ctx, post.CreatorID, payment.NetAmountIDR/rate)
+			// 4.20: Delete purchase record to revoke access
+			s.postRepo.DeletePurchase(ctx, payment.ReferenceID, *payment.PayerID)
+			if p, err := s.userRepo.FindCreatorByUserID(ctx, post.CreatorID); err == nil {
+				p.TotalEarnings -= payment.NetAmountIDR; p.Tier = nil; _ = s.userRepo.UpdateCreatorProfile(ctx, p)
 			}
-		case entity.PaymentUsecaseProductPurchase:
-			product, err := s.productRepo.FindByID(ctx, payment.ReferenceID)
-			if err == nil {
-				_ = s.walletRepo.DeductCredits(ctx, product.CreatorID, payment.NetAmountIDR/1000)
-				if p, err := s.userRepo.FindCreatorByUserID(ctx, product.CreatorID); err == nil {
-					p.TotalEarnings -= payment.NetAmountIDR; p.Tier = nil; _ = s.userRepo.UpdateCreatorProfile(ctx, p)
-				}
+		}
+	case entity.PaymentUsecaseProductPurchase:
+		if product, err := s.productRepo.FindByID(ctx, payment.ReferenceID); err == nil {
+			_ = s.walletRepo.DeductCredits(ctx, product.CreatorID, payment.NetAmountIDR/rate)
+			// 4.21: Delete purchase record
+			s.productRepo.DeletePurchase(ctx, payment.ReferenceID, *payment.PayerID)
+			if p, err := s.userRepo.FindCreatorByUserID(ctx, product.CreatorID); err == nil {
+				p.TotalEarnings -= payment.NetAmountIDR; p.Tier = nil; _ = s.userRepo.UpdateCreatorProfile(ctx, p)
+			}
+		}
+	case entity.PaymentUsecaseDonation:
+		// 4.22: Deduct donation from creator
+		if donation, err := s.donationRepo.FindByID(ctx, payment.ReferenceID); err == nil {
+			_ = s.walletRepo.DeductCredits(ctx, donation.CreatorID, payment.NetAmountIDR/rate)
+			if p, err := s.userRepo.FindCreatorByUserID(ctx, donation.CreatorID); err == nil {
+				p.TotalEarnings -= payment.NetAmountIDR; p.Tier = nil; _ = s.userRepo.UpdateCreatorProfile(ctx, p)
 			}
 		}
 	}

@@ -234,3 +234,7 @@ func (r *postRepo) CheckMembership(ctx context.Context, supporterID, creatorID u
 	r.db.WithContext(ctx).Table("memberships").Where("supporter_id = ? AND creator_id = ? AND status = 'active' AND expires_at > NOW()", supporterID, creatorID).Count(&count)
 	return count > 0
 }
+
+func (r *postRepo) DeletePurchase(ctx context.Context, postID, supporterID uuid.UUID) error {
+	return r.db.WithContext(ctx).Where("post_id = ? AND supporter_id = ?", postID, supporterID).Delete(&entity.PostPurchase{}).Error
+}
