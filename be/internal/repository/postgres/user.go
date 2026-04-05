@@ -212,3 +212,24 @@ func (r *userRepo) IncrementReferralUsed(ctx context.Context, id uuid.UUID) erro
 func (r *userRepo) HardDelete(ctx context.Context, id uuid.UUID) error {
 	return r.db.WithContext(ctx).Unscoped().Where("id = ?", id).Delete(&entity.User{}).Error
 }
+
+
+func (r *userRepo) GetAnalyticsCounts(ctx context.Context) (map[string]int64, error) {
+	result := make(map[string]int64)
+	var v int64
+	r.db.WithContext(ctx).Model(&entity.User{}).Where("deleted_at IS NULL").Count(&v); result["total_users"] = v
+	r.db.WithContext(ctx).Model(&entity.User{}).Where("role = 'creator' AND deleted_at IS NULL").Count(&v); result["total_creators"] = v
+	r.db.WithContext(ctx).Model(&entity.User{}).Where("role = 'supporter' AND deleted_at IS NULL").Count(&v); result["total_supporters"] = v
+	r.db.WithContext(ctx).Model(&entity.User{}).Where("is_banned = true AND deleted_at IS NULL").Count(&v); result["total_banned"] = v
+	r.db.WithContext(ctx).Model(&entity.Post{}).Where("deleted_at IS NULL").Count(&v); result["total_posts"] = v
+	r.db.WithContext(ctx).Model(&entity.Product{}).Where("deleted_at IS NULL").Count(&v); result["total_products"] = v
+	r.db.WithContext(ctx).Table("payments").Where("status = 'paid'").Count(&v); result["paid_count"] = v
+	r.db.WithContext(ctx).Table("payments").Where("status = 'paid'").Select("COALESCE(SUM(amount_idr),0)").Row().Scan(&v); result["gmv"] = v
+	r.db.WithContext(ctx).Table("payments").Where("status = 'paid'").Select("COALESCE(SUM(fee_idr),0)").Row().Scan(&v); result["revenue"] = v
+	r.db.WithContext(ctx).Table("donations").Count(&v); result["total_donations"] = v
+	r.db.WithContext(ctx).Table("withdrawals").Where("status = 'pending'").Count(&v); result["withdrawals_pending"] = v
+	r.db.WithContext(ctx).Table("credit_topup_requests").Where("status = 'pending'").Count(&v); result["topups_pending"] = v
+	r.db.WithContext(ctx).Table("user_kyc").Where("status = 'pending'").Count(&v); result["kyc_pending"] = v
+	r.db.WithContext(ctx).Table("content_reports").Where("status = 'pending'").Count(&v); result["reports_pending"] = v
+	return result, nil
+}

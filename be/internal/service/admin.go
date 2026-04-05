@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/redis/go-redis/v9"
 	"golang.org/x/crypto/bcrypt"
 	"github.com/yourpage/be/internal/entity"
 	"github.com/yourpage/be/internal/pkg/mailer"
@@ -114,6 +115,7 @@ type adminService struct {
 	followRepo     repository.FollowRepository
 	platformRepo   repository.PlatformRepository
 	mailer         mailer.Mailer
+	rdb            *redis.Client
 }
 
 func NewAdminService(
@@ -128,6 +130,7 @@ func NewAdminService(
 	followRepo repository.FollowRepository,
 	platformRepo repository.PlatformRepository,
 	m mailer.Mailer,
+	rdb *redis.Client,
 ) AdminService {
 	return &adminService{
 		userRepo:       userRepo,
@@ -141,6 +144,7 @@ func NewAdminService(
 		followRepo:     followRepo,
 		platformRepo:   platformRepo,
 		mailer:         m,
+		rdb:            rdb,
 	}
 }
 
@@ -175,7 +179,14 @@ func (s *adminService) BanUser(ctx context.Context, userID uuid.UUID) error {
 		return err
 	}
 	user.IsBanned = true
-	return s.userRepo.Update(ctx, user)
+	if err := s.userRepo.Update(ctx, user); err != nil { return err }
+	// 7.2: Invalidate all refresh tokens
+	iter := s.rdb.Scan(ctx, 0, "refresh:*", 100).Iterator()
+	for iter.Next(ctx) {
+		val, _ := s.rdb.Get(ctx, iter.Val()).Result()
+		if val == userID.String() { s.rdb.Del(ctx, iter.Val()) }
+	}
+	return nil
 }
 
 func (s *adminService) VerifyCreator(ctx context.Context, userID uuid.UUID) error {
@@ -337,6 +348,8 @@ func (s *adminService) ListKYC(ctx context.Context, status string, cursor *uuid.
 func (s *adminService) UpdateKYCStatus(ctx context.Context, id uuid.UUID, req UpdateKYCStatusRequest) error {
 	kyc, err := s.kycRepo.FindKYCByID(ctx, id)
 	if err != nil { return entity.ErrNotFound }
+	// 7.9: Idempotency
+	if string(kyc.Status) == string(req.Status) { return nil }
 	userID := kyc.UserID
 
 	if err := s.kycRepo.UpdateKYCStatus(ctx, id, req.Status, req.AdminNote); err != nil {
@@ -639,104 +652,9 @@ func (s *adminService) CreateProfitWithdrawal(ctx context.Context, w *entity.Pla
 }
 
 func (s *adminService) GetAnalytics(ctx context.Context) (map[string]interface{}, error) {
+	counts, err := s.userRepo.GetAnalyticsCounts(ctx)
+	if err != nil { return nil, err }
 	result := make(map[string]interface{})
-
-	// We need direct DB access — use userRepo's underlying queries via GORM
-	// For now, use the repos we have
-
-	// User counts by role
-	allUsers, _ := s.userRepo.List(ctx, "", nil, 10000)
-	creators := 0; supporters := 0; admins := 0; banned := 0
-	for _, u := range allUsers {
-		switch u.Role {
-		case "creator": creators++
-		case "supporter": supporters++
-		case "admin": admins++
-		}
-		if u.IsBanned { banned++ }
-	}
-	result["total_users"] = len(allUsers)
-	result["total_creators"] = creators
-	result["total_supporters"] = supporters
-	result["total_admins"] = admins
-	result["total_banned"] = banned
-
-	// Payment stats
-	payments, _ := s.paymentRepo.List(ctx, nil, 10000)
-	var gmv, revenue, paidCount, pendingCount, failedCount, refundedCount int64
-	for _, p := range payments {
-		switch p.Status {
-		case "paid":
-			gmv += p.AmountIDR
-			revenue += p.FeeIDR
-			paidCount++
-		case "pending": pendingCount++
-		case "failed": failedCount++
-		case "refunded": refundedCount++
-		}
-	}
-	result["total_payments"] = len(payments)
-	result["gmv"] = gmv
-	result["revenue"] = revenue
-	result["paid_count"] = paidCount
-	result["pending_count"] = pendingCount
-	result["failed_count"] = failedCount
-	result["refunded_count"] = refundedCount
-
-	// Donation stats
-	donations, _ := s.donationRepo.ListAll(ctx, nil, 10000)
-	var totalDonations int64
-	for _, d := range donations {
-		if d.Status == "paid" { totalDonations += d.AmountIDR }
-	}
-	result["total_donations_count"] = len(donations)
-	result["total_donations_amount"] = totalDonations
-
-	// Post & product counts
-	posts, _ := s.postRepo.ListAll(ctx, nil, 10000)
-	products, _ := s.productRepo.ListAll(ctx, nil, 10000)
-	result["total_posts"] = len(posts)
-	result["total_products"] = len(products)
-
-	// Withdrawal stats
-	withdrawals, _ := s.withdrawalRepo.ListAll(ctx, "", nil, 10000)
-	var wdPending, wdProcessed, wdTotal int64
-	for _, w := range withdrawals {
-		switch w.Status {
-		case "pending": wdPending++
-		case "processed": wdProcessed++; wdTotal += w.AmountIDR
-		case "approved": wdTotal += w.AmountIDR
-		}
-	}
-	result["total_withdrawals"] = len(withdrawals)
-	result["withdrawals_pending"] = wdPending
-	result["withdrawals_processed_amount"] = wdTotal
-
-	// KYC stats
-	kycs, _ := s.kycRepo.ListKYC(ctx, "", nil, 10000)
-	kycPending := 0
-	for _, k := range kycs {
-		if k.Status == "pending" { kycPending++ }
-	}
-	result["total_kyc"] = len(kycs)
-	result["kyc_pending"] = kycPending
-
-	// Report stats
-	reports, _ := s.kycRepo.ListReports(ctx, "", nil, 10000)
-	reportPending := 0
-	for _, r := range reports {
-		if r.Status == "pending" { reportPending++ }
-	}
-	result["total_reports"] = len(reports)
-	result["reports_pending"] = reportPending
-
-	// Platform profit withdrawals
-	pws, _ := s.platformRepo.ListPlatformWithdrawals(ctx)
-	var totalProfitWithdrawn int64
-	for _, pw := range pws { totalProfitWithdrawn += pw.AmountIDR }
-	result["platform_withdrawals"] = pws
-	result["profit_withdrawn"] = totalProfitWithdrawn
-	result["profit_available"] = revenue - totalProfitWithdrawn
-
+	for k, v := range counts { result[k] = v }
 	return result, nil
 }

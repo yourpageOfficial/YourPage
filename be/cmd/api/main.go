@@ -85,7 +85,7 @@ func main() {
 	kycSvc := service.NewKYCService(kycRepo)
 	adminSvc := service.NewAdminService(
 		userRepo, postRepo, productRepo, paymentRepo, donationRepo,
-		withdrawalRepo, walletRepo, kycRepo, followRepo, platformRepo, mailSvc,
+		withdrawalRepo, walletRepo, kycRepo, followRepo, platformRepo, mailSvc, rdb,
 	)
 	chatRepo := postgres.NewChatRepo(db)
 
