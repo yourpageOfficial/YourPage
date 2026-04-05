@@ -228,3 +228,9 @@ func (r *postRepo) DeleteComment(ctx context.Context, commentID, userID uuid.UUI
 	}
 	return nil
 }
+
+func (r *postRepo) CheckMembership(ctx context.Context, supporterID, creatorID uuid.UUID) bool {
+	var count int64
+	r.db.WithContext(ctx).Table("memberships").Where("supporter_id = ? AND creator_id = ? AND status = 'active' AND expires_at > NOW()", supporterID, creatorID).Count(&count)
+	return count > 0
+}

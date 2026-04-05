@@ -55,6 +55,7 @@ type PostRepository interface {
 	ListAll(ctx context.Context, cursor *uuid.UUID, limit int) ([]entity.Post, error) // admin
 	IncrementViewCount(ctx context.Context, postID uuid.UUID) error
 	PublishScheduled(ctx context.Context) error
+	CheckMembership(ctx context.Context, supporterID, creatorID uuid.UUID) bool
 
 	AddMedia(ctx context.Context, media *entity.PostMedia) error
 	DeleteMedia(ctx context.Context, mediaID uuid.UUID) (*entity.PostMedia, error)

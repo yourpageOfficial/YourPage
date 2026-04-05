@@ -26,6 +26,7 @@ type CreatePostRequest struct {
 	AccessType  entity.PostAccessType `json:"access_type" validate:"omitempty,oneof=free paid"`
 	Price       *int64                `json:"price"`
 	Status      entity.PostStatus     `json:"status"      validate:"omitempty,oneof=draft published"`
+	Visibility  string                `json:"visibility"  validate:"omitempty,oneof=public paid members"`
 	ScheduledAt *time.Time            `json:"scheduled_at"`
 }
 
@@ -132,6 +133,7 @@ func (s *postService) Create(ctx context.Context, creatorID uuid.UUID, req Creat
 		AccessType:  accessType,
 		Price:       req.Price,
 		Status:      status,
+		Visibility:  func() string { if req.Visibility != "" { return req.Visibility }; return "public" }(),
 		ScheduledAt: req.ScheduledAt,
 	}
 
@@ -168,6 +170,13 @@ func (s *postService) GetByID(ctx context.Context, postID uuid.UUID, viewerID *u
 			}
 		}
 		if err != nil { return nil, err }
+	}
+
+	// 2.7: Draft posts only visible to creator
+	if post.Status != entity.PostStatusPublished {
+		if viewerID == nil || *viewerID != post.CreatorID {
+			return nil, entity.ErrNotFound
+		}
 	}
 
 	media, err := s.postRepo.ListMedia(ctx, postID)
@@ -213,18 +222,17 @@ func (s *postService) GetByID(ctx context.Context, postID uuid.UUID, viewerID *u
 		}
 	}
 
-	// H-01: Members-only visibility
-	if post.Visibility == "members" && !post.IsLocked {
-		if viewerID == nil || *viewerID != post.CreatorID {
-			// Check if viewer is an active member
-			isMember := false
-			if viewerID != nil {
-				// Use followRepo DB access — simplified check
-			}
-			if !isMember && (viewerID == nil || *viewerID != post.CreatorID) {
-				post.IsLocked = true
-				applyPostLock(post)
-			}
+	// Members-only visibility
+	if post.Visibility == "members" {
+		isMember := false
+		if viewerID != nil && *viewerID == post.CreatorID {
+			isMember = true
+		} else if viewerID != nil {
+			isMember = s.postRepo.CheckMembership(ctx, *viewerID, post.CreatorID)
+		}
+		if !isMember {
+			post.IsLocked = true
+			applyPostLock(post)
 		}
 	}
 

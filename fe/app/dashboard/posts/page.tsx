@@ -137,10 +137,10 @@ export default function DashboardPosts() {
             {isPro && (
               <div>
                 <label className="text-xs text-gray-500 dark:text-gray-400">Jadwalkan (opsional)</label>
-                <Input type="datetime-local" value={scheduledAt} onChange={(e) => setScheduledAt(e.target.value)} className="w-60" />
+                <Input type="datetime-local" value={scheduledAt} onChange={(e) => setScheduledAt(e.target.value)} className="w-60" min={new Date().toISOString().slice(0, 16)} />
               </div>
             )}
-            <Button onClick={() => createPost.mutate()} disabled={createPost.isPending || !title}>
+            <Button onClick={() => createPost.mutate()} disabled={createPost.isPending || !title || (accessType === "paid" && (!price || isNaN(parseInt(price)) || parseInt(price) < 1))}>
               {createPost.isPending ? "Menyimpan..." : scheduledAt ? "Jadwalkan" : "Publish"}
             </Button>
           </CardContent>
