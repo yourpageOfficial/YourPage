@@ -119,6 +119,8 @@ services:
       FRONTEND_URL: http://localhost:3000
       ADMIN_EMAIL: "nandolimwork+admin@gmail.com"
       ADMIN_PASSWORD: "Admin@YourPage2026!"
+      FINANCE_EMAIL: "${FINANCE_EMAIL:-nandolimwork+finance@gmail.com}"
+      FINANCE_PASSWORD: "${FINANCE_PASSWORD:-6ca954aa55471ad2}"
     volumes:
       - ./be:/app
     depends_on:
