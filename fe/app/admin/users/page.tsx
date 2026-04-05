@@ -1,11 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/api";
 import { toast } from "@/lib/toast";
 import { useAdminList } from "@/lib/use-admin-list";
 import { AdminList } from "@/components/admin-list";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@/lib/utils";
@@ -22,9 +24,33 @@ export default function AdminUsers() {
   const ban = useMutation({ mutationFn: (id: string) => api.post(`/admin/users/${id}/ban`), onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-users"] }) });
   const unban = useMutation({ mutationFn: (id: string) => api.post(`/admin/users/${id}/unban`), onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-users"] }) });
 
+  const [showFinance, setShowFinance] = useState(false);
+  const [fEmail, setFEmail] = useState("");
+  const [fPassword, setFPassword] = useState("");
+  const [fName, setFName] = useState("");
+  const createFinance = useMutation({
+    mutationFn: () => api.post("/admin/users/finance", { email: fEmail, password: fPassword, display_name: fName }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin-users"] }); toast.success("Finance user created"); setShowFinance(false); setFEmail(""); setFPassword(""); setFName(""); },
+    onError: (e: any) => toast.error(e.response?.data?.error || "Gagal"),
+  });
+
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-bold">Users</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold">Users</h1>
+        <Button size="sm" variant="outline" onClick={() => setShowFinance(!showFinance)}>+ Finance User</Button>
+      </div>
+      {showFinance && (
+        <Card className="mb-4">
+          <CardContent className="p-4 space-y-3">
+            <p className="text-sm font-medium">Tambah Finance User</p>
+            <Input placeholder="Email" value={fEmail} onChange={e => setFEmail(e.target.value)} />
+            <Input placeholder="Display Name" value={fName} onChange={e => setFName(e.target.value)} />
+            <Input type="password" placeholder="Password (min 8)" value={fPassword} onChange={e => setFPassword(e.target.value)} />
+            <Button size="sm" onClick={() => createFinance.mutate()} disabled={!fEmail || !fPassword || fPassword.length < 8 || !fName}>Buat Finance User</Button>
+          </CardContent>
+        </Card>
+      )}
       <AdminList
         filters={filters} activeFilter={list.filter} onFilter={list.setFilter}
         search={list.search} onSearch={list.setSearch} searchPlaceholder="Cari username, nama..."

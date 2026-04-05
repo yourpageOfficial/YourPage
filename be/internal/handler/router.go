@@ -297,6 +297,7 @@ func NewRouter(cfg *config.Config, rdb *redis.Client, h Handlers) *gin.Engine {
 		adminG.POST("/users/:id/unban", adminOnly, h.Admin.UnbanUser)
 		adminG.POST("/users/:id/verify", adminOnly, h.Admin.VerifyCreator)
 		adminG.POST("/users/:id/promo", adminOnly, h.Admin.SetCreatorPromo)
+		adminG.POST("/users/finance", adminOnly, h.Admin.CreateFinanceUser)
 
 		adminG.GET("/withdrawals", h.Admin.ListWithdrawals)
 		adminG.PATCH("/withdrawals/:id", h.Admin.UpdateWithdrawalStatus)

@@ -55,6 +55,20 @@ func (h *AdminHandler) ListUsers(c *gin.Context) {
 	response.Paginated(c, users, uuidToString(next))
 }
 
+func (h *AdminHandler) CreateFinanceUser(c *gin.Context) {
+	var body struct {
+		Email       string `json:"email" validate:"required,email"`
+		Password    string `json:"password" validate:"required,min=8"`
+		DisplayName string `json:"display_name" validate:"required"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil { response.BadRequest(c, "invalid body"); return }
+	if errs := h.validate.Validate(body); errs != nil { response.BadRequest(c, formatValidationErrors(errs)); return }
+	if err := h.svc.CreateFinanceUser(c.Request.Context(), body.Email, body.Password, body.DisplayName); err != nil {
+		handleServiceError(c, err); return
+	}
+	response.OKMessage(c, "finance user created")
+}
+
 func (h *AdminHandler) BanUser(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {

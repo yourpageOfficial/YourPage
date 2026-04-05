@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"golang.org/x/crypto/bcrypt"
 	"github.com/yourpage/be/internal/entity"
 	"github.com/yourpage/be/internal/pkg/mailer"
 	"github.com/yourpage/be/internal/repository"
@@ -50,6 +51,7 @@ type AdminService interface {
 	ListUsers(ctx context.Context, role string, cursor *uuid.UUID, limit int) ([]entity.User, *uuid.UUID, error)
 	BanUser(ctx context.Context, userID uuid.UUID) error
 	UnbanUser(ctx context.Context, userID uuid.UUID) error
+	CreateFinanceUser(ctx context.Context, email, password, displayName string) error
 	VerifyCreator(ctx context.Context, userID uuid.UUID) error
 	SetCreatorPromo(ctx context.Context, userID uuid.UUID, promoFee *int, promoDays int, featured bool, note string) error
 	ListFeaturedCreators(ctx context.Context) ([]entity.CreatorProfile, error)
@@ -155,6 +157,16 @@ func (s *adminService) ListUsers(ctx context.Context, role string, cursor *uuid.
 		users = users[:limit]
 	}
 	return users, next, nil
+}
+
+func (s *adminService) CreateFinanceUser(ctx context.Context, email, password, displayName string) error {
+	if _, err := s.userRepo.FindByEmail(ctx, email); err == nil { return entity.ErrConflict }
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), 12)
+	if err != nil { return err }
+	return s.userRepo.Create(ctx, &entity.User{
+		ID: uuid.New(), Email: email, Username: "finance_" + uuid.NewString()[:8],
+		PasswordHash: string(hash), DisplayName: displayName, Role: entity.RoleFinance, EmailVerified: true,
+	})
 }
 
 func (s *adminService) BanUser(ctx context.Context, userID uuid.UUID) error {
