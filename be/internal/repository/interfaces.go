@@ -113,6 +113,7 @@ type DonationRepository interface {
 	ListBySupporter(ctx context.Context, supporterID uuid.UUID, cursor *uuid.UUID, limit int) ([]entity.Donation, error)
 	ListAll(ctx context.Context, cursor *uuid.UUID, limit int) ([]entity.Donation, error)
 	GetLatest(ctx context.Context, creatorID uuid.UUID) (*entity.Donation, error)
+	GetTopSupporters(ctx context.Context, creatorID uuid.UUID, limit int) ([]entity.TopSupporter, error)
 }
 
 // WithdrawalRepository handles creator withdrawals

@@ -1,29 +1,25 @@
 import type { Metadata } from "next";
 
-type Props = { params: { slug: string }; children: React.ReactNode };
-
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
+export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
   try {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://be:8080/api/v1";
-    const res = await fetch(`${apiUrl}/creators/${params.slug}`, { next: { revalidate: 60 } });
-    const data = await res.json();
-    const c = data?.data;
-    if (c) {
-      return {
-        title: `${c.display_name} (@${c.username}) — YourPage`,
-        description: c.bio || `Halaman kreator ${c.display_name} di YourPage`,
-        openGraph: {
-          title: `${c.display_name} — YourPage`,
-          description: c.bio || `Dukung ${c.display_name} di YourPage`,
-          type: "profile",
-          images: c.avatar_url ? [c.avatar_url] : [],
-        },
-      };
-    }
-  } catch {}
-  return { title: "Kreator — YourPage" };
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://be:8080/api/v1"}/creators/${params.slug}`, { next: { revalidate: 60 } });
+    const { data } = await res.json();
+    if (!data) return { title: "Creator — YourPage" };
+    return {
+      title: `${data.display_name} (@${data.username}) — YourPage`,
+      description: data.bio || `Dukung ${data.display_name} di YourPage. Beli konten eksklusif, kirim donasi, dan chat langsung.`,
+      openGraph: {
+        title: `${data.display_name} — YourPage`,
+        description: data.bio || `Kreator di YourPage`,
+        images: data.avatar_url ? [{ url: data.avatar_url, width: 200, height: 200 }] : [],
+        type: "profile",
+        siteName: "YourPage",
+      },
+      twitter: { card: "summary", title: data.display_name, description: data.bio || "Kreator di YourPage" },
+    };
+  } catch { return { title: "Creator — YourPage" }; }
 }
 
-export default function CreatorLayout({ children }: Props) {
-  return <>{children}</>;
+export default function CreatorLayout({ children }: { children: React.ReactNode }) {
+  return children;
 }

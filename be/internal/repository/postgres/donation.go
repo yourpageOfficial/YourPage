@@ -71,3 +71,12 @@ func (r *donationRepo) GetLatest(ctx context.Context, creatorID uuid.UUID) (*ent
 	if err != nil { return nil, err }
 	return &d, nil
 }
+
+func (r *donationRepo) GetTopSupporters(ctx context.Context, creatorID uuid.UUID, limit int) ([]entity.TopSupporter, error) {
+	var result []entity.TopSupporter
+	err := r.db.WithContext(ctx).Model(&entity.Donation{}).
+		Select("donor_name, SUM(amount_idr) as total_idr, COUNT(*) as donation_count").
+		Where("creator_id = ? AND is_anonymous = false", creatorID).
+		Group("donor_name").Order("total_idr DESC").Limit(limit).Scan(&result).Error
+	return result, err
+}

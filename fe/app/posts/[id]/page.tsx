@@ -186,10 +186,16 @@ export default function PostDetailPage() {
           <button onClick={loadComments} className="flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-primary transition-colors">
             <MessageCircle className="h-5 w-5" /> {post.comment_count || 0} Komentar
           </button>
-          <button onClick={() => { const url = window.location.href; navigator.share ? navigator.share({ title: post.title, url }) : navigator.clipboard.writeText(url).then(() => alert("Link disalin!")); }}
-            className="flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-primary transition-colors">
-            <Share2 className="h-5 w-5" /> Bagikan
-          </button>
+          <div className="relative group">
+            <button className="flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-primary transition-colors">
+              <Share2 className="h-5 w-5" /> Bagikan
+            </button>
+            <div className="hidden group-hover:flex absolute bottom-full left-0 mb-2 bg-white dark:bg-gray-800 shadow-lg rounded-lg p-2 gap-1 z-10 border dark:border-gray-700">
+              <button onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent(post.title + " " + window.location.href)}`, "_blank")} className="px-3 py-1.5 text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded">WhatsApp</button>
+              <button onClick={() => window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(post.title)}&url=${encodeURIComponent(window.location.href)}`, "_blank")} className="px-3 py-1.5 text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded">Twitter</button>
+              <button onClick={() => { navigator.clipboard.writeText(window.location.href); alert("Link disalin!"); }} className="px-3 py-1.5 text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded">Copy Link</button>
+            </div>
+          </div>
           <span className="ml-auto"><ReportButton targetType="post" targetId={id} /></span>
         </div>
 

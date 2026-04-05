@@ -24,3 +24,9 @@ type Donation struct {
 	CreatedAt   time.Time  `json:"created_at"`
 	UpdatedAt   time.Time  `json:"updated_at"`
 }
+
+type TopSupporter struct {
+	DonorName     string `json:"donor_name"`
+	TotalIDR      int64  `json:"total_idr"`
+	DonationCount int    `json:"donation_count"`
+}

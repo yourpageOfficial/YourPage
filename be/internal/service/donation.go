@@ -31,6 +31,7 @@ type DonationService interface {
 	ListByCreator(ctx context.Context, creatorID uuid.UUID, cursor *uuid.UUID, limit int) ([]entity.Donation, *uuid.UUID, error)
 	ListBySupporter(ctx context.Context, supporterID uuid.UUID, cursor *uuid.UUID, limit int) ([]entity.Donation, *uuid.UUID, error)
 	GetLatestDonation(ctx context.Context, creatorID uuid.UUID) (*entity.Donation, error)
+	GetTopSupporters(ctx context.Context, creatorID uuid.UUID) ([]entity.TopSupporter, error)
 }
 
 // ---------------------------------------------------------------------------
@@ -141,4 +142,8 @@ func (s *donationService) ListBySupporter(ctx context.Context, supporterID uuid.
 
 func (s *donationService) GetLatestDonation(ctx context.Context, creatorID uuid.UUID) (*entity.Donation, error) {
 	return s.donationRepo.GetLatest(ctx, creatorID)
+}
+
+func (s *donationService) GetTopSupporters(ctx context.Context, creatorID uuid.UUID) ([]entity.TopSupporter, error) {
+	return s.donationRepo.GetTopSupporters(ctx, creatorID, 5)
 }

@@ -165,6 +165,7 @@ func NewRouter(cfg *config.Config, rdb *redis.Client, h Handlers) *gin.Engine {
 	donationsG := api.Group("/donations")
 	{
 		donationsG.GET("/creator/:creatorId/latest", h.Donation.GetLatest)
+		donationsG.GET("/creator/:creatorId/top", h.Donation.GetTopSupporters)
 		donationsG.POST("", optAuth, h.Donation.Create)
 		donationsG.GET("/creator/:creatorId", auth, creatorOnly, h.Donation.ListByCreator)
 		donationsG.GET("/sent", auth, h.Donation.ListMySent)

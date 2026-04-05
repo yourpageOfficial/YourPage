@@ -68,3 +68,11 @@ func (h *DonationHandler) GetLatest(c *gin.Context) {
 	if err != nil { response.OK(c, nil); return }
 	response.OK(c, donation)
 }
+
+func (h *DonationHandler) GetTopSupporters(c *gin.Context) {
+	creatorID, err := uuid.Parse(c.Param("creatorId"))
+	if err != nil { response.BadRequest(c, "invalid creator id"); return }
+	top, err := h.svc.GetTopSupporters(c.Request.Context(), creatorID)
+	if err != nil { response.OK(c, []interface{}{}); return }
+	response.OK(c, top)
+}
