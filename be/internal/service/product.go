@@ -341,14 +341,15 @@ func (s *productService) DeleteAsset(ctx context.Context, assetID, productID, cr
 const downloadURLExpiry = 15 * time.Minute
 
 func (s *productService) GetDownloadURL(ctx context.Context, productID, supporterID uuid.UUID) ([]DownloadURLResponse, error) {
-	_, err := s.productRepo.FindPurchase(ctx, productID, supporterID)
-	if err != nil {
-		return nil, entity.ErrForbidden
-	}
-
 	product, err := s.productRepo.FindByID(ctx, productID)
-	if err != nil {
-		return nil, err
+	if err != nil { return nil, err }
+
+	// 3.6: Creator can always download own product
+	isCreator := product.CreatorID == supporterID
+	if !isCreator {
+		if _, err := s.productRepo.FindPurchase(ctx, productID, supporterID); err != nil {
+			return nil, entity.ErrForbidden
+		}
 	}
 
 	// Link-type product — return the link directly
