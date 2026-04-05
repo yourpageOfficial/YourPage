@@ -36,7 +36,7 @@ jobs:
         env:
           POSTGRES_DB: yourpage_test
           POSTGRES_USER: yourpage
-          POSTGRES_PASSWORD: secret
+          POSTGRES_PASSWORD: testpass
         ports: ["5432:5432"]
         options: >-
           --health-cmd pg_isready
@@ -56,12 +56,12 @@ jobs:
       - name: Run migrations
         working-directory: be
         env:
-          DATABASE_URL: postgres://yourpage:secret@localhost:5432/yourpage_test?sslmode=disable
+          DATABASE_URL: postgres://yourpage:testpass@localhost:5432/yourpage_test?sslmode=disable
         run: go run ./cmd/migrate/main.go up
       - name: Run tests
         working-directory: be
         env:
-          DATABASE_URL: postgres://yourpage:secret@localhost:5432/yourpage_test?sslmode=disable
+          DATABASE_URL: postgres://yourpage:testpass@localhost:5432/yourpage_test?sslmode=disable
           REDIS_URL: redis://localhost:6379
         run: go test -v -race -coverprofile=coverage.out ./...
 
