@@ -23,6 +23,7 @@ type AppConfig struct {
 	Env         string
 	Port        string
 	FrontendURL string
+	AdminEmail  string
 }
 
 type DBConfig struct {
@@ -91,11 +92,17 @@ func Load() (*Config, error) {
 		refreshTTL = 7 * 24 * time.Hour
 	}
 
+	adminEmail := viper.GetString("ADMIN_EMAIL")
+	if adminEmail == "" {
+		adminEmail = "nandolimwork+admin@gmail.com"
+	}
+
 	return &Config{
 		App: AppConfig{
 			Env:         viper.GetString("APP_ENV"),
 			Port:        viper.GetString("APP_PORT"),
 			FrontendURL: viper.GetString("FRONTEND_URL"),
+			AdminEmail:  adminEmail,
 		},
 		DB: DBConfig{
 			URL: viper.GetString("DATABASE_URL"),

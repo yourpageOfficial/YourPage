@@ -146,6 +146,12 @@ func (s *chatService) SendMessage(ctx context.Context, senderID uuid.UUID, req S
 	if err := s.chatRepo.CreateMessage(ctx, msg); err != nil { return nil, err }
 	s.chatRepo.IncrementUnread(ctx, conv.ID, true)
 
+	// Notify creator about new chat
+	s.followRepo.CreateNotification(ctx, &entity.Notification{
+		ID: uuid.New(), UserID: req.CreatorID, Type: entity.NotificationNewChat,
+		Title: "Chat Baru 💬", Body: fmt.Sprintf("%s mengirim pesan", sender.DisplayName),
+	})
+
 	// Auto-reply (Business tier)
 	if creatorProfile.AutoReply != nil && *creatorProfile.AutoReply != "" && tierName == "Business" {
 		autoMsg := &entity.ChatMessage{ID: uuid.New(), ConversationID: conv.ID, SenderID: req.CreatorID, Content: *creatorProfile.AutoReply}

@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/yourpage/be/internal/config"
 	"github.com/yourpage/be/internal/entity"
+	"github.com/yourpage/be/internal/pkg/mailer"
 	"github.com/yourpage/be/internal/pkg/storage"
 	"github.com/yourpage/be/internal/pkg/validator"
 	"github.com/yourpage/be/internal/repository"
@@ -24,12 +25,23 @@ type WalletService interface {
 type walletService struct {
 	walletRepo   repository.WalletRepository
 	platformRepo repository.PlatformRepository
+	userRepo     repository.UserRepository
 	storage      storage.StorageService
 	cfg          *config.Config
+	mailer       mailer.Mailer
+	adminEmail   string
 }
 
-func NewWalletService(walletRepo repository.WalletRepository, platformRepo repository.PlatformRepository, storageSvc storage.StorageService, cfg *config.Config) WalletService {
-	return &walletService{walletRepo: walletRepo, platformRepo: platformRepo, storage: storageSvc, cfg: cfg}
+func NewWalletService(walletRepo repository.WalletRepository, platformRepo repository.PlatformRepository, userRepo repository.UserRepository, storageSvc storage.StorageService, cfg *config.Config, mailSvc mailer.Mailer, adminEmail string) WalletService {
+	return &walletService{
+		walletRepo:   walletRepo,
+		platformRepo: platformRepo,
+		userRepo:     userRepo,
+		storage:      storageSvc,
+		cfg:          cfg,
+		mailer:       mailSvc,
+		adminEmail:   adminEmail,
+	}
 }
 
 func (s *walletService) GetBalance(ctx context.Context, userID uuid.UUID) (*entity.UserWallet, error) {

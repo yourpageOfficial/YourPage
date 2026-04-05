@@ -425,7 +425,20 @@ func (s *postService) ListPurchased(ctx context.Context, supporterID uuid.UUID, 
 }
 
 func (s *postService) LikePost(ctx context.Context, postID, userID uuid.UUID) error {
-	return s.postRepo.LikePost(ctx, postID, userID)
+	if err := s.postRepo.LikePost(ctx, postID, userID); err != nil { return err }
+	// Notify creator
+	post, err := s.postRepo.FindByID(ctx, postID)
+	if err == nil && post.CreatorID != userID {
+		user, _ := s.userRepo.FindByID(ctx, userID)
+		name := "Seseorang"
+		if user != nil { name = user.DisplayName }
+		_ = s.followRepo.CreateNotification(ctx, &entity.Notification{
+			ID: uuid.New(), UserID: post.CreatorID, Type: entity.NotificationNewLike,
+			Title: "Like Baru ❤️", Body: fmt.Sprintf("%s menyukai post \"%s\"", name, post.Title),
+			ReferenceID: &postID,
+		})
+	}
+	return nil
 }
 
 func (s *postService) UnlikePost(ctx context.Context, postID, userID uuid.UUID) error {

@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/yourpage/be/internal/entity"
+	"github.com/yourpage/be/internal/pkg/mailer"
 	"github.com/yourpage/be/internal/repository"
 )
 
@@ -39,6 +40,8 @@ type withdrawalService struct {
 	walletRepo     repository.WalletRepository
 	kycRepo        repository.KYCRepository
 	platformRepo   repository.PlatformRepository
+	mailer         mailer.Mailer
+	adminEmail     string
 }
 
 func NewWithdrawalService(
@@ -47,6 +50,8 @@ func NewWithdrawalService(
 	walletRepo repository.WalletRepository,
 	kycRepo repository.KYCRepository,
 	platformRepo repository.PlatformRepository,
+	mailer mailer.Mailer,
+	adminEmail string,
 ) WithdrawalService {
 	return &withdrawalService{
 		withdrawalRepo: withdrawalRepo,
@@ -54,6 +59,8 @@ func NewWithdrawalService(
 		walletRepo:     walletRepo,
 		kycRepo:        kycRepo,
 		platformRepo:   platformRepo,
+		mailer:         mailer,
+		adminEmail:     adminEmail,
 	}
 }
 
@@ -72,7 +79,6 @@ func (s *withdrawalService) Create(ctx context.Context, creatorID uuid.UUID, req
 	}
 
 	// Check wallet balance
-	// Use multiplication to avoid integer division truncation: balance*rate >= amountIDR
 	balance, err := s.walletRepo.GetBalance(ctx, creatorID)
 	if err != nil || balance*settings.CreditRateIDR < req.AmountIDR {
 		return nil, entity.ErrInsufficientCredit
@@ -106,6 +112,9 @@ func (s *withdrawalService) Create(ctx context.Context, creatorID uuid.UUID, req
 	if err := s.withdrawalRepo.Create(ctx, w); err != nil {
 		return nil, fmt.Errorf("withdrawal: create: %w", err)
 	}
+
+	// Notify admin (non-blocking) — TODO: add admin notification
+
 	return w, nil
 }
 

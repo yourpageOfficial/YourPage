@@ -317,11 +317,17 @@ func (s *paymentService) payWithCredits(
 			PaymentID: &paymentID, ReferenceID: &referenceID,
 			Description: fmt.Sprintf("Pendapatan dari %s", usecase),
 		})
+		notifType := entity.NotificationPurchaseSuccess
+		notifTitle := "Pembelian Baru!"
+		notifBody := fmt.Sprintf("Seseorang membeli kontenmu. Kamu menerima %d Credit.", netIDR/1000)
+		if usecase == entity.PaymentUsecaseDonation {
+			notifType = entity.NotificationDonationReceived
+			notifTitle = "Donasi Diterima! ☕"
+			notifBody = fmt.Sprintf("Seseorang mengirim donasi %d Credit untukmu.", amountIDR/1000)
+		}
 		_ = s.followRepo.CreateNotification(ctx, &entity.Notification{
-			ID: uuid.New(), UserID: creatorID, Type: entity.NotificationPurchaseSuccess,
-			Title: "Pembelian Baru!",
-			Body:  fmt.Sprintf("Seseorang membeli kontenmu. Kamu menerima %d Credit.", netIDR/1000),
-			ReferenceID: &referenceID,
+			ID: uuid.New(), UserID: creatorID, Type: notifType,
+			Title: notifTitle, Body: notifBody, ReferenceID: &referenceID,
 		})
 
 		// Send emails

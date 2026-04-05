@@ -78,9 +78,9 @@ func main() {
 	postSvc := service.NewPostService(postRepo, userRepo, followRepo, storageSvc, cfg)
 	productSvc := service.NewProductService(productRepo, userRepo, storageSvc, cfg)
 	donationSvc := service.NewDonationService(donationRepo, paymentRepo, userRepo, platformRepo)
-	walletSvc := service.NewWalletService(walletRepo, platformRepo, storageSvc, cfg)
+	walletSvc := service.NewWalletService(walletRepo, platformRepo, userRepo, storageSvc, cfg, mailSvc, os.Getenv("ADMIN_EMAIL"))
 	followSvc := service.NewFollowService(followRepo, userRepo)
-	withdrawalSvc := service.NewWithdrawalService(withdrawalRepo, userRepo, walletRepo, kycRepo, platformRepo)
+	withdrawalSvc := service.NewWithdrawalService(withdrawalRepo, userRepo, walletRepo, kycRepo, platformRepo, mailSvc, os.Getenv("ADMIN_EMAIL"))
 	kycSvc := service.NewKYCService(kycRepo)
 	adminSvc := service.NewAdminService(
 		userRepo, postRepo, productRepo, paymentRepo, donationRepo,

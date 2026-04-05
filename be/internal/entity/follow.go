@@ -23,6 +23,9 @@ const (
 	NotificationCreditTopupDone   NotificationType = "credit_topup_done"
 	NotificationKYCUpdated        NotificationType = "kyc_updated"
 	NotificationReportResolved    NotificationType = "report_resolved"
+	NotificationNewLike           NotificationType = "new_like"
+	NotificationNewChat           NotificationType = "new_chat"
+	NotificationDonationReceived2 NotificationType = "donation_received"
 )
 
 type Notification struct {

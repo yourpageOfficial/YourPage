@@ -25,6 +25,8 @@ type Mailer interface {
 	SendKYCRejected(ctx context.Context, toEmail, reason string) error
 	SendTierUpgrade(ctx context.Context, toEmail, tierName string) error
 	SendTierExpired(ctx context.Context, toEmail string) error
+	// Admin digest
+	SendAdminPendingDigest(ctx context.Context, adminEmail string, pendingWithdrawals, pendingTopups, pendingKYC int) error
 }
 
 type SMTPMailer struct {
@@ -190,6 +192,68 @@ func (m *SMTPMailer) SendTierExpired(_ context.Context, toEmail string) error {
 		<p>Tier premium kamu sudah berakhir. Kamu sekarang kembali ke tier Free.</p>
 		<p>Upgrade lagi untuk menikmati fitur premium.</p>
 		<p style="text-align:center;padding:16px 0"><a href="`+m.frontendURL+`/dashboard/subscription" style="background:#2563EB;color:white;padding:12px 32px;border-radius:8px;text-decoration:none;font-weight:bold">Upgrade Sekarang</a></p>`)
+}
+
+func (m *SMTPMailer) SendAdminPendingDigest(_ context.Context, adminEmail string, pendingWithdrawals, pendingTopups, pendingKYC int) error {
+	rows := ""
+	if pendingWithdrawals > 0 {
+		rows += fmt.Sprintf(`
+		<tr>
+			<td style="padding:12px 16px;border-bottom:1px solid #eee">💸 Penarikan Dana</td>
+			<td style="padding:12px 16px;border-bottom:1px solid #eee;text-align:center">
+				<span style="background:#FEF3C7;color:#92400E;padding:4px 12px;border-radius:20px;font-weight:bold">%d menunggu</span>
+			</td>
+			<td style="padding:12px 16px;border-bottom:1px solid #eee;text-align:center">
+				<a href="%s/admin/withdrawals" style="color:#2563EB;text-decoration:none;font-weight:bold">Proses →</a>
+			</td>
+		</tr>`, pendingWithdrawals, m.frontendURL)
+	}
+	if pendingTopups > 0 {
+		rows += fmt.Sprintf(`
+		<tr>
+			<td style="padding:12px 16px;border-bottom:1px solid #eee">💰 Top-up Credit</td>
+			<td style="padding:12px 16px;border-bottom:1px solid #eee;text-align:center">
+				<span style="background:#FEF3C7;color:#92400E;padding:4px 12px;border-radius:20px;font-weight:bold">%d menunggu</span>
+			</td>
+			<td style="padding:12px 16px;border-bottom:1px solid #eee;text-align:center">
+				<a href="%s/admin/credit-topups" style="color:#2563EB;text-decoration:none;font-weight:bold">Verifikasi →</a>
+			</td>
+		</tr>`, pendingTopups, m.frontendURL)
+	}
+	if pendingKYC > 0 {
+		rows += fmt.Sprintf(`
+		<tr>
+			<td style="padding:12px 16px">🪪 Verifikasi KYC</td>
+			<td style="padding:12px 16px;text-align:center">
+				<span style="background:#FEF3C7;color:#92400E;padding:4px 12px;border-radius:20px;font-weight:bold">%d menunggu</span>
+			</td>
+			<td style="padding:12px 16px;text-align:center">
+				<a href="%s/admin/kyc" style="color:#2563EB;text-decoration:none;font-weight:bold">Tinjau →</a>
+			</td>
+		</tr>`, pendingKYC, m.frontendURL)
+	}
+
+	total := pendingWithdrawals + pendingTopups + pendingKYC
+	body := fmt.Sprintf(`
+		<h2>📋 Ringkasan Tugas Admin</h2>
+		<p>Ada <strong>%d item</strong> yang perlu kamu tindaklanjuti sekarang:</p>
+		<table style="width:100%%;border-collapse:collapse;margin:16px 0;border:1px solid #eee;border-radius:8px;overflow:hidden">
+			<thead>
+				<tr style="background:#F8FAFC">
+					<th style="padding:10px 16px;text-align:left;font-size:12px;color:#64748B;text-transform:uppercase">Tipe</th>
+					<th style="padding:10px 16px;text-align:center;font-size:12px;color:#64748B;text-transform:uppercase">Status</th>
+					<th style="padding:10px 16px;text-align:center;font-size:12px;color:#64748B;text-transform:uppercase">Aksi</th>
+				</tr>
+			</thead>
+			<tbody>%s</tbody>
+		</table>
+		<p style="text-align:center;padding:16px 0">
+			<a href="%s/admin" style="background:#2563EB;color:white;padding:12px 32px;border-radius:8px;text-decoration:none;font-weight:bold">Buka Admin Panel →</a>
+		</p>
+		<p style="color:#999;font-size:12px">Email ini dikirim otomatis setiap 5 menit jika ada item pending.</p>`,
+		total, rows, m.frontendURL)
+
+	return m.send(adminEmail, fmt.Sprintf("🔔 YourPage Admin — %d Item Menunggu Tindakan", total), body)
 }
 
 func formatRupiah(amount int64) string {
