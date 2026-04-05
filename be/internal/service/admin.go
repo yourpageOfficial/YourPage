@@ -186,6 +186,8 @@ func (s *adminService) BanUser(ctx context.Context, userID uuid.UUID) error {
 		val, _ := s.rdb.Get(ctx, iter.Val()).Result()
 		if val == userID.String() { s.rdb.Del(ctx, iter.Val()) }
 	}
+	// 12.9: Set ban flag for access token check (expires in 1 hour, covers max token lifetime)
+	s.rdb.Set(ctx, "banned:"+userID.String(), "1", time.Hour)
 	return nil
 }
 
@@ -223,6 +225,7 @@ func (s *adminService) UnbanUser(ctx context.Context, userID uuid.UUID) error {
 		return err
 	}
 	user.IsBanned = false
+	s.rdb.Del(ctx, "banned:"+userID.String())
 	return s.userRepo.Update(ctx, user)
 }
 
@@ -258,7 +261,7 @@ func (s *adminService) UpdateWithdrawalStatus(ctx context.Context, id uuid.UUID,
 	allowed := validTransitions[w.Status]
 	valid := false
 	for _, s := range allowed { if s == req.Status { valid = true; break } }
-	if !valid { return fmt.Errorf("Tidak bisa ubah status dari %s ke %s", w.Status, req.Status) }
+	if !valid { return fmt.Errorf("⚠ Tidak bisa ubah status dari %s ke %s", w.Status, req.Status) }
 
 	// Deduct credits BEFORE updating status to keep state consistent.
 	// If deduction fails, abort so status stays unchanged.

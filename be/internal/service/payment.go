@@ -169,7 +169,7 @@ func (s *paymentService) CheckoutProduct(ctx context.Context, buyerID uuid.UUID,
 		return nil, entity.ErrForbidden
 	}
 	if !product.IsActive {
-		return nil, fmt.Errorf("Produk tidak tersedia")
+		return nil, fmt.Errorf("⚠ Produk tidak tersedia")
 	}
 
 	if _, err := s.productRepo.FindPurchase(ctx, req.ProductID, buyerID); err == nil {

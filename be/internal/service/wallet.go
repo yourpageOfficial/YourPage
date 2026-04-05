@@ -65,7 +65,7 @@ func (s *walletService) ListTransactions(ctx context.Context, userID uuid.UUID, 
 func (s *walletService) CreateTopupRequest(ctx context.Context, userID uuid.UUID, amountStr string) (*entity.CreditTopupRequest, error) {
 	amount, err := strconv.ParseInt(amountStr, 10, 64)
 	if err != nil || amount < 10000 {
-		return nil, fmt.Errorf("Minimum top-up Rp 10.000. Masukkan angka bulat.")
+		return nil, fmt.Errorf("⚠ Minimum top-up Rp 10.000. Masukkan angka bulat.")
 	}
 
 	// 5.7: Limit pending requests
@@ -76,7 +76,7 @@ func (s *walletService) CreateTopupRequest(ctx context.Context, userID uuid.UUID
 	if w, err := s.walletRepo.FindOrCreateWallet(ctx, userID); err == nil { _ = w }
 	topups, _ := s.walletRepo.ListTopupRequests(ctx, "pending", nil, 100)
 	for _, t := range topups { if t.UserID == userID { userPending++ } }
-	if userPending >= 3 { return nil, fmt.Errorf("Maksimal 3 topup pending. Tunggu yang sebelumnya diproses.") }
+	if userPending >= 3 { return nil, fmt.Errorf("⚠ Maksimal 3 topup pending. Tunggu yang sebelumnya diproses.") }
 
 	settings, err := s.platformRepo.GetSettings(ctx)
 	if err != nil {
@@ -114,7 +114,7 @@ func (s *walletService) UploadTopupProof(ctx context.Context, userID, topupID uu
 		return nil, entity.ErrForbidden
 	}
 	if topup.Status != entity.PaymentStatusPending {
-		return nil, fmt.Errorf("Topup sudah diproses, tidak bisa upload ulang")
+		return nil, fmt.Errorf("⚠ Topup sudah diproses, tidak bisa upload ulang")
 	}
 
 	objectName := fmt.Sprintf("topups/%s/%s", userID, uuid.NewString())

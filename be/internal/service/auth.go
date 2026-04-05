@@ -206,7 +206,7 @@ func (s *authService) Login(ctx context.Context, req LoginRequest) (*LoginRespon
 	lockKey := "login_fail:" + req.Email
 	failCount, _ := s.rdb.Get(ctx, lockKey).Int()
 	if failCount >= 5 {
-		return nil, fmt.Errorf("Terlalu banyak percobaan login. Coba lagi dalam 15 menit.")
+		return nil, fmt.Errorf("⚠ Terlalu banyak percobaan login. Coba lagi dalam 15 menit.")
 	}
 
 	user, err := s.userRepo.FindByEmail(ctx, req.Email)
@@ -535,7 +535,7 @@ func (s *authService) VerifyEmail(ctx context.Context, token string) error {
 func (s *authService) ResendVerification(ctx context.Context, userID uuid.UUID) error {
 	user, err := s.userRepo.FindByID(ctx, userID)
 	if err != nil { return err }
-	if user.EmailVerified { return fmt.Errorf("Email sudah terverifikasi") }
+	if user.EmailVerified { return fmt.Errorf("⚠ Email sudah terverifikasi") }
 	token, _ := randomHex(32)
 	s.rdb.Set(ctx, "verify:"+token, user.Email, 24*time.Hour)
 	go s.mailer.SendEmailVerification(ctx, user.Email, token)
@@ -556,7 +556,7 @@ func (s *authService) SubscribeTier(ctx context.Context, userID uuid.UUID, tierI
 
 	// 1.26: Idempotency — if already on this tier and not expired, skip
 	if profile.TierID != nil && *profile.TierID == tierID && profile.TierExpiresAt != nil && profile.TierExpiresAt.After(time.Now()) {
-		return fmt.Errorf("Kamu sudah berlangganan tier ini. Berlaku sampai %s", profile.TierExpiresAt.Format("2 Jan 2006"))
+		return fmt.Errorf("⚠ Kamu sudah berlangganan tier ini. Berlaku sampai %s", profile.TierExpiresAt.Format("2 Jan 2006"))
 	}
 
 	// Downgrade to Free

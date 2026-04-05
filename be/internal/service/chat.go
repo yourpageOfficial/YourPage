@@ -64,7 +64,7 @@ func (s *chatService) SendMessage(ctx context.Context, senderID uuid.UUID, req S
 			profile, _ := s.userRepo.FindCreatorByUserID(ctx, senderID)
 			if profile != nil && (profile.Tier == nil || profile.Tier.PriceIDR == 0) {
 				count, _ := s.chatRepo.CountTodayMessages(ctx, senderID)
-				if count >= 10 { return nil, fmt.Errorf("Batas 10 chat/hari untuk tier Free. Upgrade untuk unlimited.") }
+				if count >= 10 { return nil, fmt.Errorf("⚠ Batas 10 chat/hari untuk tier Free. Upgrade untuk unlimited.") }
 			}
 		}
 
@@ -89,16 +89,16 @@ func (s *chatService) SendMessage(ctx context.Context, senderID uuid.UUID, req S
 	if allowFrom == "" { allowFrom = "all" }
 	switch allowFrom {
 	case "none":
-		return nil, fmt.Errorf("Creator tidak menerima chat saat ini")
+		return nil, fmt.Errorf("⚠ Creator tidak menerima chat saat ini")
 	case "supporter_only":
-		if senderIsCreator { return nil, fmt.Errorf("Creator ini hanya menerima chat dari supporter") }
+		if senderIsCreator { return nil, fmt.Errorf("⚠ Creator ini hanya menerima chat dari supporter") }
 	case "creator_only":
-		if !senderIsCreator { return nil, fmt.Errorf("Creator ini hanya menerima chat dari sesama creator") }
+		if !senderIsCreator { return nil, fmt.Errorf("⚠ Creator ini hanya menerima chat dari sesama creator") }
 	}
 
 	// Must follow (both supporter and creator must follow first)
 	isFollowing, _ := s.followRepo.IsFollowing(ctx, senderID, req.CreatorID)
-	if !isFollowing { return nil, fmt.Errorf("Follow creator terlebih dahulu untuk mengirim chat") }
+	if !isFollowing { return nil, fmt.Errorf("⚠ Follow creator terlebih dahulu untuk mengirim chat") }
 
 	conv, err := s.chatRepo.FindOrCreateConversation(ctx, req.CreatorID, senderID)
 	if err != nil { return nil, err }

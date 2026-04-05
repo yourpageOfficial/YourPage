@@ -140,11 +140,11 @@ func (s *postService) Create(ctx context.Context, creatorID uuid.UUID, req Creat
 	// If scheduled, check tier (Pro+ only) + must be future
 	if req.ScheduledAt != nil {
 		if !req.ScheduledAt.After(time.Now()) {
-			return nil, fmt.Errorf("Waktu jadwal harus di masa depan")
+			return nil, fmt.Errorf("⚠ Waktu jadwal harus di masa depan")
 		}
 		cp, _ := s.userRepo.FindCreatorByUserID(ctx, creatorID)
 		if cp == nil || cp.Tier == nil || cp.Tier.PriceIDR == 0 {
-			return nil, fmt.Errorf("Fitur jadwal post hanya tersedia untuk tier Pro ke atas")
+			return nil, fmt.Errorf("⚠ Fitur jadwal post hanya tersedia untuk tier Pro ke atas")
 		}
 		post.Status = entity.PostStatusDraft
 		post.PublishedAt = nil

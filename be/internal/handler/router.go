@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"fmt"
+	"strings"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
@@ -52,15 +53,15 @@ func NewRouter(cfg *config.Config, rdb *redis.Client, h Handlers) *gin.Engine {
 
 	// Prometheus metrics (internal only - check header)
 	r.GET("/metrics", func(c *gin.Context) {
-		if c.GetHeader("X-Internal") != "true" && c.ClientIP() != "127.0.0.1" {
-			// Allow from docker network (172.x) and localhost
-			ip := c.ClientIP()
-			if len(ip) < 3 || (ip[:3] != "172" && ip[:3] != "10." && ip != "::1") {
-				c.AbortWithStatus(403)
-				return
-			}
+		ip := c.ClientIP()
+		// Strip IPv6-mapped prefix
+		if strings.HasPrefix(ip, "::ffff:") { ip = strings.TrimPrefix(ip, "::ffff:") }
+		if c.GetHeader("X-Internal") == "true" || ip == "127.0.0.1" || ip == "::1" ||
+			strings.HasPrefix(ip, "172.") || strings.HasPrefix(ip, "10.") || strings.HasPrefix(ip, "192.168.") {
+			promhttp.Handler().ServeHTTP(c.Writer, c.Request)
+			return
 		}
-		promhttp.Handler().ServeHTTP(c.Writer, c.Request)
+		c.AbortWithStatus(403)
 	})
 
 	// CORS — restrict in production

@@ -2,6 +2,7 @@ package handler
 
 import (
 	"errors"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -272,11 +273,10 @@ func handleServiceError(c *gin.Context, err error) {
 	case errors.Is(err, entity.ErrPaymentFailed):
 		response.UnprocessableEntity(c, "Pembayaran gagal. Silakan coba lagi.")
 	default:
-		// Check if error message is user-friendly (Indonesian)
+		// 12.1: Only pass through errors wrapped with ErrUserFacing prefix
 		msg := err.Error()
-		if len(msg) > 0 && (msg[0] >= 'A' && msg[0] <= 'Z' || msg[0] >= 'a' && msg[0] <= 'z') {
-			// Likely a custom message from service — return as 422
-			response.UnprocessableEntity(c, msg)
+		if strings.HasPrefix(msg, "⚠ ") {
+			response.UnprocessableEntity(c, strings.TrimPrefix(msg, "⚠ "))
 			return
 		}
 		response.InternalError(c)

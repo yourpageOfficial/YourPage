@@ -38,6 +38,13 @@ func AuthRequired(jwtCfg config.JWTConfig, rdb *redis.Client) gin.HandlerFunc {
 			return
 		}
 
+		// 12.9: Check if user is banned
+		if rdb.Exists(c.Request.Context(), "banned:"+claims.UserID.String()).Val() > 0 {
+			response.Forbidden(c)
+			c.Abort()
+			return
+		}
+
 		c.Set(ContextKeyUserID, claims.UserID)
 		c.Set(ContextKeyRole, entity.UserRole(claims.Role))
 		c.Next()
