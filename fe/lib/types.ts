@@ -21,6 +21,7 @@ export interface Post {
   content: string;
   excerpt?: string;
   access_type: "free" | "paid";
+  visibility?: "public" | "paid" | "members";
   price?: number;
   status: "draft" | "published";
   published_at?: string;
