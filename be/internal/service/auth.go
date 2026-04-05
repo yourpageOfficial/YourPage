@@ -167,8 +167,8 @@ func (s *authService) Register(ctx context.Context, req RegisterRequest) (*Regis
 			PageSlug: user.Username,
 		}
 		if err := s.userRepo.CreateCreatorProfile(ctx, profile); err != nil {
-			// Rollback — delete the user we just created
-			_ = s.userRepo.SoftDelete(ctx, user.ID)
+			// 1.5: Hard delete user on rollback so email/username can be reused
+			_ = s.userRepo.HardDelete(ctx, user.ID)
 			return nil, fmt.Errorf("register: create creator profile: %w", err)
 		}
 	}
@@ -202,9 +202,17 @@ func (s *authService) Register(ctx context.Context, req RegisterRequest) (*Regis
 
 // Login verifies credentials and issues a token pair.
 func (s *authService) Login(ctx context.Context, req LoginRequest) (*LoginResponse, error) {
+	// 1.15: Account lockout — 5 failed attempts = 15 min lock
+	lockKey := "login_fail:" + req.Email
+	failCount, _ := s.rdb.Get(ctx, lockKey).Int()
+	if failCount >= 5 {
+		return nil, fmt.Errorf("Terlalu banyak percobaan login. Coba lagi dalam 15 menit.")
+	}
+
 	user, err := s.userRepo.FindByEmail(ctx, req.Email)
 	if err != nil {
 		if errors.Is(err, entity.ErrNotFound) {
+			s.rdb.Incr(ctx, lockKey); s.rdb.Expire(ctx, lockKey, 15*time.Minute)
 			return nil, entity.ErrUnauthorized
 		}
 		return nil, fmt.Errorf("login: find user: %w", err)
@@ -215,9 +223,12 @@ func (s *authService) Login(ctx context.Context, req LoginRequest) (*LoginRespon
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)); err != nil {
+		s.rdb.Incr(ctx, lockKey); s.rdb.Expire(ctx, lockKey, 15*time.Minute)
 		return nil, entity.ErrUnauthorized
 	}
 
+	// Reset fail counter on success
+	s.rdb.Del(ctx, lockKey)
 	return s.issueTokenPair(ctx, user.ID, string(user.Role))
 }
 
@@ -466,7 +477,15 @@ func (s *authService) ChangePassword(ctx context.Context, userID uuid.UUID, oldP
 		return fmt.Errorf("change_password: hash: %w", err)
 	}
 	user.PasswordHash = string(hash)
-	return s.userRepo.Update(ctx, user)
+	if err := s.userRepo.Update(ctx, user); err != nil { return err }
+
+	// 1.17: Invalidate all refresh tokens
+	iter := s.rdb.Scan(ctx, 0, refreshKeyPrefix+"*", 100).Iterator()
+	for iter.Next(ctx) {
+		val, _ := s.rdb.Get(ctx, iter.Val()).Result()
+		if val == userID.String() { s.rdb.Del(ctx, iter.Val()) }
+	}
+	return nil
 }
 
 // ------------------------------------------------------------------ helpers
@@ -535,6 +554,12 @@ func (s *authService) SubscribeTier(ctx context.Context, userID uuid.UUID, tierI
 		return entity.ErrNotFound
 	}
 
+	// 1.26: Idempotency — if already on this tier and not expired, skip
+	if profile.TierID != nil && *profile.TierID == tierID && profile.TierExpiresAt != nil && profile.TierExpiresAt.After(time.Now()) {
+		return fmt.Errorf("Kamu sudah berlangganan tier ini. Berlaku sampai %s", profile.TierExpiresAt.Format("2 Jan 2006"))
+	}
+
+	// Downgrade to Free
 	if tier.PriceIDR == 0 {
 		profile.TierID = &tier.ID
 		profile.Tier = nil
@@ -545,20 +570,24 @@ func (s *authService) SubscribeTier(ctx context.Context, userID uuid.UUID, tierI
 		return s.userRepo.UpdateCreatorProfile(ctx, profile)
 	}
 
-	// Check wallet balance (single source)
+	// 1.29: Use platform settings for credit rate, not hardcode
+	settings, err := s.platformRepo.GetSettings(ctx)
+	if err != nil { return err }
+	creditRate := settings.CreditRateIDR
+	if creditRate <= 0 { creditRate = 1000 }
+	tierCredits := tier.PriceIDR / creditRate
+
 	wallet, err := s.walletRepo.FindOrCreateWallet(ctx, userID)
-	if err != nil {
-		return entity.ErrNotFound
-	}
-	tierCredits := tier.PriceIDR / 1000
+	if err != nil { return entity.ErrNotFound }
 	if wallet.BalanceCredits < tierCredits {
 		return entity.ErrInsufficientCredit
 	}
+
+	// 1.30: Deduct + update in sequence, refund on failure
 	if err := s.walletRepo.DeductCredits(ctx, userID, tierCredits); err != nil {
 		return err
 	}
 
-	// Update tier
 	profile.TierID = &tier.ID
 	profile.Tier = nil
 	expires := time.Now().AddDate(0, 1, 0)
@@ -566,7 +595,11 @@ func (s *authService) SubscribeTier(ctx context.Context, userID uuid.UUID, tierI
 	feeP := tier.FeePercent
 	profile.CustomFeePercent = &feeP
 	profile.StorageQuotaBytes = tier.StorageBytes
-	if err := s.userRepo.UpdateCreatorProfile(ctx, profile); err != nil { return err }
+	if err := s.userRepo.UpdateCreatorProfile(ctx, profile); err != nil {
+		// Refund on failure
+		_ = s.walletRepo.AddCredits(ctx, userID, tierCredits)
+		return err
+	}
 
 	// Send tier upgrade email
 	if user, err := s.userRepo.FindByID(ctx, userID); err == nil {

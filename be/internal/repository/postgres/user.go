@@ -208,3 +208,7 @@ func (r *userRepo) CreateReferralCode(ctx context.Context, ref *entity.ReferralC
 func (r *userRepo) IncrementReferralUsed(ctx context.Context, id uuid.UUID) error {
 	return r.db.WithContext(ctx).Model(&entity.ReferralCode{}).Where("id = ?", id).Update("used_count", gorm.Expr("used_count + 1")).Error
 }
+
+func (r *userRepo) HardDelete(ctx context.Context, id uuid.UUID) error {
+	return r.db.WithContext(ctx).Unscoped().Where("id = ?", id).Delete(&entity.User{}).Error
+}

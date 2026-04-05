@@ -15,6 +15,7 @@ type UserRepository interface {
 	FindByUsername(ctx context.Context, username string) (*entity.User, error)
 	Update(ctx context.Context, user *entity.User) error
 	SoftDelete(ctx context.Context, id uuid.UUID) error
+	HardDelete(ctx context.Context, id uuid.UUID) error
 	List(ctx context.Context, role string, cursor *uuid.UUID, limit int) ([]entity.User, error)
 
 	CreateCreatorProfile(ctx context.Context, p *entity.CreatorProfile) error
