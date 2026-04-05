@@ -89,3 +89,9 @@ func (r *withdrawalRepo) CountPending(ctx context.Context) (int64, error) {
 	err := r.db.WithContext(ctx).Model(&entity.Withdrawal{}).Where("status = 'pending'").Count(&c).Error
 	return c, err
 }
+
+func (r *withdrawalRepo) SumPendingAmount(ctx context.Context, creatorID uuid.UUID) (int64, error) {
+	var sum int64
+	err := r.db.WithContext(ctx).Model(&entity.Withdrawal{}).Where("creator_id = ? AND status = 'pending'", creatorID).Select("COALESCE(SUM(amount_idr),0)").Scan(&sum).Error
+	return sum, err
+}

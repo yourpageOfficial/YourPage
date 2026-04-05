@@ -320,8 +320,10 @@ func NewRouter(cfg *config.Config, rdb *redis.Client, h Handlers) *gin.Engine {
 		if err := h.AuditDB.Where("user_id = ?", uid).First(&w).Error; err == nil { bal = w.BalanceCredits }
 		if bal < int64(tier.PriceCredits) { c.JSON(422, gin.H{"error": "Credit tidak cukup"}); return }
 		// Deduct + create membership
-		h.AuditDB.Model(&entity.UserWallet{}).Where("user_id = ? AND balance_credits >= ?", uid, tier.PriceCredits).Update("balance_credits", gorm.Expr("balance_credits - ?", tier.PriceCredits))
-		// Credit creator
+		result := h.AuditDB.Model(&entity.UserWallet{}).Where("user_id = ? AND balance_credits >= ?", uid, tier.PriceCredits).Update("balance_credits", gorm.Expr("balance_credits - ?", tier.PriceCredits))
+		if result.RowsAffected == 0 { c.JSON(422, gin.H{"error": "Credit tidak cukup (atomic check)"}); return }
+		// Ensure creator wallet exists + credit
+		h.AuditDB.Exec("INSERT INTO user_wallets (user_id, balance_credits) VALUES (?, 0) ON CONFLICT (user_id) DO NOTHING", tier.CreatorID)
 		h.AuditDB.Model(&entity.UserWallet{}).Where("user_id = ?", tier.CreatorID).Update("balance_credits", gorm.Expr("balance_credits + ?", tier.PriceCredits))
 		now := time.Now()
 		mem := entity.Membership{ID: uuid.New(), SupporterID: uid, CreatorID: tier.CreatorID, TierID: tierID, Status: "active", StartedAt: now, ExpiresAt: now.AddDate(0, 1, 0)}

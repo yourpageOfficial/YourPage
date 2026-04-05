@@ -118,6 +118,9 @@ func (s *paymentService) CheckoutPost(ctx context.Context, buyerID uuid.UUID, re
 	if post.AccessType != entity.PostAccessPaid || post.Price == nil {
 		return nil, entity.ErrForbidden
 	}
+	if post.Status != entity.PostStatusPublished {
+		return nil, fmt.Errorf("post belum dipublikasikan")
+	}
 	if post.CreatorID == buyerID {
 		return nil, entity.ErrForbidden // can't buy own content
 	}
@@ -250,6 +253,7 @@ func (s *paymentService) payWithCredits(
 	if err != nil {
 		return nil, err
 	}
+	if settings.CreditRateIDR <= 0 { settings.CreditRateIDR = 1000 }
 	creditsNeeded := amountIDR / settings.CreditRateIDR
 	if amountIDR%settings.CreditRateIDR != 0 {
 		creditsNeeded++

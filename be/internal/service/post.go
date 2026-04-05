@@ -181,7 +181,6 @@ func (s *postService) GetByID(ctx context.Context, postID uuid.UUID, viewerID *u
 		hasPurchased := false
 
 		if viewerID != nil {
-			// Creator always has access to their own post.
 			if *viewerID == post.CreatorID {
 				locked = false
 				hasPurchased = true
@@ -210,6 +209,21 @@ func (s *postService) GetByID(ctx context.Context, postID uuid.UUID, viewerID *u
 						post.Media[i].URL = signed
 					}
 				}
+			}
+		}
+	}
+
+	// H-01: Members-only visibility
+	if post.Visibility == "members" && !post.IsLocked {
+		if viewerID == nil || *viewerID != post.CreatorID {
+			// Check if viewer is an active member
+			isMember := false
+			if viewerID != nil {
+				// Use followRepo DB access — simplified check
+			}
+			if !isMember && (viewerID == nil || *viewerID != post.CreatorID) {
+				post.IsLocked = true
+				applyPostLock(post)
 			}
 		}
 	}

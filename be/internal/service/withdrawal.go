@@ -71,9 +71,12 @@ func (s *withdrawalService) Create(ctx context.Context, creatorID uuid.UUID, req
 		return nil, fmt.Errorf("withdrawal: creator not found: %w", err)
 	}
 
-	// Check wallet balance
+	// Check wallet balance (account for pending withdrawals)
 	balance, err := s.walletRepo.GetBalance(ctx, creatorID)
-	if err != nil || balance*settings.CreditRateIDR < req.AmountIDR {
+	if err != nil { return nil, entity.ErrInsufficientCredit }
+	pendingAmount, _ := s.withdrawalRepo.SumPendingAmount(ctx, creatorID)
+	creditsNeeded := req.AmountIDR / settings.CreditRateIDR
+	if balance-pendingAmount/settings.CreditRateIDR < creditsNeeded {
 		return nil, entity.ErrInsufficientCredit
 	}
 

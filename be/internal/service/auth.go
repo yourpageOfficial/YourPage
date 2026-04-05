@@ -356,6 +356,16 @@ func (s *authService) ResetPassword(ctx context.Context, token, newPassword stri
 	}
 
 	_ = s.rdb.Del(ctx, resetKey(token))
+
+	// H-06: Invalidate all existing refresh tokens for this user
+	iter := s.rdb.Scan(ctx, 0, refreshKeyPrefix+"*", 100).Iterator()
+	for iter.Next(ctx) {
+		val, _ := s.rdb.Get(ctx, iter.Val()).Result()
+		if val == user.ID.String() {
+			s.rdb.Del(ctx, iter.Val())
+		}
+	}
+
 	return nil
 }
 

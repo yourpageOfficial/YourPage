@@ -130,6 +130,7 @@ type WithdrawalRepository interface {
 	ListAll(ctx context.Context, status string, cursor *uuid.UUID, limit int) ([]entity.Withdrawal, error) // admin
 	HasPreviousApproved(ctx context.Context, creatorID uuid.UUID) (bool, error)
 	CountPending(ctx context.Context) (int64, error)
+	SumPendingAmount(ctx context.Context, creatorID uuid.UUID) (int64, error)
 }
 
 // WalletRepository handles credit wallets

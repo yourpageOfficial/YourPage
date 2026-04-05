@@ -236,6 +236,11 @@ func (s *adminService) UpdateWithdrawalStatus(ctx context.Context, id uuid.UUID,
 		return err
 	}
 
+	// C-05: Prevent double processing
+	if w.Status == entity.WithdrawalStatusProcessed || w.Status == entity.WithdrawalStatusRejected {
+		return fmt.Errorf("withdrawal sudah diproses sebelumnya")
+	}
+
 	// Deduct credits BEFORE updating status to keep state consistent.
 	// If deduction fails, abort so status stays unchanged.
 	if req.Status == entity.WithdrawalStatusProcessed {
