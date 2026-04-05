@@ -84,6 +84,11 @@ services:
       ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@yourpage.id}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD}
       DOMAIN: ${DOMAIN:-_}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-}
       PORT: "8080"
     depends_on:
       postgres:
