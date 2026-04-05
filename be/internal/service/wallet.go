@@ -75,7 +75,9 @@ func (s *walletService) CreateTopupRequest(ctx context.Context, userID uuid.UUID
 
 	uniqueCode := validator.GenerateUniqueCode()
 	totalAmount := amount + int64(uniqueCode)
-	credits := amount / settings.CreditRateIDR
+	rate := settings.CreditRateIDR
+	if rate <= 0 { rate = 1000 }
+	credits := amount / rate
 
 	topup := &entity.CreditTopupRequest{
 		ID:         uuid.New(),
@@ -100,6 +102,9 @@ func (s *walletService) UploadTopupProof(ctx context.Context, userID, topupID uu
 	}
 	if topup.UserID != userID {
 		return nil, entity.ErrForbidden
+	}
+	if topup.Status != entity.PaymentStatusPending {
+		return nil, fmt.Errorf("Topup sudah diproses, tidak bisa upload ulang")
 	}
 
 	objectName := fmt.Sprintf("topups/%s/%s", userID, uuid.NewString())
