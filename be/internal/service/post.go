@@ -593,6 +593,24 @@ func (s *postService) applyLockBatch(ctx context.Context, posts []entity.Post, v
 		}
 	}
 
+	// Members-only visibility check
+	for i := range posts {
+		if posts[i].Visibility != "members" { continue }
+		if viewerID != nil && *viewerID == posts[i].CreatorID { continue }
+		isMember := false
+		if viewerID != nil {
+			if posts[i].MembershipTierID != nil {
+				isMember = s.postRepo.CheckMembershipTier(ctx, *viewerID, posts[i].CreatorID, *posts[i].MembershipTierID)
+			} else {
+				isMember = s.postRepo.CheckMembership(ctx, *viewerID, posts[i].CreatorID)
+			}
+		}
+		if !isMember {
+			posts[i].IsLocked = true
+			applyPostLock(&posts[i])
+		}
+	}
+
 	return nil
 }
 
