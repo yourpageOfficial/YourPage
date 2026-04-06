@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -19,7 +20,7 @@ import (
 
 type CreateProductRequest struct {
 	Name         string              `json:"name"         validate:"required,max=255"`
-	Slug         string              `json:"slug"         validate:"required,max=100"`
+	Slug         string              `json:"slug"         validate:"omitempty,max=100"`
 	Description  *string             `json:"description"`
 	Type         entity.ProductType  `json:"type"         validate:"required,oneof=ebook preset template other"`
 	PriceIDR     int64               `json:"price_idr"    validate:"min=0"`
@@ -127,11 +128,15 @@ func (s *productService) Create(ctx context.Context, creatorID uuid.UUID, req Cr
 	if deliveryType == "" {
 		deliveryType = "file"
 	}
+	slug := req.Slug
+	if slug == "" {
+		slug = strings.ToLower(strings.ReplaceAll(req.Name, " ", "-")) + "-" + uuid.New().String()[:8]
+	}
 	product := &entity.Product{
 		ID:           uuid.New(),
 		CreatorID:    creatorID,
 		Name:         req.Name,
-		Slug:         req.Slug,
+		Slug:         slug,
 		Description:  req.Description,
 		Type:         req.Type,
 		PriceIDR:     req.PriceIDR,

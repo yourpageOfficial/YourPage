@@ -341,9 +341,13 @@ func NewRouter(cfg *config.Config, rdb *redis.Client, h Handlers) *gin.Engine {
 		// Deduct + create membership
 		result := h.AuditDB.Model(&entity.UserWallet{}).Where("user_id = ? AND balance_credits >= ?", uid, tier.PriceCredits).Update("balance_credits", gorm.Expr("balance_credits - ?", tier.PriceCredits))
 		if result.RowsAffected == 0 { c.JSON(422, gin.H{"error": "Credit tidak cukup (atomic check)"}); return }
+		// Log transaction for supporter (spend)
+		h.AuditDB.Create(&entity.CreditTransaction{ID: uuid.New(), UserID: uid, Type: "spend", Credits: -int64(tier.PriceCredits), IDRAmount: int64(tier.PriceCredits) * 1000, Description: fmt.Sprintf("Subscribe membership %s", tier.Name)})
 		// Ensure creator wallet exists + credit
 		h.AuditDB.Exec("INSERT INTO user_wallets (user_id, balance_credits) VALUES (?, 0) ON CONFLICT (user_id) DO NOTHING", tier.CreatorID)
 		h.AuditDB.Model(&entity.UserWallet{}).Where("user_id = ?", tier.CreatorID).Update("balance_credits", gorm.Expr("balance_credits + ?", tier.PriceCredits))
+		// Log transaction for creator (earning)
+		h.AuditDB.Create(&entity.CreditTransaction{ID: uuid.New(), UserID: tier.CreatorID, Type: "earning", Credits: int64(tier.PriceCredits), IDRAmount: int64(tier.PriceCredits) * 1000, Description: fmt.Sprintf("Member subscribe tier %s", tier.Name)})
 		now := time.Now()
 		mem := entity.Membership{ID: uuid.New(), SupporterID: uid, CreatorID: tier.CreatorID, TierID: tierID, Status: "active", StartedAt: now, ExpiresAt: now.AddDate(0, 1, 0)}
 		h.AuditDB.Clauses(clause.OnConflict{Columns: []clause.Column{{Name: "supporter_id"}, {Name: "creator_id"}}, DoUpdates: clause.AssignmentColumns([]string{"tier_id", "status", "started_at", "expires_at"})}).Create(&mem)

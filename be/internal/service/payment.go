@@ -18,22 +18,22 @@ import (
 
 type CheckoutPostRequest struct {
 	PostID   uuid.UUID `json:"post_id"   validate:"required"`
-	Provider string    `json:"provider"  validate:"required,oneof=credits"` // TODO: add xendit paypal
+	Provider string    `json:"provider"` // defaults to "credits"
 }
 
 type CheckoutProductRequest struct {
 	ProductID uuid.UUID `json:"product_id" validate:"required"`
-	Provider  string    `json:"provider"   validate:"required,oneof=credits"` // TODO: add xendit paypal
+	Provider  string    `json:"provider"` // defaults to "credits"
 }
 
 type CheckoutDonationRequest struct {
 	CreatorID   uuid.UUID `json:"creator_id"   validate:"required"`
 	AmountIDR   int64     `json:"amount_idr"   validate:"required,min=1000"`
 	Message     *string   `json:"message"      validate:"omitempty,max=500"`
-	DonorName   string    `json:"donor_name"   validate:"required,max=100"`
+	DonorName   string    `json:"donor_name"   validate:"omitempty,max=100"`
 	IsAnonymous bool      `json:"is_anonymous"`
 	MediaURL    *string   `json:"media_url"`
-	Provider    string    `json:"provider"     validate:"required,oneof=credits"`
+	Provider    string    `json:"provider"` // defaults to "credits"
 }
 
 type CheckoutResponse struct {
@@ -115,6 +115,7 @@ func (s *paymentService) getCreatorFeePercent(ctx context.Context, creatorID uui
 }
 
 func (s *paymentService) CheckoutPost(ctx context.Context, buyerID uuid.UUID, req CheckoutPostRequest) (*CheckoutResponse, error) {
+	if req.Provider == "" { req.Provider = "credits" }
 	post, err := s.postRepo.FindByID(ctx, req.PostID)
 	if err != nil {
 		return nil, err
@@ -161,6 +162,7 @@ func (s *paymentService) CheckoutPost(ctx context.Context, buyerID uuid.UUID, re
 // ---------------------------------------------------------------------------
 
 func (s *paymentService) CheckoutProduct(ctx context.Context, buyerID uuid.UUID, req CheckoutProductRequest) (*CheckoutResponse, error) {
+	if req.Provider == "" { req.Provider = "credits" }
 	product, err := s.productRepo.FindByID(ctx, req.ProductID)
 	if err != nil {
 		return nil, err
@@ -207,6 +209,11 @@ func (s *paymentService) CheckoutProduct(ctx context.Context, buyerID uuid.UUID,
 func (s *paymentService) CheckoutDonation(ctx context.Context, buyerID uuid.UUID, req CheckoutDonationRequest) (*CheckoutResponse, error) {
 	if buyerID == req.CreatorID {
 		return nil, entity.ErrForbidden
+	}
+	if req.Provider == "" { req.Provider = "credits" }
+	if req.DonorName == "" {
+		if buyer, err := s.userRepo.FindByID(ctx, buyerID); err == nil { req.DonorName = buyer.DisplayName }
+		if req.DonorName == "" { req.DonorName = "Supporter" }
 	}
 
 	feePct := s.getCreatorFeePercent(ctx, req.CreatorID)
@@ -308,7 +315,7 @@ func (s *paymentService) payWithCredits(
 	// 4. Record spend transaction
 	_ = s.walletRepo.CreateTransaction(ctx, &entity.CreditTransaction{
 		ID: uuid.New(), UserID: buyerID, Type: entity.CreditTransactionSpend,
-		Credits: creditsNeeded, IDRAmount: amountIDR,
+		Credits: -creditsNeeded, IDRAmount: amountIDR,
 		PaymentID: &paymentID, ReferenceID: &referenceID,
 		Description: fmt.Sprintf("Payment for %s", usecase),
 	})
