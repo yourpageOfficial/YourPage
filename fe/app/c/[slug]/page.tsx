@@ -60,6 +60,13 @@ export default function CreatorPageView() {
     queryFn: async () => { const { data } = await api.get(`/membership-tiers/${creator!.user_id}`); return data.data as any[]; },
   });
 
+  const { data: myMemberships } = useQuery({
+    queryKey: ["my-memberships"],
+    enabled: !!user,
+    queryFn: async () => { const { data } = await api.get("/memberships/my"); return data.data as any[]; },
+  });
+  const subscribedTierID = myMemberships?.find((m: any) => m.creator_id === creator?.user_id)?.tier_id;
+
   const { data: products } = useQuery({
     queryKey: ["creator-products", creator?.user_id],
     enabled: !!creator?.user_id,
@@ -238,9 +245,13 @@ export default function CreatorPageView() {
                       <p className="text-xs text-gray-500 dark:text-gray-400">{t.price_credits} Credit/bulan</p>
                     </div>
                     {user && !isOwn && (
-                      <Button size="sm" variant="outline" onClick={async () => {
-                        try { await api.post("/memberships/subscribe", { tier_id: t.id }); toast.success("Berhasil subscribe! ⭐"); } catch (e: any) { toast.error(e.response?.data?.error || "Gagal subscribe"); }
-                      }}>{t.price_credits} Credit</Button>
+                      subscribedTierID === t.id ? (
+                        <Badge className="bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">✓ Subscribed</Badge>
+                      ) : (
+                        <Button size="sm" variant="outline" onClick={async () => {
+                          try { await api.post("/memberships/subscribe", { tier_id: t.id }); toast.success("Berhasil subscribe! ⭐"); qc.invalidateQueries({ queryKey: ["my-memberships"] }); } catch (e: any) { toast.error(e.response?.data?.error || "Gagal subscribe"); }
+                        }}>{t.price_credits} Credit</Button>
+                      )
                     )}
                   </div>
                 ))}
