@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
+import { toast } from "@/lib/toast";
 import api from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { Navbar } from "@/components/navbar";
@@ -165,7 +166,7 @@ export default function CreatorPageView() {
                   <Link href="/dashboard/profile"><Button size="sm" variant="outline">Edit Profil</Button></Link>
                   <Button size="sm" variant="ghost" onClick={() => {
                     const url = window.location.href + "?ref=" + creator.username;
-                    navigator.share ? navigator.share({ title: creator.display_name, url }) : navigator.clipboard.writeText(url).then(() => alert("Referral link disalin!"));
+                    navigator.share ? navigator.share({ title: creator.display_name, url }) : navigator.clipboard.writeText(url).then(() => toast.success("Referral link disalin!"));
                   }}>Bagikan</Button>
                 </>
               ) : user ? (
@@ -238,7 +239,7 @@ export default function CreatorPageView() {
                     </div>
                     {user && !isOwn && (
                       <Button size="sm" variant="outline" onClick={async () => {
-                        try { await api.post("/memberships/subscribe", { tier_id: t.id }); alert("Berhasil subscribe!"); } catch (e: any) { alert(e.response?.data?.error || "Gagal"); }
+                        try { await api.post("/memberships/subscribe", { tier_id: t.id }); toast.success("Berhasil subscribe! ⭐"); } catch (e: any) { toast.error(e.response?.data?.error || "Gagal subscribe"); }
                       }}>{t.price_credits} Credit</Button>
                     )}
                   </div>
