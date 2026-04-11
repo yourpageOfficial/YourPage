@@ -20,6 +20,8 @@ jobs:
             git fetch --all --tags
             git checkout main
             git pull origin main
+            sudo docker compose -f docker-compose.production.yml down fe
             sudo docker compose -f docker-compose.production.yml up -d --build
+            sudo docker compose -f docker-compose.production.yml restart nginx
             sudo docker image prune -f
             echo "Deployed $(git describe --tags) at $(date)"
