@@ -50,7 +50,7 @@ func (r *withdrawalRepo) ListByCreator(ctx context.Context, creatorID uuid.UUID,
 	var withdrawals []entity.Withdrawal
 	q := r.db.WithContext(ctx).Where("creator_id = ?", creatorID)
 	if cursor != nil {
-		q = q.Where("id > ?", *cursor)
+		q = q.Where("id < ?", *cursor)
 	}
 	err := q.Order("created_at DESC").Limit(limit).Find(&withdrawals).Error
 	return withdrawals, err
@@ -63,7 +63,7 @@ func (r *withdrawalRepo) ListAll(ctx context.Context, status string, cursor *uui
 		q = q.Where("status = ?", status)
 	}
 	if cursor != nil {
-		q = q.Where("id > ?", *cursor)
+		q = q.Where("id < ?", *cursor)
 	}
 	err := q.Order("created_at DESC").Limit(limit).Find(&withdrawals).Error
 	return withdrawals, err

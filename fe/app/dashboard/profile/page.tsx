@@ -32,6 +32,7 @@ export default function EditProfile() {
   const [socialTiktok, setSocialTiktok] = useState("");
   const [socialYT, setSocialYT] = useState("");
   const [confirmDeleteBanner, setConfirmDeleteBanner] = useState(false);
+  const [category, setCategory] = useState("");
 
   const { data: earnings } = useQuery({
     queryKey: ["creator-earnings"],
@@ -51,6 +52,7 @@ export default function EditProfile() {
     if (earnings) {
       if (earnings.page_color) setPageColor(earnings.page_color);
       if (earnings.header_image) setBannerPreview(earnings.header_image);
+      if (earnings.category) setCategory(earnings.category);
       if (earnings.social_links) {
         setSocialIG(earnings.social_links.instagram || "");
         setSocialX(earnings.social_links.x || "");
@@ -79,6 +81,7 @@ export default function EditProfile() {
         header_image: bannerUrl || "",
         page_color: isPro ? pageColor : undefined,
         social_links: { instagram: socialIG, x: socialX, tiktok: socialTiktok, youtube: socialYT },
+        category: category || undefined,
       });
     },
     onSuccess: () => { toast.success("Profil berhasil disimpan!"); fetchMe(); qc.invalidateQueries({ queryKey: ["creator-earnings"] }); },
@@ -88,7 +91,7 @@ export default function EditProfile() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-xl sm:text-2xl font-bold">Profil</h1>
+        <h1 className="text-2xl font-display font-black tracking-tight">Profil</h1>
         <Link href={`/c/${user?.username}`} target="_blank">
           <Button size="sm" variant="outline"><ExternalLink className="mr-1 h-3 w-3" /> Lihat Halaman Publik</Button>
         </Link>
@@ -101,11 +104,11 @@ export default function EditProfile() {
           <CardContent className="space-y-4">
             <div>
               <input ref={bannerRef} type="file" accept="image/*" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) { setBannerFile(f); setBannerPreview(URL.createObjectURL(f)); } }} />
-              <div className="relative cursor-pointer group rounded-lg overflow-hidden" onClick={() => bannerRef.current?.click()}>
+              <div className="relative cursor-pointer group rounded-xl overflow-hidden" onClick={() => bannerRef.current?.click()}>
                 {bannerPreview ? (
-                  <img src={bannerPreview} alt="" className="h-32 sm:h-40 w-full object-cover" />
+                  <img loading="lazy" src={bannerPreview} alt="" className="h-32 sm:h-40 w-full object-cover" />
                 ) : (
-                  <div className="h-32 sm:h-40 w-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+                  <div className="h-32 sm:h-40 w-full bg-primary-50 dark:bg-navy-800 flex items-center justify-center">
                     <div className="text-center text-gray-400 dark:text-gray-500">
                       <Upload className="mx-auto h-8 w-8 mb-1" />
                       <p className="text-xs">Upload banner (1500×400px)</p>
@@ -128,7 +131,7 @@ export default function EditProfile() {
             <div className="flex items-center gap-4">
               <input ref={avatarRef} type="file" accept="image/*" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) { setAvatarFile(f); setAvatarPreview(URL.createObjectURL(f)); } }} />
               {avatarPreview ? (
-                <img src={avatarPreview} alt="" className="h-20 w-20 rounded-full object-cover cursor-pointer border-2 shrink-0" onClick={() => avatarRef.current?.click()} />
+                <img loading="lazy" src={avatarPreview} alt="" className="h-20 w-20 rounded-full object-cover cursor-pointer border-2 shrink-0" onClick={() => avatarRef.current?.click()} />
               ) : (
                 <div className="h-20 w-20 rounded-full bg-primary/20 flex items-center justify-center text-2xl font-bold text-primary cursor-pointer shrink-0" onClick={() => avatarRef.current?.click()}>
                   {displayName?.[0] || "?"}
@@ -156,8 +159,18 @@ export default function EditProfile() {
               <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{bio.length}/500 karakter</p>
             </div>
             <div>
+              <label className="text-sm font-medium">Kategori</label>
+              <div className="flex flex-wrap gap-2 mt-1.5">
+                {["Gaming", "Musik", "Edukasi", "Podcast", "Seni", "Teknologi", "Lifestyle", "Lainnya"].map(c => (
+                  <button key={c} type="button" onClick={() => setCategory(category === c ? "" : c)}
+                    className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${category === c ? "bg-primary text-white" : "bg-primary-50 dark:bg-navy-800 text-gray-600 dark:text-gray-400 hover:bg-primary-100 dark:hover:bg-navy-700"}`}>{c}</button>
+                ))}
+              </div>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1.5">Ditampilkan di halaman Explore agar supporter mudah menemukan kamu</p>
+            </div>
+            <div>
               <label className="text-sm font-medium">Username</label>
-              <Input value={user?.username || ""} disabled className="bg-gray-50 dark:bg-gray-800" />
+              <Input value={user?.username || ""} disabled className="bg-primary-50/50 dark:bg-navy-800" />
               <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Username digunakan sebagai link halaman kamu: urpage.online/c/{user?.username}</p>
             </div>
           </CardContent>
@@ -169,19 +182,19 @@ export default function EditProfile() {
           <CardContent className="space-y-3">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="text-xs text-gray-500 dark:text-gray-400">Instagram</label>
+                <label className="text-sm font-medium mb-1.5 block">Instagram</label>
                 <Input value={socialIG} onChange={e => setSocialIG(e.target.value)} placeholder="@username" />
               </div>
               <div>
-                <label className="text-xs text-gray-500 dark:text-gray-400">X (Twitter)</label>
+                <label className="text-sm font-medium mb-1.5 block">X (Twitter)</label>
                 <Input value={socialX} onChange={e => setSocialX(e.target.value)} placeholder="@username" />
               </div>
               <div>
-                <label className="text-xs text-gray-500 dark:text-gray-400">TikTok</label>
+                <label className="text-sm font-medium mb-1.5 block">TikTok</label>
                 <Input value={socialTiktok} onChange={e => setSocialTiktok(e.target.value)} placeholder="@username" />
               </div>
               <div>
-                <label className="text-xs text-gray-500 dark:text-gray-400">YouTube</label>
+                <label className="text-sm font-medium mb-1.5 block">YouTube</label>
                 <Input value={socialYT} onChange={e => setSocialYT(e.target.value)} placeholder="Channel URL" />
               </div>
             </div>
@@ -193,7 +206,7 @@ export default function EditProfile() {
           <Card>
             <CardHeader className="pb-2"><CardTitle className="text-base">🎨 Kustomisasi <Badge variant="outline" className="text-xs ml-2">Pro</Badge></CardTitle></CardHeader>
             <CardContent>
-              <label className="text-xs text-gray-500 dark:text-gray-400">Warna aksen halaman</label>
+              <label className="text-sm font-medium mb-1.5 block">Warna aksen halaman</label>
               <div className="flex items-center gap-3 mt-1">
                 <input type="color" value={pageColor} onChange={e => setPageColor(e.target.value)} className="h-10 w-10 rounded cursor-pointer border-0" />
                 <div className="flex gap-1">

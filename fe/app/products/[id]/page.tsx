@@ -3,8 +3,10 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
+import { toast } from "@/lib/toast";
 import api from "@/lib/api";
 import { Navbar } from "@/components/navbar";
+import { ImageFallback } from "@/components/ui/image-fallback";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -13,6 +15,8 @@ import { ListSkeleton } from "@/components/ui/skeleton";
 import { ShoppingCart, Download, FileText, CheckCircle } from "lucide-react";
 import Link from "next/link";
 import { ReportButton } from "@/components/report-button";
+import { PageTransition } from "@/components/ui/page-transition";
+import { Avatar } from "@/components/ui/avatar";
 import { useAuth } from "@/lib/auth";
 import type { Product, ApiResponse } from "@/lib/types";
 
@@ -56,7 +60,7 @@ export default function ProductDetailPage() {
       if (msg.includes("Credit") || msg.includes("insufficient")) setError("Credit tidak cukup.");
       else if (msg.includes("already")) {
         setPurchased(true);
-        try { const { data } = await api.get(`/products/${id}/download`); setDownloadUrls(data.data || []); } catch {}
+        try { const { data } = await api.get(`/products/${id}/download`); setDownloadUrls(data.data || []); } catch (e: any) { toast.error(e.response?.data?.error || "Gagal") }
       } else setError(msg);
     } finally { setBuying(false); }
   };
@@ -66,12 +70,13 @@ export default function ProductDetailPage() {
   return (
     <>
       <Navbar />
+      <PageTransition>
       <main className="mx-auto max-w-4xl px-3 sm:px-4 py-6 sm:py-8">
         <div className="grid gap-6 sm:gap-8 md:grid-cols-5">
           {/* Left — Thumbnail */}
           <div className="md:col-span-2">
             {product.thumbnail_url ? (
-              <img src={product.thumbnail_url} alt={product.name} className="w-full rounded-xl object-cover aspect-[4/3] sm:aspect-square shadow-sm" />
+              <ImageFallback src={product.thumbnail_url} alt={product.name} width={600} height={600} className="w-full rounded-xl object-cover aspect-[4/3] sm:aspect-square shadow-sm" />
             ) : (
               <div className="w-full rounded-xl bg-gradient-to-br from-gray-100 to-gray-200 aspect-[4/3] sm:aspect-square flex items-center justify-center text-5xl sm:text-7xl">
                 {product.type === "ebook" ? "📖" : product.type === "preset" ? "🎨" : product.type === "template" ? "📄" : "📦"}
@@ -92,13 +97,7 @@ export default function ProductDetailPage() {
             {/* Creator */}
             {product.creator && (
               <Link href={`/c/${product.creator.username}`} className="flex items-center gap-2 mt-3 group">
-                {product.creator.avatar_url ? (
-                  <img src={product.creator.avatar_url} alt="" className="h-8 w-8 rounded-full object-cover" />
-                ) : (
-                  <div className="h-8 w-8 rounded-full bg-primary-100 flex items-center justify-center text-xs font-bold text-primary">
-                    {product.creator.display_name?.[0]}
-                  </div>
-                )}
+                <Avatar src={product.creator.avatar_url} name={product.creator.display_name} size="md" />
                 <span className="text-sm text-gray-600 group-hover:text-primary">{product.creator.display_name}</span>
               </Link>
             )}
@@ -122,7 +121,7 @@ export default function ProductDetailPage() {
                 <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2">File yang didapat</h3>
                 <div className="space-y-2">
                   {product.assets.map((a) => (
-                    <div key={a.id} className="flex items-center gap-3 bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2">
+                    <div key={a.id} className="flex items-center gap-3 bg-primary-50/50 dark:bg-navy-800 rounded-xl px-3 py-2">
                       <FileText className="h-5 w-5 text-gray-400 shrink-0" />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium truncate">{a.file_name}</p>
@@ -177,7 +176,7 @@ export default function ProductDetailPage() {
                   <p className="text-center text-xs text-gray-400">Kamu butuh <span className="font-semibold">{formatCredit(product.price_idr)}</span> untuk membeli produk ini</p>
                 </div>
               ) : (
-                <Button size="lg" className="w-full" onClick={handleBuy} disabled={buying}>
+                <Button size="lg" className="w-full" onClick={handleBuy} disabled={buying} loading={buying}>
                   <ShoppingCart className="mr-2 h-5 w-5" />
                   {buying ? "Memproses..." : `Beli — ${formatCredit(product.price_idr)}`}
                 </Button>
@@ -186,6 +185,7 @@ export default function ProductDetailPage() {
           </div>
         </div>
       </main>
+      </PageTransition>
     </>
   );
 }

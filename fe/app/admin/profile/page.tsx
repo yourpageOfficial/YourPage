@@ -2,6 +2,7 @@
 
 import { useAuth } from "@/lib/auth";
 import { Badge } from "@/components/ui/badge";
+import { Avatar } from "@/components/ui/avatar";
 import { CollapsibleCard } from "@/components/ui/collapsible-card";
 import { ChangePasswordCard } from "@/components/change-password";
 
@@ -10,11 +11,11 @@ export default function AdminProfile() {
 
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-bold">Admin Profile</h1>
+      <h1 className="mb-6 text-2xl font-display font-black tracking-tight">Admin Profile</h1>
       <div className="space-y-4">
         <CollapsibleCard title="👤 Profil" defaultOpen>
           <div className="flex items-center gap-4">
-            <div className="h-14 w-14 rounded-full bg-purple-100 flex items-center justify-center text-lg font-bold text-purple-700 shrink-0">{user?.display_name?.[0]}</div>
+            <Avatar src={user?.avatar_url} name={user?.display_name} size="xl" />
             <div>
               <p className="text-xl font-bold">{user?.display_name}</p>
               <p className="text-sm text-gray-500 dark:text-gray-400">@{user?.username}</p>

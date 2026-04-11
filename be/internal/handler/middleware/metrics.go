@@ -25,6 +25,21 @@ var (
 		Name: "http_active_requests",
 		Help: "Active HTTP requests",
 	})
+
+	CreditTransactionsTotal = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "credit_transactions_total",
+		Help: "Total credit transactions",
+	}, []string{"type"})
+
+	UserRegistrationsTotal = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "user_registrations_total",
+		Help: "Total user registrations",
+	})
+
+	BackgroundJobErrors = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "background_job_errors_total",
+		Help: "Background job errors",
+	}, []string{"job"})
 )
 
 func Metrics() gin.HandlerFunc {

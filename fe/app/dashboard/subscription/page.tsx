@@ -19,7 +19,7 @@ export default function SubscriptionPage() {
 
   const { data: tiers } = useQuery({
     queryKey: ["tiers"],
-    queryFn: async () => { const { data } = await api.get("/tiers"); return data.data as any[]; },
+    queryFn: async () => { const { data } = await api.get("/tiers"); return (data.data || []) as any[]; },
   });
 
   const { data: profile } = useQuery({
@@ -46,7 +46,7 @@ export default function SubscriptionPage() {
 
   return (
     <div>
-      <h1 className="text-xl sm:text-2xl font-bold mb-2">Subscription</h1>
+      <h1 className="text-2xl font-display font-black tracking-tight mb-2">Subscription</h1>
       {tierExpires && (
         <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
           Tier aktif sampai: {new Date(tierExpires).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}
@@ -71,9 +71,9 @@ export default function SubscriptionPage() {
               <CardContent className="space-y-4">
                 <div>
                   {t.price_idr === 0 ? (
-                    <p className="text-2xl font-bold">Gratis</p>
+                    <p className="text-2xl font-display font-black tracking-tight">Gratis</p>
                   ) : (
-                    <p className="text-2xl font-bold">{formatCredit(t.price_idr)} <span className="text-sm font-normal text-gray-500 dark:text-gray-400">Credit/bulan</span></p>
+                    <p className="text-2xl font-display font-black tracking-tight">{formatCredit(t.price_idr)} <span className="text-sm font-normal text-gray-500 dark:text-gray-400">Credit/bulan</span></p>
                   )}
                 </div>
                 <div className="space-y-1.5">

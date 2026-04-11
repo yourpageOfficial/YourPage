@@ -7,6 +7,7 @@ import api from "@/lib/api";
 import { useAdminList } from "@/lib/use-admin-list";
 import { AdminList } from "@/components/admin-list";
 import { Button } from "@/components/ui/button";
+import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -36,7 +37,7 @@ export default function AdminPayments() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-xl sm:text-xl sm:text-2xl font-bold">Pembayaran</h1>
+        <h1 className="text-2xl font-display font-black tracking-tight">Pembayaran</h1>
         <Button size="sm" variant="outline" onClick={async () => {
           const res = await api.get("/admin/export/payments", { responseType: "blob" });
           const url = URL.createObjectURL(res.data);
@@ -82,7 +83,7 @@ export default function AdminPayments() {
                   )}
                   {editId === p.id ? (
                     <div className="flex gap-2 flex-1">
-                      <select className="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-2 py-1 text-sm" value={editStatus} onChange={(e) => setEditStatus(e.target.value)}>
+                      <select className="rounded-xl border border-primary-200 dark:border-primary-900/40 bg-white dark:bg-navy-800 px-2 py-1 text-sm" value={editStatus} onChange={(e) => setEditStatus(e.target.value)}>
                         <option value="pending">Pending</option>
                         <option value="paid">Paid</option>
                         <option value="failed">Failed</option>

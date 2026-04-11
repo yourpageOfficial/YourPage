@@ -34,7 +34,7 @@ export default function TaxPage() {
 
   return (
     <div>
-      <h1 className="text-xl sm:text-2xl font-bold mb-6">Laporan Pajak</h1>
+      <h1 className="text-2xl font-display font-black tracking-tight mb-6">Laporan Pajak</h1>
       <Card className="mb-4">
         <CardHeader><CardTitle className="text-base">Ringkasan Tahun 2026</CardTitle></CardHeader>
         <CardContent>

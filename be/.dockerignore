@@ -1,0 +1,15 @@
+.env
+.env.*
+.git
+.gitignore
+.idea
+.vscode
+tmp/
+bin/
+docs/
+*.md
+BE improvement/
+.air.toml
+.golangci.yml
+Makefile
+Dockerfile*

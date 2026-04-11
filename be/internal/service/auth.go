@@ -89,11 +89,14 @@ type AuthService interface {
 	ForgotPassword(ctx context.Context, email string) error
 	ResetPassword(ctx context.Context, token, newPassword string) error
 	UpgradeToCreator(ctx context.Context, userID uuid.UUID, req UpgradeCreatorRequest) error
-	UpdateProfile(ctx context.Context, userID uuid.UUID, displayName, bio, avatarURL, pageColor, headerImage *string, chatPrice *int64, chatAllowFrom *string, autoReply *string, socialLinks map[string]interface{}, goalTitle *string, goalAmount *int64, welcomeMsg, overlayStyle, overlayText *string) error
+	UpdateProfile(ctx context.Context, userID uuid.UUID, displayName, bio, avatarURL, pageColor, headerImage *string, chatPrice *int64, chatAllowFrom *string, autoReply *string, socialLinks map[string]interface{}, goalTitle *string, goalAmount *int64, welcomeMsg, overlayStyle, overlayText, category *string) error
 	ChangePassword(ctx context.Context, userID uuid.UUID, oldPassword, newPassword string) error
 	VerifyEmail(ctx context.Context, token string) error
 	ResendVerification(ctx context.Context, userID uuid.UUID) error
 	SubscribeTier(ctx context.Context, userID uuid.UUID, tierID uuid.UUID) error
+	RequestDeleteAccount(ctx context.Context, userID uuid.UUID, password string) error
+	CancelDeleteAccount(ctx context.Context, userID uuid.UUID) error
+	ExportData(ctx context.Context, userID uuid.UUID) (map[string]interface{}, error)
 }
 
 // ------------------------------------------------------------------ Redis key helpers
@@ -106,7 +109,18 @@ const (
 )
 
 func refreshKey(token string) string { return refreshKeyPrefix + token }
+func userRefreshSet(userID uuid.UUID) string { return "user_refresh:" + userID.String() }
 func resetKey(token string) string   { return resetKeyPrefix + token }
+
+// invalidateAllRefreshTokens deletes all refresh tokens for a user using per-user set.
+func (s *authService) invalidateAllRefreshTokens(ctx context.Context, userID uuid.UUID) {
+	tokens, err := s.rdb.SMembers(ctx, userRefreshSet(userID)).Result()
+	if err != nil { return }
+	for _, t := range tokens {
+		s.rdb.Del(ctx, refreshKey(t))
+	}
+	s.rdb.Del(ctx, userRefreshSet(userID))
+}
 
 // ------------------------------------------------------------------ implementation
 
@@ -187,10 +201,10 @@ func (s *authService) Register(ctx context.Context, req RegisterRequest) (*Regis
 	}
 
 	// Send welcome + verification email
-	go s.mailer.SendWelcome(ctx, user.Email, user.DisplayName)
+	go s.mailer.SendWelcome(context.Background(), user.Email, user.DisplayName)
 	verifyToken, _ := randomHex(32)
 	s.rdb.Set(ctx, "verify:"+verifyToken, user.Email, 24*time.Hour)
-	go s.mailer.SendEmailVerification(ctx, user.Email, verifyToken)
+	go s.mailer.SendEmailVerification(context.Background(), user.Email, verifyToken)
 
 	return &RegisterResponse{
 		ID:          user.ID,
@@ -233,7 +247,9 @@ func (s *authService) Login(ctx context.Context, req LoginRequest) (*LoginRespon
 }
 
 // Logout invalidates the refresh token stored in Redis.
-func (s *authService) Logout(ctx context.Context, _ uuid.UUID, refreshToken, accessToken string) error {
+func (s *authService) Logout(ctx context.Context, userID uuid.UUID, refreshToken, accessToken string) error {
+	// Remove from per-user set
+	s.rdb.SRem(ctx, userRefreshSet(userID), refreshToken)
 	// Delete refresh token
 	if err := s.rdb.Del(ctx, refreshKey(refreshToken)).Err(); err != nil {
 		return fmt.Errorf("logout: del refresh token: %w", err)
@@ -369,13 +385,7 @@ func (s *authService) ResetPassword(ctx context.Context, token, newPassword stri
 	_ = s.rdb.Del(ctx, resetKey(token))
 
 	// H-06: Invalidate all existing refresh tokens for this user
-	iter := s.rdb.Scan(ctx, 0, refreshKeyPrefix+"*", 100).Iterator()
-	for iter.Next(ctx) {
-		val, _ := s.rdb.Get(ctx, iter.Val()).Result()
-		if val == user.ID.String() {
-			s.rdb.Del(ctx, iter.Val())
-		}
-	}
+	s.invalidateAllRefreshTokens(ctx, user.ID)
 
 	return nil
 }
@@ -417,7 +427,7 @@ func (s *authService) UpgradeToCreator(ctx context.Context, userID uuid.UUID, re
 }
 
 // UpdateProfile updates display name, bio, and avatar.
-func (s *authService) UpdateProfile(ctx context.Context, userID uuid.UUID, displayName, bio, avatarURL, pageColor, headerImage *string, chatPrice *int64, chatAllowFrom *string, autoReply *string, socialLinks map[string]interface{}, goalTitle *string, goalAmount *int64, welcomeMsg, overlayStyle, overlayText *string) error {
+func (s *authService) UpdateProfile(ctx context.Context, userID uuid.UUID, displayName, bio, avatarURL, pageColor, headerImage *string, chatPrice *int64, chatAllowFrom *string, autoReply *string, socialLinks map[string]interface{}, goalTitle *string, goalAmount *int64, welcomeMsg, overlayStyle, overlayText, category *string) error {
 	user, err := s.userRepo.FindByID(ctx, userID)
 	if err != nil {
 		return err
@@ -480,11 +490,7 @@ func (s *authService) ChangePassword(ctx context.Context, userID uuid.UUID, oldP
 	if err := s.userRepo.Update(ctx, user); err != nil { return err }
 
 	// 1.17: Invalidate all refresh tokens
-	iter := s.rdb.Scan(ctx, 0, refreshKeyPrefix+"*", 100).Iterator()
-	for iter.Next(ctx) {
-		val, _ := s.rdb.Get(ctx, iter.Val()).Result()
-		if val == userID.String() { s.rdb.Del(ctx, iter.Val()) }
-	}
+	s.invalidateAllRefreshTokens(ctx, userID)
 	return nil
 }
 
@@ -505,6 +511,9 @@ func (s *authService) issueTokenPair(ctx context.Context, userID uuid.UUID, role
 	if err := s.rdb.Set(ctx, refreshKey(refreshToken), userID.String(), refreshTTL).Err(); err != nil {
 		return nil, fmt.Errorf("issue_tokens: store refresh: %w", err)
 	}
+	// QA-15: Track token in per-user set for efficient invalidation
+	s.rdb.SAdd(ctx, userRefreshSet(userID), refreshToken)
+	s.rdb.Expire(ctx, userRefreshSet(userID), refreshTTL)
 
 	return &LoginResponse{
 		AccessToken:  accessToken,
@@ -538,7 +547,7 @@ func (s *authService) ResendVerification(ctx context.Context, userID uuid.UUID) 
 	if user.EmailVerified { return fmt.Errorf("⚠ Email sudah terverifikasi") }
 	token, _ := randomHex(32)
 	s.rdb.Set(ctx, "verify:"+token, user.Email, 24*time.Hour)
-	go s.mailer.SendEmailVerification(ctx, user.Email, token)
+	go s.mailer.SendEmailVerification(context.Background(), user.Email, token)
 	return nil
 }
 
@@ -603,7 +612,43 @@ func (s *authService) SubscribeTier(ctx context.Context, userID uuid.UUID, tierI
 
 	// Send tier upgrade email
 	if user, err := s.userRepo.FindByID(ctx, userID); err == nil {
-		go s.mailer.SendTierUpgrade(ctx, user.Email, tier.Name)
+		go s.mailer.SendTierUpgrade(context.Background(), user.Email, tier.Name)
 	}
 	return nil
+}
+
+func (s *authService) RequestDeleteAccount(ctx context.Context, userID uuid.UUID, password string) error {
+	user, err := s.userRepo.FindByID(ctx, userID)
+	if err != nil { return err }
+	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password)); err != nil {
+		return entity.ErrUnauthorized
+	}
+	scheduledAt := time.Now().AddDate(0, 0, 30)
+	user.DeletionScheduledAt = &scheduledAt
+	return s.userRepo.Update(ctx, user)
+}
+
+func (s *authService) CancelDeleteAccount(ctx context.Context, userID uuid.UUID) error {
+	user, err := s.userRepo.FindByID(ctx, userID)
+	if err != nil { return err }
+	user.DeletionScheduledAt = nil
+	return s.userRepo.Update(ctx, user)
+}
+
+func (s *authService) ExportData(ctx context.Context, userID uuid.UUID) (map[string]interface{}, error) {
+	user, err := s.userRepo.FindByID(ctx, userID)
+	if err != nil { return nil, err }
+	data := map[string]interface{}{
+		"user": map[string]interface{}{
+			"id": user.ID, "username": user.Username, "display_name": user.DisplayName,
+			"role": user.Role, "created_at": user.CreatedAt,
+		},
+	}
+	if profile, err := s.userRepo.FindCreatorByUserID(ctx, userID); err == nil {
+		data["creator_profile"] = map[string]interface{}{
+			"page_slug": profile.PageSlug, "follower_count": profile.FollowerCount,
+			"total_earnings": profile.TotalEarnings,
+		}
+	}
+	return data, nil
 }

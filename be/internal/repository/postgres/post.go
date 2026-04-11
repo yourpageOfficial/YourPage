@@ -58,7 +58,7 @@ func (r *postRepo) ListByCreator(ctx context.Context, creatorID uuid.UUID, statu
 		q = q.Where("status = ?", status)
 	}
 	if cursor != nil {
-		q = q.Where("id > ?", *cursor)
+		q = q.Where("id < ?", *cursor)
 	}
 	err := q.Order("created_at DESC").Limit(limit).Find(&posts).Error
 	return posts, err
@@ -69,7 +69,7 @@ func (r *postRepo) ListFeed(ctx context.Context, creatorIDs []uuid.UUID, cursor 
 	q := r.db.WithContext(ctx).Preload("Media").Preload("Creator").
 		Where("creator_id IN ? AND status = ? AND deleted_at IS NULL", creatorIDs, entity.PostStatusPublished)
 	if cursor != nil {
-		q = q.Where("id > ?", *cursor)
+		q = q.Where("id < ?", *cursor)
 	}
 	err := q.Order("created_at DESC").Limit(limit).Find(&posts).Error
 	return posts, err
@@ -79,7 +79,7 @@ func (r *postRepo) ListAll(ctx context.Context, cursor *uuid.UUID, limit int) ([
 	var posts []entity.Post
 	q := r.db.WithContext(ctx).Preload("Media").Preload("Creator").Where("deleted_at IS NULL")
 	if cursor != nil {
-		q = q.Where("id > ?", *cursor)
+		q = q.Where("id < ?", *cursor)
 	}
 	err := q.Order("created_at DESC").Limit(limit).Find(&posts).Error
 	return posts, err
@@ -215,18 +215,19 @@ func (r *postRepo) ListComments(ctx context.Context, postID uuid.UUID, cursor *u
 	var comments []entity.PostComment
 	q := r.db.WithContext(ctx).Preload("User").Where("post_id = ?", postID)
 	if cursor != nil {
-		q = q.Where("id > ?", *cursor)
+		q = q.Where("id > ?", *cursor) // ASC order → id > cursor
 	}
 	err := q.Order("created_at ASC").Limit(limit).Find(&comments).Error
 	return comments, err
 }
 
 func (r *postRepo) DeleteComment(ctx context.Context, commentID, userID uuid.UUID) error {
-	res := r.db.WithContext(ctx).Where("id = ? AND user_id = ?", commentID, userID).Delete(&entity.PostComment{})
-	if res.Error != nil {
-		return res.Error
-	}
-	return nil
+	q := r.db.WithContext(ctx).Where("id = ?", commentID)
+	if userID != uuid.Nil { q = q.Where("user_id = ?", userID) }
+	var comment entity.PostComment
+	if err := q.First(&comment).Error; err != nil { return entity.ErrNotFound }
+	if err := r.db.WithContext(ctx).Delete(&comment).Error; err != nil { return err }
+	return r.db.WithContext(ctx).Model(&entity.Post{}).Where("id = ?", comment.PostID).Update("comment_count", gorm.Expr("GREATEST(comment_count - 1, 0)")).Error
 }
 
 func (r *postRepo) CheckMembership(ctx context.Context, supporterID, creatorID uuid.UUID) bool {

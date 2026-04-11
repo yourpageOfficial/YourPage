@@ -6,6 +6,8 @@ import api from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Avatar } from "@/components/ui/avatar";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { formatDate } from "@/lib/utils";
 import { ListSkeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
@@ -15,7 +17,7 @@ import Link from "next/link";
 
 import { useState } from "react";
 
-const roleBadge: Record<string, string> = { admin: "bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400", creator: "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400", supporter: "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-400" };
+const roleBadge: Record<string, string> = { admin: "bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400", creator: "bg-primary-100 dark:bg-primary-900/30 text-blue-700 dark:text-blue-400", supporter: "bg-primary-50 dark:bg-navy-800 text-gray-700 dark:text-gray-400" };
 
 export default function AdminUserDetail() {
   const { id } = useParams<{ id: string }>();
@@ -87,11 +89,7 @@ export default function AdminUserDetail() {
         <CardHeader><CardTitle>Detail User</CardTitle></CardHeader>
         <CardContent className="space-y-3">
           <div className="flex items-center gap-4">
-            {user.avatar_url ? (
-              <img src={user.avatar_url} alt="" className="h-16 w-16 rounded-full object-cover" />
-            ) : (
-              <div className="h-16 w-16 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-xl font-bold">{user.display_name?.[0]}</div>
-            )}
+            <Avatar src={user.avatar_url} name={user.display_name} size="xl" />
             <div>
               <p className="text-xl font-bold">{user.display_name}</p>
               <p className="text-gray-500 dark:text-gray-400">@{user.username}</p>
@@ -110,7 +108,11 @@ export default function AdminUserDetail() {
             {user.role === "creator" && <Link href={`/c/${user.username}`}><Button size="sm" variant="outline">Lihat Page</Button></Link>}
             {user.is_banned
               ? <Button size="sm" onClick={() => unban.mutate()}>Unban</Button>
-              : user.role !== "admin" && <Button size="sm" variant="destructive" onClick={() => ban.mutate()}>Ban User</Button>
+              : user.role !== "admin" && (
+                <ConfirmDialog title="Ban User?" message={`Yakin ingin ban ${user.display_name}?`} confirmLabel="Ban" variant="destructive" onConfirm={() => ban.mutate()}>
+                  {(open) => <Button size="sm" variant="destructive" onClick={open}>Ban User</Button>}
+                </ConfirmDialog>
+              )
             }
           </div>
         </CardContent>

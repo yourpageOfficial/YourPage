@@ -5,12 +5,19 @@ export interface User {
   avatar_url?: string;
   bio?: string;
   role: "supporter" | "creator" | "admin";
-  creator_profile?: {
-    page_slug: string;
-    is_monetized: boolean;
-    is_verified: boolean;
-    follower_count: number;
-  };
+  is_banned?: boolean;
+  ban_reason?: string;
+  deletion_scheduled_at?: string;
+  creator_profile?: CreatorProfile;
+}
+
+export interface CreatorProfile {
+  page_slug: string;
+  is_monetized: boolean;
+  is_verified: boolean;
+  follower_count: number;
+  tier_id?: string;
+  tier_expires_at?: string;
 }
 
 export interface Post {
@@ -22,6 +29,7 @@ export interface Post {
   excerpt?: string;
   access_type: "free" | "paid";
   visibility?: "public" | "paid" | "members";
+  membership_tier_id?: string;
   price?: number;
   status: "draft" | "published";
   published_at?: string;
@@ -73,8 +81,12 @@ export interface ProductAsset {
 export interface Donation {
   id: string;
   creator_id: string;
+  supporter?: User;
+  creator?: User;
+  payment_id?: string;
   amount_idr: number;
   net_amount_idr: number;
+  fee_idr?: number;
   message?: string;
   donor_name: string;
   is_anonymous: boolean;
@@ -118,17 +130,152 @@ export interface Notification {
   created_at: string;
 }
 
-export interface PaginatedResponse<T> {
-  success: boolean;
-  data: T[];
-  next_cursor?: string;
+export interface ChatConversation {
+  id: string;
+  creator_id: string;
+  supporter_id: string;
+  creator?: User;
+  supporter?: User;
+  last_message_at?: string;
+  creator_unread: number;
+  supporter_unread: number;
 }
 
-export interface ApiResponse<T> {
-  success: boolean;
-  data: T;
-  message?: string;
-  error?: string;
+export interface ChatMessage {
+  id: string;
+  conversation_id: string;
+  sender_id: string;
+  sender?: User;
+  content: string;
+  is_paid: boolean;
+  created_at: string;
+}
+
+export interface MembershipTier {
+  id: string;
+  creator_id: string;
+  name: string;
+  price_credits: number;
+  description?: string;
+  perks?: string;
+}
+
+export interface Membership {
+  id: string;
+  tier_id: string;
+  tier?: MembershipTier;
+  creator_id: string;
+  supporter_id: string;
+  expires_at: string;
+  created_at: string;
+}
+
+export interface OverlayTier {
+  id: string;
+  creator_id: string;
+  min_credits: number;
+  image_url?: string;
+  label?: string;
+}
+
+export interface UserKYC {
+  id: string;
+  user_id: string;
+  full_name: string;
+  id_number?: string;
+  ktp_image_url?: string;
+  status: "pending" | "approved" | "rejected";
+  admin_note?: string;
+  created_at: string;
+}
+
+export interface ContentReport {
+  id: string;
+  reporter_id: string;
+  reporter?: User;
+  target_type: "post" | "product" | "user";
+  target_id: string;
+  reason: string;
+  status: "pending" | "resolved" | "dismissed";
+  admin_note?: string;
+  created_at: string;
+}
+
+export interface ReferralCode {
+  code: string;
+  used_count: number;
+}
+
+export interface AdminAnalytics {
+  total_users: number;
+  total_creators: number;
+  total_posts: number;
+  total_products: number;
+  gmv: number;
+  revenue: number;
+  total_donations_amount: number;
+  withdrawals_processed_amount: number;
+  reports_pending: number;
+}
+
+export interface CreatorEarnings {
+  total_earnings: number;
+  follower_count: number;
+  post_count: number;
+  tier_name?: string;
+  tier_expires_at?: string;
+  fee_percent: number;
+  storage_used_bytes: number;
+  storage_quota_bytes: number;
+  page_color?: string;
+  header_image?: string;
+  social_links?: Record<string, string>;
+  welcome_message?: string;
+  donation_goal_title?: string;
+  donation_goal_amount?: number;
+  donation_goal_current?: number;
+  chat_price_idr?: number;
+  chat_allow_from?: string;
+  auto_reply?: string;
+  overlay_style?: string;
+  overlay_text_template?: string;
+}
+
+export interface Sale {
+  id: string;
+  usecase: "post_purchase" | "product_purchase" | "donation";
+  amount_idr: number;
+  net_amount_idr: number;
+  fee_idr: number;
+  payer?: User;
+  status: string;
+  created_at: string;
+}
+
+export interface Transaction {
+  id: string;
+  usecase: string;
+  amount_idr: number;
+  net_amount_idr: number;
+  fee_idr: number;
+  provider: string;
+  status: string;
+  reference_id?: string;
+  unique_code?: number;
+  created_at: string;
+}
+
+export interface CreditTopup {
+  id: string;
+  user_id: string;
+  user?: User;
+  amount_idr: number;
+  credits: number;
+  unique_code?: number;
+  donor_name?: string;
+  proof_image_url?: string;
+  status: "pending" | "approved" | "rejected";
+  created_at: string;
 }
 
 export interface CreatorPage {
@@ -139,7 +286,7 @@ export interface CreatorPage {
   bio?: string;
   page_slug: string;
   header_image?: string;
-  social_links: Record<string, string>;
+  social_links?: Record<string, string>;
   follower_count: number;
   is_verified: boolean;
   tier_badge?: string;
@@ -164,4 +311,17 @@ export interface Payment {
   status: "pending" | "paid" | "failed" | "expired";
   amount_idr: number;
   created_at: string;
+}
+
+export interface PaginatedResponse<T> {
+  success: boolean;
+  data: T[];
+  next_cursor?: string;
+}
+
+export interface ApiResponse<T> {
+  success: boolean;
+  data: T;
+  message?: string;
+  error?: string;
 }

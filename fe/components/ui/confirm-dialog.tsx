@@ -11,6 +11,7 @@ interface ControlledProps {
   description?: string;
   confirmText?: string;
   variant?: "default" | "destructive";
+  loading?: boolean;
   children?: never;
 }
 
@@ -20,6 +21,7 @@ interface UncontrolledProps {
   confirmLabel?: string;
   variant?: "default" | "destructive";
   onConfirm: () => void;
+  loading?: boolean;
   children: (open: () => void) => React.ReactNode;
   open?: never;
   onClose?: never;
@@ -40,14 +42,14 @@ export function ConfirmDialog(props: Props) {
     <>
       {!isControlled && (props as UncontrolledProps).children(() => setInternalOpen(true))}
       {isOpen && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4" role="dialog" aria-modal="true">
           <div className="fixed inset-0 bg-black/50" onClick={close} />
-          <div className="relative bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-sm w-full p-5 space-y-4">
+          <div className="relative bg-white dark:bg-navy-800 rounded-xl shadow-xl max-w-sm w-full p-5 space-y-4 animate-scale-in">
             <h3 className="font-semibold text-lg">{props.title}</h3>
             {msg && <p className="text-sm text-gray-600 dark:text-gray-400">{msg}</p>}
             <div className="flex justify-end gap-2">
-              <Button variant="ghost" size="sm" onClick={close}>Batal</Button>
-              <Button variant={props.variant || "destructive"} size="sm" onClick={() => { props.onConfirm(); close(); }}>{label}</Button>
+              <Button variant="ghost" size="sm" onClick={close} disabled={props.loading}>Batal</Button>
+              <Button variant={props.variant || "destructive"} size="sm" loading={props.loading} onClick={() => { props.onConfirm(); if (!props.loading) close(); }}>{label}</Button>
             </div>
           </div>
         </div>

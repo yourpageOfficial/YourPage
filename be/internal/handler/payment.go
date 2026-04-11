@@ -116,5 +116,11 @@ func (h *PaymentHandler) GetStatus(c *gin.Context) {
 		handleServiceError(c, err)
 		return
 	}
+	// QA-1: Ownership check — only payer can view
+	uid := getUserID(c)
+	if payment.PayerID == nil || *payment.PayerID != uid {
+		response.NotFound(c, "payment not found")
+		return
+	}
 	response.OK(c, payment)
 }

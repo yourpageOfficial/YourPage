@@ -8,12 +8,15 @@ import { useAdminList } from "@/lib/use-admin-list";
 import { AdminList } from "@/components/admin-list";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Breadcrumb } from "@/components/ui/breadcrumb";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Avatar } from "@/components/ui/avatar";
 import { formatDate } from "@/lib/utils";
 import Link from "next/link";
 
-const roleBadge: Record<string, string> = { admin: "bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400", creator: "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400", supporter: "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-400" };
+const roleBadge: Record<string, string> = { admin: "bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400", creator: "bg-primary-100 dark:bg-primary-900/30 text-blue-700 dark:text-blue-400", supporter: "bg-primary-50 dark:bg-navy-800 text-gray-700 dark:text-gray-400" };
 const filters = [{ label: "Creator", value: "creator" }, { label: "Supporter", value: "supporter" }, { label: "Admin", value: "admin" }];
 const sorts = [{ label: "Username", key: "username" }, { label: "Display Name", key: "display_name" }, { label: "Role", key: "role" }, { label: "Created", key: "created_at" }];
 
@@ -36,8 +39,9 @@ export default function AdminUsers() {
 
   return (
     <div>
+      <Breadcrumb items={[{ label: "Admin", href: "/admin" }, { label: "Pengguna" }]} className="mb-4" />
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">Users</h1>
+        <h1 className="text-2xl font-display font-black tracking-tight">Users</h1>
         <Button size="sm" variant="outline" onClick={() => setShowFinance(!showFinance)}>+ Finance User</Button>
       </div>
       {showFinance && (
@@ -63,7 +67,7 @@ export default function AdminUsers() {
             <Card key={u.id} className="cursor-pointer hover:border-primary transition-colors" onClick={() => window.location.href = `/admin/users/${u.id}`}>
               <CardContent className="p-4 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-sm font-bold shrink-0">{u.display_name?.[0]}</div>
+                  <Avatar src={u.avatar_url} name={u.display_name} size="md" />
                   <div>
                     <p className="font-medium">{u.display_name} <span className="text-gray-400 text-sm">@{u.username}</span></p>
                     <p className="text-xs text-gray-400 dark:text-gray-400">{formatDate(u.created_at)}</p>
@@ -76,7 +80,11 @@ export default function AdminUsers() {
                   {u.role === "creator" && <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); verify.mutate(u.id); }}>✓ Verify</Button>}
                   {u.role === "creator" && <Link href={`/admin/users/${u.id}`} onClick={e => e.stopPropagation()}><Button size="sm" variant="outline">🎯 Promo</Button></Link>}
                   {u.is_banned ? <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); unban.mutate(u.id); }}>Unban</Button>
-                    : u.role !== "admin" && <Button size="sm" variant="destructive" onClick={(e) => { e.stopPropagation(); ban.mutate(u.id); }}>Ban</Button>}
+                    : u.role !== "admin" && (
+                      <ConfirmDialog title="Ban User?" message={`Yakin ingin ban ${u.display_name}?`} confirmLabel="Ban" variant="destructive" onConfirm={() => ban.mutate(u.id)}>
+                        {(open) => <Button size="sm" variant="destructive" onClick={(e) => { e.stopPropagation(); open(); }}>Ban</Button>}
+                      </ConfirmDialog>
+                    )}
                 </div>
               </CardContent>
             </Card>

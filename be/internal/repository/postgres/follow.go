@@ -73,7 +73,7 @@ func (r *followRepo) ListNotifications(ctx context.Context, userID uuid.UUID, cu
 	var notifications []entity.Notification
 	q := r.db.WithContext(ctx).Where("user_id = ?", userID)
 	if cursor != nil {
-		q = q.Where("id > ?", *cursor)
+		q = q.Where("id < ?", *cursor)
 	}
 	err := q.Order("created_at DESC").Limit(limit).Find(&notifications).Error
 	return notifications, err
@@ -100,4 +100,14 @@ func (r *followRepo) MarkAllRead(ctx context.Context, userID uuid.UUID) error {
 		Model(&entity.Notification{}).
 		Where("user_id = ? AND is_read = false", userID).
 		Update("is_read", true).Error
+}
+
+func (r *followRepo) DeleteNotification(ctx context.Context, notifID, userID uuid.UUID) error {
+	result := r.db.WithContext(ctx).Where("id = ? AND user_id = ?", notifID, userID).Delete(&entity.Notification{})
+	if result.RowsAffected == 0 { return entity.ErrNotFound }
+	return result.Error
+}
+
+func (r *followRepo) DeleteReadNotifications(ctx context.Context, userID uuid.UUID) error {
+	return r.db.WithContext(ctx).Where("user_id = ? AND is_read = true", userID).Delete(&entity.Notification{}).Error
 }

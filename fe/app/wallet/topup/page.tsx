@@ -58,7 +58,7 @@ export default function TopupPage() {
       <main className="mx-auto max-w-md px-3 sm:px-4 py-6 sm:py-8">
         {/* Header */}
         <div className="text-center mb-6">
-          <h1 className="text-xl sm:text-2xl font-bold">Top-up Credit</h1>
+          <h1 className="text-2xl font-display font-black tracking-tight">Top-up Credit</h1>
           <p className="text-sm text-gray-500 mt-1">Saldo kamu: <span className="font-semibold text-primary">{wallet?.balance_credits ?? 0} Credit</span></p>
           <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">1 Credit = Rp 1.000</p>
         </div>
@@ -66,7 +66,7 @@ export default function TopupPage() {
         {/* Step indicator */}
         <div className="flex items-center justify-center gap-2 mb-6">
           {[1, 2, 3].map((s) => (
-            <div key={s} className={`h-2 rounded-full transition-all ${step >= s ? "bg-primary w-8" : "bg-gray-200 dark:bg-gray-700 w-6"}`} />
+            <div key={s} className={`h-2 rounded-full transition-all ${step >= s ? "bg-primary w-8" : "bg-primary-100 dark:bg-navy-800 w-6"}`} />
           ))}
         </div>
 
@@ -81,10 +81,10 @@ export default function TopupPage() {
                   <button
                     key={p}
                     onClick={() => setAmount(String(p))}
-                    className={`py-3 rounded-lg text-sm font-medium border-2 transition-all ${
+                    className={`py-3 rounded-xl text-sm font-medium border-2 transition-all ${
                       amount === String(p)
                         ? "border-primary bg-primary-50 text-primary"
-                        : "border-gray-200 hover:border-gray-300"
+                        : "border-primary-100 hover:border-primary-200"
                     }`}
                   >
                     {formatIDR(p)}
@@ -117,7 +117,7 @@ export default function TopupPage() {
               <div className="text-center py-4 bg-primary/5 rounded-xl border border-primary/20">
                 <p className="text-xs text-gray-500 dark:text-gray-400">Transfer tepat sebesar</p>
                 <p className="text-2xl sm:text-3xl font-bold text-primary mt-1">{formatIDR(topupData.amount_idr)}</p>
-                <div className="mt-2 inline-flex items-center gap-1.5 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-lg px-3 py-1.5">
+                <div className="mt-2 inline-flex items-center gap-1.5 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-xl px-3 py-1.5">
                   <span className="text-xs text-yellow-700 dark:text-yellow-400">Kode unik:</span>
                   <span className="text-sm font-bold text-yellow-700 dark:text-yellow-400">{topupData.unique_code}</span>
                 </div>
@@ -129,7 +129,7 @@ export default function TopupPage() {
                 <div className="text-center">
                   <p className="text-xs text-gray-500 mb-1">Scan QRIS di bawah:</p>
                   <p className="text-[11px] text-gray-400 dark:text-gray-500 mb-2">GoPay · OVO · Dana · ShopeePay · QRIS · M-Banking</p>
-                  <img src={qrisData.platform_qris_url} alt="QRIS" className="mx-auto max-h-48 sm:max-h-64 rounded-lg shadow" />
+                  <img loading="lazy" src={qrisData.platform_qris_url} alt="QRIS" className="mx-auto max-h-48 sm:max-h-64 rounded-xl shadow" />
                 </div>
               ) : (
                 <p className="text-center text-sm text-gray-400 py-4">QRIS belum diatur admin</p>
@@ -150,10 +150,10 @@ export default function TopupPage() {
                   }} />
                   <div
                     onClick={() => fileRef.current?.click()}
-                    className="mt-1 border-2 border-dashed rounded-lg p-4 text-center cursor-pointer hover:border-primary transition-colors"
+                    className="mt-1 border-2 border-dashed rounded-xl p-4 text-center cursor-pointer hover:border-primary transition-colors"
                   >
                     {proofFile ? (
-                      <img src={URL.createObjectURL(proofFile)} alt="preview" className="mx-auto max-h-32 rounded object-contain" />
+                      <img loading="lazy" src={URL.createObjectURL(proofFile)} alt="preview" className="mx-auto max-h-32 rounded object-contain" />
                     ) : (
                       <>
                         <Upload className="mx-auto h-8 w-8 text-gray-300 dark:text-gray-600" />

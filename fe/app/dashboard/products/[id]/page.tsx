@@ -88,7 +88,7 @@ export default function DashboardProductDetail() {
           <Textarea placeholder="Deskripsi produk..." value={description} onChange={(e) => setDescription(e.target.value)} className="min-h-[100px]" />
           <Input type="number" placeholder="Harga (Credit)" value={price} onChange={(e) => setPrice(e.target.value)} />
           <div className="flex gap-2">
-            <select className="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm" value={type} onChange={(e) => setType(e.target.value)}>
+            <select className="rounded-xl border border-primary-200 dark:border-primary-900/40 bg-white dark:bg-navy-800 px-3 py-2 text-sm" value={type} onChange={(e) => setType(e.target.value)}>
               <option value="ebook">E-book</option>
               <option value="preset">Preset</option>
               <option value="template">Template</option>

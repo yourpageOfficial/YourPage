@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/yourpage/be/internal/entity"
@@ -42,6 +43,8 @@ type UserRepository interface {
 	CountCreatorProducts(ctx context.Context, userID uuid.UUID) (int64, error)
 	CountCreatorDonations(ctx context.Context, userID uuid.UUID) (int64, int64, error)
 	CountCreatorSales(ctx context.Context, userID uuid.UUID) (int64, int64, error)
+	CountCreatorDonationsRange(ctx context.Context, userID uuid.UUID, from, to time.Time) (int64, int64, error)
+	CountCreatorSalesRange(ctx context.Context, userID uuid.UUID, from, to time.Time) (int64, int64, error)
 }
 
 // PostRepository handles posts and post media
@@ -100,6 +103,8 @@ type ProductRepository interface {
 	FindPurchase(ctx context.Context, productID, supporterID uuid.UUID) (*entity.ProductPurchase, error)
 	DeletePurchase(ctx context.Context, productID, supporterID uuid.UUID) error
 	ListPurchasedProducts(ctx context.Context, supporterID uuid.UUID, cursor *uuid.UUID, limit int) ([]entity.Product, error)
+	LogDownload(ctx context.Context, productID, userID uuid.UUID) error
+	GetDownloadCount(ctx context.Context, productID uuid.UUID) (int64, error)
 }
 
 // PaymentRepository handles payments
@@ -153,6 +158,7 @@ type WalletRepository interface {
 	UpdateTopupProof(ctx context.Context, id uuid.UUID, donorName, proofURL string) error
 	ListTopupRequests(ctx context.Context, status string, cursor *uuid.UUID, limit int) ([]entity.CreditTopupRequest, error) // admin
 	CountPendingTopups(ctx context.Context) (int64, error)
+	CountPendingTopupsByUser(ctx context.Context, userID uuid.UUID) (int64, error)
 }
 
 // FollowRepository handles follows and notifications
@@ -168,6 +174,8 @@ type FollowRepository interface {
 	CountUnread(ctx context.Context, userID uuid.UUID) (int64, error)
 	MarkRead(ctx context.Context, notifID, userID uuid.UUID) error
 	MarkAllRead(ctx context.Context, userID uuid.UUID) error
+	DeleteNotification(ctx context.Context, notifID, userID uuid.UUID) error
+	DeleteReadNotifications(ctx context.Context, userID uuid.UUID) error
 }
 
 // KYCRepository handles KYC and content reports
@@ -183,6 +191,18 @@ type KYCRepository interface {
 	FindReport(ctx context.Context, id uuid.UUID) (*entity.ContentReport, error)
 	UpdateReportStatus(ctx context.Context, id uuid.UUID, status entity.ReportStatus, adminNote *string) error
 	ListReports(ctx context.Context, status string, cursor *uuid.UUID, limit int) ([]entity.ContentReport, error) // admin
+}
+
+// ChatRepository handles chat conversations and messages
+type ChatRepository interface {
+	FindOrCreateConversation(ctx context.Context, creatorID, supporterID uuid.UUID) (*entity.ChatConversation, error)
+	FindConversation(ctx context.Context, id uuid.UUID) (*entity.ChatConversation, error)
+	ListConversations(ctx context.Context, userID uuid.UUID) ([]entity.ChatConversation, error)
+	CreateMessage(ctx context.Context, msg *entity.ChatMessage) error
+	ListMessages(ctx context.Context, convID uuid.UUID, limit int) ([]entity.ChatMessage, error)
+	IncrementUnread(ctx context.Context, convID uuid.UUID, forCreator bool) error
+	ResetUnread(ctx context.Context, convID uuid.UUID, forCreator bool) error
+	CountTodayMessages(ctx context.Context, senderID uuid.UUID) (int64, error)
 }
 
 // PlatformRepository handles platform settings

@@ -11,9 +11,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatCredit, formatDate } from "@/lib/utils";
-import { Trash2, Plus, Upload, FileText } from "lucide-react";
+import { Trash2, Plus, Upload, FileText, Package, X } from "lucide-react";
+import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import type { Product, PaginatedResponse } from "@/lib/types";
+import { motion, AnimatePresence } from "framer-motion";
+import { staggerChildren, staggerItem } from "@/lib/motion-variants";
 
 export default function DashboardProducts() {
   const { user } = useAuth();
@@ -31,49 +34,37 @@ export default function DashboardProducts() {
   const [files, setFiles] = useState<File[]>([]);
   const [thumbFile, setThumbFile] = useState<File | null>(null);
 
-  // Upload asset to existing product
   const [uploadProductId, setUploadProductId] = useState<string | null>(null);
   const assetRef = useRef<HTMLInputElement>(null);
 
   const { data: products } = useQuery({
     queryKey: ["my-products"],
     enabled: !!user,
-    queryFn: async () => {
-      const { data } = await api.get<PaginatedResponse<Product>>(`/products/creator/${user!.id}`);
-      return data.data;
-    },
+    queryFn: async () => { const { data } = await api.get<PaginatedResponse<Product>>(`/products/creator/${user!.id}`); return data.data; },
   });
 
   const createProduct = useMutation({
     mutationFn: async () => {
-      // Upload thumbnail
       let thumbnailUrl: string | undefined;
       if (thumbFile) {
-        const fd = new FormData();
-        fd.append("file", thumbFile);
+        const fd = new FormData(); fd.append("file", thumbFile);
         const { data } = await api.post("/upload", fd, { headers: { "Content-Type": "multipart/form-data" } });
         thumbnailUrl = data.data.url;
       }
-
-      // Create product
       const { data } = await api.post("/products", {
         name, slug, description, price_idr: parseInt(price) * 1000, type, is_active: true,
         thumbnail_url: thumbnailUrl, delivery_type: deliveryType,
         delivery_url: deliveryType === "link" ? deliveryUrl : undefined,
       });
       const productId = data.data.id;
-
-      // Upload asset files
       for (const f of files) {
-        const fd = new FormData();
-        fd.append("file", f);
+        const fd = new FormData(); fd.append("file", f);
         await api.post(`/products/${productId}/assets`, fd, { headers: { "Content-Type": "multipart/form-data" } });
       }
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["my-products"] });
-      setShowForm(false);
-      setName(""); setSlug(""); setDescription(""); setPrice(""); setFiles([]); setThumbFile(null); setDeliveryType("file"); setDeliveryUrl("");
+      setShowForm(false); setName(""); setSlug(""); setDescription(""); setPrice(""); setFiles([]); setThumbFile(null); setDeliveryType("file"); setDeliveryUrl("");
       toast.success("Produk berhasil dibuat!");
     },
     onError: (err: any) => toast.error(err.response?.data?.error || "Gagal membuat produk"),
@@ -81,14 +72,10 @@ export default function DashboardProducts() {
 
   const addAsset = useMutation({
     mutationFn: async ({ productId, file }: { productId: string; file: File }) => {
-      const fd = new FormData();
-      fd.append("file", file);
+      const fd = new FormData(); fd.append("file", file);
       await api.post(`/products/${productId}/assets`, fd, { headers: { "Content-Type": "multipart/form-data" } });
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["my-products"] });
-      setUploadProductId(null);
-    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["my-products"] }); setUploadProductId(null); },
   });
 
   const deleteProduct = useMutation({
@@ -96,118 +83,134 @@ export default function DashboardProducts() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["my-products"] }),
   });
 
+  const totalSales = products?.reduce((s, p) => s + (p.sales_count || 0), 0) || 0;
+
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Products</h1>
-        <Button size="sm" onClick={() => setShowForm(!showForm)}><Plus className="mr-1 h-4 w-4" /> Buat Produk</Button>
+      <Breadcrumb items={[{ label: "Dashboard", href: "/dashboard" }, { label: "Products" }]} className="mb-4" />
+      <div className="flex items-start justify-between mb-6">
+        <div>
+          <h1 className="text-2xl font-display font-black tracking-tight">Katalog Produk</h1>
+          <div className="flex items-center gap-3 mt-1.5">
+            <span className="text-xs text-gray-500 dark:text-gray-400">{products?.length || 0} produk</span>
+            {totalSales > 0 && <span className="text-xs text-green-500">{totalSales} terjual</span>}
+          </div>
+        </div>
+        <Button size="sm" onClick={() => setShowForm(!showForm)} className="rounded-2xl">
+          {showForm ? <><X className="mr-1.5 h-4 w-4" /> Tutup</> : <><Plus className="mr-1.5 h-4 w-4" /> Buat Produk</>}
+        </Button>
       </div>
 
-      {showForm && (
-        <Card className="mb-6">
-          <CardContent className="space-y-3 p-4">
-            <Input placeholder="Nama produk" value={name} onChange={(e) => setName(e.target.value)} />
-            <Input placeholder="Slug (url-friendly)" value={slug} onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-"))} />
-            <Textarea placeholder="Deskripsi produk..." value={description} onChange={(e) => setDescription(e.target.value)} />
-            <Input type="number" placeholder="Harga (Credit)" value={price} onChange={(e) => setPrice(e.target.value)} />
-            <select className="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm" value={type} onChange={(e) => setType(e.target.value)}>
-              <option value="ebook">E-book</option>
-              <option value="preset">Preset</option>
-              <option value="template">Template</option>
-              <option value="other">Lainnya</option>
-            </select>
-
-            {/* Delivery type */}
-            <div>
-              <label className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300">Tipe Pengiriman</label>
-              <div className="flex gap-2 mt-1">
-                <Button type="button" size="sm" variant={deliveryType === "file" ? "default" : "outline"} onClick={() => setDeliveryType("file")}>📁 File Digital</Button>
-                <Button type="button" size="sm" variant={deliveryType === "link" ? "default" : "outline"} onClick={() => setDeliveryType("link")}>🔗 Link / Key</Button>
-              </div>
-            </div>
-
-            {deliveryType === "link" && (
-              <Input placeholder="Link atau key (misal: URL kursus, license key, invite link)" value={deliveryUrl} onChange={(e) => setDeliveryUrl(e.target.value)} />
-            )}
-
-            {/* Thumbnail */}
-            <div>
-              <input ref={thumbRef} type="file" accept="image/*" className="hidden" onChange={(e) => setThumbFile(e.target.files?.[0] || null)} />
-              <Button type="button" variant="outline" size="sm" onClick={() => thumbRef.current?.click()}>
-                <Upload className="mr-1 h-4 w-4" /> {thumbFile ? `Thumbnail: ${thumbFile.name}` : "Upload Thumbnail"}
-              </Button>
-            </div>
-
-            {/* Asset files */}
-            <div>
-              <input ref={fileRef} type="file" multiple className="hidden" onChange={(e) => { if (e.target.files) setFiles(prev => [...prev, ...Array.from(e.target.files!)]); }} />
-              <Button type="button" variant="outline" size="sm" onClick={() => fileRef.current?.click()}>
-                <Upload className="mr-1 h-4 w-4" /> Upload File Produk
-              </Button>
-              {files.length > 0 && (
-                <div className="mt-2 space-y-1">
-                  {files.map((f, i) => (
-                    <div key={i} className="flex items-center gap-2 text-sm bg-gray-50 dark:bg-gray-800 rounded px-2 py-1">
-                      <FileText className="h-3 w-3" />
-                      <span className="truncate">{f.name}</span>
-                      <span className="text-gray-400 dark:text-gray-500">({(f.size / 1024).toFixed(0)} KB)</span>
-                      <button onClick={() => setFiles(files.filter((_, j) => j !== i))} className="text-red-500 ml-auto">×</button>
-                    </div>
-                  ))}
+      <AnimatePresence>
+        {showForm && (
+          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden mb-6">
+            <Card className="border-primary/20">
+              <CardContent className="space-y-4 p-5">
+                <div className="grid grid-cols-2 gap-3">
+                  <div><label className="text-sm font-medium mb-1.5 block">Nama</label><Input placeholder="Nama produk" value={name} onChange={(e) => setName(e.target.value)} /></div>
+                  <div><label className="text-sm font-medium mb-1.5 block">Slug</label><Input placeholder="url-friendly" value={slug} onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-"))} /></div>
                 </div>
-              )}
-            </div>
-
-            <Button onClick={() => createProduct.mutate()} disabled={createProduct.isPending || !name || !slug || !price}>
-              {createProduct.isPending ? "Menyimpan..." : "Simpan Produk"}
-            </Button>
-          </CardContent>
-        </Card>
-      )}
-
-      <div className="space-y-3">
-        {products?.map((p) => (
-          <Card key={p.id} className="cursor-pointer hover:border-primary transition-colors" onClick={() => window.location.href = `/dashboard/products/${p.id}`}>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium">{p.name}</p>
-                  <div className="flex items-center gap-2 mt-1">
-                    <Badge>{p.type}</Badge>
-                    <span className="text-sm font-medium">{formatCredit(p.price_idr)}</span>
-                    <span className="text-xs text-gray-500 dark:text-gray-400">{p.sales_count} terjual</span>
+                <Textarea placeholder="Deskripsi produk..." value={description} onChange={(e) => setDescription(e.target.value)} />
+                <div className="grid grid-cols-2 gap-3">
+                  <div><label className="text-sm font-medium mb-1.5 block">Harga (Credit)</label><Input type="number" placeholder="10" value={price} onChange={(e) => setPrice(e.target.value)} /></div>
+                  <div>
+                    <label className="text-sm font-medium mb-1.5 block">Tipe</label>
+                    <select className="w-full rounded-xl border border-primary-200 dark:border-primary-900/40 bg-white dark:bg-navy-800 px-3 py-2.5 text-sm" value={type} onChange={(e) => setType(e.target.value)}>
+                      <option value="ebook">📖 E-book</option><option value="preset">🎨 Preset</option><option value="template">📄 Template</option><option value="other">📦 Lainnya</option>
+                    </select>
                   </div>
-                  {p.description && <p className="text-sm text-gray-600 mt-1">{p.description}</p>}
-                  {p.assets?.length > 0 && (
-                    <div className="mt-2">
-                      {p.assets.map((a) => (
-                        <span key={a.id} className="inline-flex items-center gap-1 text-xs bg-gray-100 dark:bg-gray-800 rounded px-2 py-0.5 mr-1">
-                          <FileText className="h-3 w-3" /> {a.file_name}
-                        </span>
-                      ))}
+                </div>
+
+                {/* Delivery toggle */}
+                <div>
+                  <label className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 block">Pengiriman</label>
+                  <div className="inline-flex rounded-xl bg-primary-50 dark:bg-navy-800 p-1">
+                    <button onClick={() => setDeliveryType("file")} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${deliveryType === "file" ? "bg-white dark:bg-navy-900 text-primary shadow-sm" : "text-gray-500"}`}>📁 File Digital</button>
+                    <button onClick={() => setDeliveryType("link")} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${deliveryType === "link" ? "bg-white dark:bg-navy-900 text-primary shadow-sm" : "text-gray-500"}`}>🔗 Link / Key</button>
+                  </div>
+                </div>
+                {deliveryType === "link" && <Input placeholder="URL kursus, license key, invite link" value={deliveryUrl} onChange={(e) => setDeliveryUrl(e.target.value)} />}
+
+                <div className="flex gap-3">
+                  <div>
+                    <input ref={thumbRef} type="file" accept="image/*" className="hidden" onChange={(e) => setThumbFile(e.target.files?.[0] || null)} />
+                    <Button type="button" variant="outline" size="sm" onClick={() => thumbRef.current?.click()} className="rounded-xl">
+                      <Upload className="mr-1 h-4 w-4" /> {thumbFile ? `✅ ${thumbFile.name}` : "Thumbnail"}
+                    </Button>
+                  </div>
+                  <div>
+                    <input ref={fileRef} type="file" multiple className="hidden" onChange={(e) => { if (e.target.files) setFiles(prev => [...prev, ...Array.from(e.target.files!)]); }} />
+                    <Button type="button" variant="outline" size="sm" onClick={() => fileRef.current?.click()} className="rounded-xl">
+                      <Upload className="mr-1 h-4 w-4" /> File Produk {files.length > 0 && `(${files.length})`}
+                    </Button>
+                  </div>
+                </div>
+                {files.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {files.map((f, i) => (
+                      <span key={i} className="inline-flex items-center gap-1 text-xs bg-primary-50 dark:bg-navy-800 rounded-lg px-2 py-1">
+                        <FileText className="h-3 w-3" /> {f.name}
+                        <button onClick={() => setFiles(files.filter((_, j) => j !== i))} className="text-red-500 ml-0.5 cursor-pointer">×</button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+                <Button onClick={() => createProduct.mutate()} disabled={createProduct.isPending || !name || !slug || !price} className="rounded-xl">
+                  {createProduct.isPending ? "Menyimpan..." : "Simpan Produk"}
+                </Button>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Product grid — 2 cols on desktop */}
+      <motion.div variants={staggerChildren} initial="hidden" animate="visible" className="grid sm:grid-cols-2 gap-3">
+        {products?.map((p) => (
+          <motion.div key={p.id} variants={staggerItem}>
+            <Card clickable onClick={() => window.location.href = `/dashboard/products/${p.id}`} className="h-full">
+              <CardContent className="p-4">
+                <div className="flex gap-3">
+                  {p.thumbnail_url ? (
+                    <img loading="lazy" src={p.thumbnail_url} alt="" className="h-16 w-16 rounded-xl object-cover shrink-0" />
+                  ) : (
+                    <div className="h-16 w-16 rounded-xl bg-gradient-to-br from-primary-50 to-secondary-50 dark:from-primary-900/20 dark:to-secondary-900/20 flex items-center justify-center text-2xl shrink-0">
+                      {p.type === "ebook" ? "📖" : p.type === "preset" ? "🎨" : p.type === "template" ? "📄" : "📦"}
                     </div>
                   )}
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-sm truncate">{p.name}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Badge className="text-[10px]">{p.type}</Badge>
+                      <span className="text-sm font-bold text-primary">{formatCredit(p.price_idr)}</span>
+                    </div>
+                    <p className="text-[11px] text-gray-400 mt-1">{p.sales_count} terjual</p>
+                  </div>
+                  <div className="flex flex-col gap-1 shrink-0">
+                    <input ref={assetRef} type="file" className="hidden" onChange={(e) => {
+                      if (e.target.files?.[0] && uploadProductId) addAsset.mutate({ productId: uploadProductId, file: e.target.files[0] });
+                    }} />
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); setUploadProductId(p.id); setTimeout(() => assetRef.current?.click(), 100); }}>
+                      <Upload className="h-3.5 w-3.5" />
+                    </Button>
+                    <ConfirmDialog title="Hapus Produk?" message="Produk yang dihapus tidak bisa dikembalikan." onConfirm={() => deleteProduct.mutate(p.id)}>
+                      {(open) => <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); open(); }}><Trash2 className="h-3.5 w-3.5 text-red-400" /></Button>}
+                    </ConfirmDialog>
+                  </div>
                 </div>
-                <div className="flex items-center gap-1">
-                  <input ref={assetRef} type="file" className="hidden" onChange={(e) => {
-                    if (e.target.files?.[0] && uploadProductId) {
-                      addAsset.mutate({ productId: uploadProductId, file: e.target.files[0] });
-                    }
-                  }} />
-                  <Button variant="ghost" size="sm" onClick={() => { setUploadProductId(p.id); setTimeout(() => assetRef.current?.click(), 100); }}>
-                    <Upload className="h-4 w-4" />
-                  </Button>
-                  <ConfirmDialog title="Hapus Produk?" message="Produk yang dihapus tidak bisa dikembalikan." onConfirm={() => deleteProduct.mutate(p.id)}>
-                    {(open) => (
-                      <Button variant="ghost" size="icon" onClick={open}><Trash2 className="h-4 w-4 text-red-500" /></Button>
-                    )}
-                  </ConfirmDialog>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </motion.div>
         ))}
-      </div>
+      </motion.div>
+
+      {products?.length === 0 && (
+        <Card><CardContent className="p-12 text-center">
+          <div className="h-14 w-14 rounded-2xl bg-primary-50 dark:bg-primary-900/20 flex items-center justify-center mx-auto mb-3"><Package className="h-7 w-7 text-primary" /></div>
+          <p className="font-display font-bold">Belum ada produk</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Buat produk digital pertamamu!</p>
+        </CardContent></Card>
+      )}
     </div>
   );
 }

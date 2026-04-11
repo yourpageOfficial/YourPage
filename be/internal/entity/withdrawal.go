@@ -21,8 +21,8 @@ type Withdrawal struct {
 	Creator       *User            `json:"creator,omitempty" gorm:"foreignKey:CreatorID"`
 	AmountIDR     int64            `json:"amount_idr" gorm:"column:amount_idr"`
 	BankName      string           `json:"bank_name"`
-	AccountNumber string           `json:"account_number"`
-	AccountName   string           `json:"account_name"`
+	AccountNumber string           `json:"account_number" gorm:"column:account_number"`
+	AccountName   string           `json:"account_name" gorm:"column:account_name"`
 	Status        WithdrawalStatus `json:"status" gorm:"default:'pending'"`
 	AdminNote     *string          `json:"admin_note,omitempty"`
 	ProcessedAt   *time.Time       `json:"processed_at,omitempty"`

@@ -1,14 +1,20 @@
 package handler
 
 import (
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
+	"github.com/yourpage/be/internal/config"
 	"github.com/yourpage/be/internal/entity"
 	"github.com/yourpage/be/internal/handler/middleware"
+	pkgjwt "github.com/yourpage/be/internal/pkg/jwt"
 	"github.com/yourpage/be/internal/pkg/response"
 	"github.com/yourpage/be/internal/pkg/validator"
 	"github.com/yourpage/be/internal/service"
@@ -17,10 +23,33 @@ import (
 type AuthHandler struct {
 	svc      service.AuthService
 	validate *validator.Validator
+	jwtCfg   config.JWTConfig
+	isSecure bool // true in production (HTTPS)
 }
 
-func NewAuthHandler(svc service.AuthService) *AuthHandler {
-	return &AuthHandler{svc: svc, validate: validator.New()}
+func NewAuthHandler(svc service.AuthService, jwtCfg config.JWTConfig, isProd bool) *AuthHandler {
+	return &AuthHandler{svc: svc, validate: validator.New(), jwtCfg: jwtCfg, isSecure: isProd}
+}
+
+// setAuthCookies sets HttpOnly cookies for access/refresh tokens + signed auth-role cookie.
+func (h *AuthHandler) setAuthCookies(c *gin.Context, accessToken, refreshToken, role string) {
+	c.SetCookie("access_token", accessToken, int(h.jwtCfg.AccessTTL.Seconds()), "/api", "", h.isSecure, true)
+	c.SetCookie("refresh_token", refreshToken, int(h.jwtCfg.RefreshTTL.Seconds()), "/api/v1/auth", "", h.isSecure, true)
+	// Signed auth-role cookie (readable by FE middleware, not trivially forgeable)
+	sig := hmacSign(role, h.jwtCfg.Secret)
+	c.SetCookie("auth-role", fmt.Sprintf("%s.%s", role, sig), int(h.jwtCfg.RefreshTTL.Seconds()), "/", "", h.isSecure, false)
+}
+
+func (h *AuthHandler) clearAuthCookies(c *gin.Context) {
+	c.SetCookie("access_token", "", -1, "/api", "", h.isSecure, true)
+	c.SetCookie("refresh_token", "", -1, "/api/v1/auth", "", h.isSecure, true)
+	c.SetCookie("auth-role", "", -1, "/", "", h.isSecure, false)
+}
+
+func hmacSign(value, secret string) string {
+	mac := hmac.New(sha256.New, []byte(secret))
+	mac.Write([]byte(value))
+	return hex.EncodeToString(mac.Sum(nil))[:16] // short sig
 }
 
 func (h *AuthHandler) Register(c *gin.Context) {
@@ -58,43 +87,62 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		handleServiceError(c, err)
 		return
 	}
+	// Batch 14: Set HttpOnly cookies + signed auth-role
+	claims, _ := pkgjwt.ParseToken(h.jwtCfg, resp.AccessToken)
+	role := "supporter"
+	if claims != nil { role = claims.Role }
+	h.setAuthCookies(c, resp.AccessToken, resp.RefreshToken, role)
 	response.OK(c, resp)
 }
 
 func (h *AuthHandler) Logout(c *gin.Context) {
 	userID := getUserID(c)
-	var body struct {
-		RefreshToken string `json:"refresh_token" validate:"required"`
+	refreshToken, _ := c.Cookie("refresh_token")
+	if refreshToken == "" {
+		var body struct { RefreshToken string `json:"refresh_token"` }
+		c.ShouldBindJSON(&body)
+		refreshToken = body.RefreshToken
 	}
-	if err := c.ShouldBindJSON(&body); err != nil {
-		response.BadRequest(c, "refresh_token is required")
+	if refreshToken == "" {
+		// No refresh token — just clear cookies gracefully
+		h.clearAuthCookies(c)
+		response.OKMessage(c, "logged out")
 		return
 	}
-	// Get access token to blacklist it
-	accessToken := c.GetHeader("Authorization")
-	if len(accessToken) > 7 {
-		accessToken = accessToken[7:] // strip "Bearer "
+	accessToken, _ := c.Cookie("access_token")
+	if accessToken == "" {
+		at := c.GetHeader("Authorization")
+		if len(at) > 7 { accessToken = at[7:] }
 	}
-	if err := h.svc.Logout(c.Request.Context(), userID, body.RefreshToken, accessToken); err != nil {
+	if err := h.svc.Logout(c.Request.Context(), userID, refreshToken, accessToken); err != nil {
 		handleServiceError(c, err)
 		return
 	}
+	h.clearAuthCookies(c)
 	response.OKMessage(c, "logged out")
 }
 
 func (h *AuthHandler) RefreshToken(c *gin.Context) {
-	var body struct {
-		RefreshToken string `json:"refresh_token" validate:"required"`
+	// Batch 14: Read refresh token from cookie first, fallback to body
+	refreshToken, _ := c.Cookie("refresh_token")
+	if refreshToken == "" {
+		var body struct { RefreshToken string `json:"refresh_token"` }
+		c.ShouldBindJSON(&body)
+		refreshToken = body.RefreshToken
 	}
-	if err := c.ShouldBindJSON(&body); err != nil {
+	if refreshToken == "" {
 		response.BadRequest(c, "refresh_token is required")
 		return
 	}
-	resp, err := h.svc.RefreshToken(c.Request.Context(), body.RefreshToken)
+	resp, err := h.svc.RefreshToken(c.Request.Context(), refreshToken)
 	if err != nil {
 		handleServiceError(c, err)
 		return
 	}
+	claims, _ := pkgjwt.ParseToken(h.jwtCfg, resp.AccessToken)
+	role := "supporter"
+	if claims != nil { role = claims.Role }
+	h.setAuthCookies(c, resp.AccessToken, resp.RefreshToken, role)
 	response.OK(c, resp)
 }
 
@@ -124,12 +172,14 @@ func (h *AuthHandler) UpdateMe(c *gin.Context) {
 		DonationGoalAmount  *int64  `json:"donation_goal_amount"`
 		WelcomeMessage      *string `json:"welcome_message"`
 		OverlayStyle        *string `json:"overlay_style"`
-		OverlayTextTemplate *string `json:"overlay_text_template"`	}
+		OverlayTextTemplate *string `json:"overlay_text_template"`
+		Category            *string `json:"category"`
+	}
 	if err := c.ShouldBindJSON(&body); err != nil {
 		response.BadRequest(c, "invalid request body")
 		return
 	}
-	err := h.svc.UpdateProfile(c.Request.Context(), userID, body.DisplayName, body.Bio, body.AvatarURL, body.PageColor, body.HeaderImage, body.ChatPriceIDR, body.ChatAllowFrom, body.AutoReply, body.SocialLinks, body.DonationGoalTitle, body.DonationGoalAmount, body.WelcomeMessage, body.OverlayStyle, body.OverlayTextTemplate)
+	err := h.svc.UpdateProfile(c.Request.Context(), userID, body.DisplayName, body.Bio, body.AvatarURL, body.PageColor, body.HeaderImage, body.ChatPriceIDR, body.ChatAllowFrom, body.AutoReply, body.SocialLinks, body.DonationGoalTitle, body.DonationGoalAmount, body.WelcomeMessage, body.OverlayStyle, body.OverlayTextTemplate, body.Category)
 	if err != nil {
 		handleServiceError(c, err)
 		return
@@ -210,6 +260,43 @@ func (h *AuthHandler) ResendVerification(c *gin.Context) {
 		handleServiceError(c, err); return
 	}
 	response.OKMessage(c, "verification email sent")
+}
+
+
+func (h *AuthHandler) RequestDeleteAccount(c *gin.Context) {
+	var body struct { Password string `json:"password" validate:"required"` }
+	if err := c.ShouldBindJSON(&body); err != nil { response.BadRequest(c, "password required"); return }
+	if err := h.svc.RequestDeleteAccount(c.Request.Context(), getUserID(c), body.Password); err != nil {
+		handleServiceError(c, err); return
+	}
+	response.OKMessage(c, "Akun akan dihapus dalam 30 hari. Kamu bisa membatalkan kapan saja.")
+}
+
+func (h *AuthHandler) CancelDeleteAccount(c *gin.Context) {
+	if err := h.svc.CancelDeleteAccount(c.Request.Context(), getUserID(c)); err != nil {
+		handleServiceError(c, err); return
+	}
+	response.OKMessage(c, "Penghapusan akun dibatalkan.")
+}
+
+func (h *AuthHandler) ExportData(c *gin.Context) {
+	data, err := h.svc.ExportData(c.Request.Context(), getUserID(c))
+	if err != nil { handleServiceError(c, err); return }
+	response.OK(c, data)
+}
+
+// Appeal handles ban appeal requests from suspended users.
+func (h *AuthHandler) Appeal(c *gin.Context) {
+	var body struct {
+		Reason string `json:"reason" validate:"required,max=1000"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil || body.Reason == "" {
+		response.BadRequest(c, "reason is required")
+		return
+	}
+	uid := getUserID(c)
+	log.Info().Str("user_id", uid.String()).Str("reason", body.Reason).Msg("ban appeal submitted")
+	response.OKMessage(c, "Banding berhasil dikirim")
 }
 
 func (h *AuthHandler) UpgradeToCreator(c *gin.Context) {

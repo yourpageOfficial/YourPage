@@ -1,0 +1,10 @@
+{{define "content"}}
+<h2>Pembelian Berhasil ✅</h2>
+<p>Hai {{.UserName}},</p>
+<p>Pembelian kamu berhasil:</p>
+<table style="width:100%;border-collapse:collapse;margin:16px 0;">
+  <tr><td style="padding:8px;color:#6b7280;">Item</td><td style="padding:8px;font-weight:600;">{{.ItemName}}</td></tr>
+  <tr><td style="padding:8px;color:#6b7280;">Jumlah</td><td style="padding:8px;font-weight:600;">{{.Credits}} Credit</td></tr>
+</table>
+<a href="{{.FrontendURL}}/s/library" class="btn">Lihat di Library</a>
+{{end}}

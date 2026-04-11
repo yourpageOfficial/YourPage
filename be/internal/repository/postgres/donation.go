@@ -41,7 +41,7 @@ func (r *donationRepo) ListByCreator(ctx context.Context, creatorID uuid.UUID, c
 	var donations []entity.Donation
 	q := r.db.WithContext(ctx).Preload("Supporter").Where("creator_id = ?", creatorID)
 	if cursor != nil {
-		q = q.Where("id > ?", *cursor)
+		q = q.Where("id < ?", *cursor)
 	}
 	err := q.Order("created_at DESC").Limit(limit).Find(&donations).Error
 	return donations, err
@@ -51,7 +51,7 @@ func (r *donationRepo) ListBySupporter(ctx context.Context, supporterID uuid.UUI
 	var donations []entity.Donation
 	q := r.db.WithContext(ctx).Preload("Creator").Where("supporter_id = ?", supporterID)
 	if cursor != nil {
-		q = q.Where("id > ?", *cursor)
+		q = q.Where("id < ?", *cursor)
 	}
 	err := q.Order("created_at DESC").Limit(limit).Find(&donations).Error
 	return donations, err
@@ -60,7 +60,7 @@ func (r *donationRepo) ListBySupporter(ctx context.Context, supporterID uuid.UUI
 func (r *donationRepo) ListAll(ctx context.Context, cursor *uuid.UUID, limit int) ([]entity.Donation, error) {
 	var donations []entity.Donation
 	q := r.db.WithContext(ctx).Preload("Creator").Preload("Supporter")
-	if cursor != nil { q = q.Where("id > ?", *cursor) }
+	if cursor != nil { q = q.Where("id < ?", *cursor) }
 	err := q.Order("created_at DESC").Limit(limit).Find(&donations).Error
 	return donations, err
 }

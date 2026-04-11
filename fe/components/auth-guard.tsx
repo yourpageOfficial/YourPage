@@ -15,10 +15,8 @@ export function AuthGuard({ children, role, requireAuth = true }: Props) {
   const router = useRouter();
 
   useEffect(() => {
-    if (typeof window !== "undefined" && localStorage.getItem("access_token") && !user && loading) {
+    if (typeof window !== "undefined" && !user && loading) {
       fetchMe();
-    } else if (!localStorage.getItem("access_token")) {
-      useAuth.setState({ loading: false });
     }
   }, [user, loading, fetchMe]);
 

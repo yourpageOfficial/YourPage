@@ -105,8 +105,8 @@ export default function DashboardPostDetail() {
           </div>
           {accessType === "members" && membershipTiers && membershipTiers.length > 0 && (
             <div>
-              <label className="text-xs text-gray-500 dark:text-gray-400">Pilih tier minimum (kosong = semua member)</label>
-              <select value={memberTierID} onChange={(e) => setMemberTierID(e.target.value)} className="w-full mt-1 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm">
+              <label className="text-sm font-medium mb-1.5 block">Pilih tier minimum (kosong = semua member)</label>
+              <select value={memberTierID} onChange={(e) => setMemberTierID(e.target.value)} className="w-full mt-1 rounded-xl border border-primary-200 dark:border-primary-900/40 bg-white dark:bg-navy-800 px-3 py-2 text-sm">
                 <option value="">Semua Member</option>
                 {membershipTiers.map((t: any) => (
                   <option key={t.id} value={t.id}>{t.name} ({t.price_credits} Credit/bulan)</option>
@@ -144,10 +144,10 @@ export default function DashboardPostDetail() {
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {post.media?.map((m) => (
               <div key={m.id} className="relative group rounded border overflow-hidden">
-                {m.media_type === "image" && m.url && <img src={m.url} alt="" className="h-32 w-full object-cover" />}
+                {m.media_type === "image" && m.url && <img loading="lazy" src={m.url} alt="" className="h-32 w-full object-cover" />}
                 {m.media_type === "video" && m.url && <video src={m.url} className="h-32 w-full object-cover" />}
-                {m.media_type === "audio" && <div className="h-32 flex items-center justify-center bg-gray-50 dark:bg-gray-800 text-2xl">🎵</div>}
-                {m.media_type === "document" && <div className="h-32 flex items-center justify-center bg-gray-50 dark:bg-gray-800 text-2xl">📄</div>}
+                {m.media_type === "audio" && <div className="h-32 flex items-center justify-center bg-primary-50/50 dark:bg-navy-800 text-2xl">🎵</div>}
+                {m.media_type === "document" && <div className="h-32 flex items-center justify-center bg-primary-50/50 dark:bg-navy-800 text-2xl">📄</div>}
                 <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   <Button size="icon" variant="destructive" className="h-7 w-7" onClick={() => deleteMedia.mutate(m.id)}>
                     <Trash2 className="h-3 w-3" />

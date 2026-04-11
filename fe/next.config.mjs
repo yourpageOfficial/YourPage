@@ -51,11 +51,11 @@ const nextConfig = {
             value: [
               "default-src 'self'",
               "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
-              "style-src 'self' 'unsafe-inline'",
+              "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               `img-src 'self' data: blob: http://${minioHostname} https://${minioHostname}`,
               `media-src 'self' http://${minioHostname} https://${minioHostname}`,
               "connect-src 'self'",
-              "font-src 'self'",
+              "font-src 'self' https://fonts.gstatic.com",
               "frame-ancestors 'none'",
             ].join("; "),
           },

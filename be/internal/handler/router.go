@@ -1,21 +1,17 @@
 package handler
 
 import (
-	"context"
-	"fmt"
 	"strings"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/redis/go-redis/v9"
-	"github.com/google/uuid"
 	"github.com/yourpage/be/internal/config"
-	"github.com/yourpage/be/internal/entity"
 	"github.com/yourpage/be/internal/handler/middleware"
+	"github.com/yourpage/be/internal/pkg/response"
 	"github.com/yourpage/be/internal/repository"
 	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 	"os"
 	"time"
 )
@@ -34,6 +30,10 @@ type Handlers struct {
 	Payment    *PaymentHandler
 	Webhook    *WebhookHandler
 	Chat       *ChatHandler
+	Membership *MembershipHandler
+	Overlay    *OverlayHandler
+	Broadcast  *BroadcastHandler
+	Referral   *ReferralHandler
 	PlatformRepo repository.PlatformRepository
 	UserRepo     repository.UserRepository
 	AuditDB      *gorm.DB
@@ -91,6 +91,15 @@ func NewRouter(cfg *config.Config, rdb *redis.Client, h Handlers) *gin.Engine {
 	// Max upload size (500MB)
 	r.MaxMultipartMemory = 500 << 20
 
+	// QA-45: Limit JSON body size to 1MB (prevents DoS via huge payloads)
+	r.Use(func(c *gin.Context) {
+		if c.Request.ContentLength > 1<<20 && c.ContentType() == "application/json" {
+			c.AbortWithStatusJSON(413, gin.H{"error": "request body too large"})
+			return
+		}
+		c.Next()
+	})
+
 	auth := middleware.AuthRequired(cfg.JWT, rdb)
 	optAuth := middleware.OptionalAuth(cfg.JWT, rdb)
 	creatorOnly := CreatorRequiredMiddleware()
@@ -99,7 +108,30 @@ func NewRouter(cfg *config.Config, rdb *redis.Client, h Handlers) *gin.Engine {
 
 	// ---- Health ----
 	api.GET("/health", func(c *gin.Context) {
-		c.JSON(200, gin.H{"status": "ok"})
+		status := gin.H{"status": "ok"}
+		code := 200
+
+		// Check Postgres
+		sqlDB, err := h.AuditDB.DB()
+		if err != nil || sqlDB.PingContext(c.Request.Context()) != nil {
+			status["postgres"] = "down"
+			code = 503
+		} else {
+			status["postgres"] = "up"
+		}
+
+		// Check Redis
+		if rdb.Ping(c.Request.Context()).Err() != nil {
+			status["redis"] = "down"
+			code = 503
+		} else {
+			status["redis"] = "up"
+		}
+
+		if code != 200 {
+			status["status"] = "degraded"
+		}
+		c.JSON(code, status)
 	})
 
 	// ---- Auth ----
@@ -136,8 +168,8 @@ func NewRouter(cfg *config.Config, rdb *redis.Client, h Handlers) *gin.Engine {
 	// ---- Posts ----
 	postsG := api.Group("/posts")
 	{
-		postsG.GET("/:id", optAuth, shortCache, h.Post.GetByID)
-		postsG.GET("/creator/:creatorId", optAuth, rl.Middleware(), shortCache, h.Post.ListByCreator)
+		postsG.GET("/:id", optAuth, h.Post.GetByID)
+		postsG.GET("/creator/:creatorId", optAuth, rl.Middleware(), h.Post.ListByCreator)
 		postsG.POST("", auth, creatorOnly, h.Post.Create)
 		postsG.PUT("/:id", auth, creatorOnly, h.Post.Update)
 		postsG.DELETE("/:id", auth, creatorOnly, h.Post.Delete)
@@ -155,7 +187,7 @@ func NewRouter(cfg *config.Config, rdb *redis.Client, h Handlers) *gin.Engine {
 	// ---- Products ----
 	productsG := api.Group("/products")
 	{
-		productsG.GET("/:id", optAuth, shortCache, h.Product.GetByID)
+		productsG.GET("/:id", optAuth, h.Product.GetByID)
 		productsG.GET("/creator/:creatorId", rl.Middleware(), shortCache, h.Product.ListByCreator)
 		productsG.POST("", auth, creatorOnly, h.Product.Create)
 		productsG.PUT("/:id", auth, creatorOnly, h.Product.Update)
@@ -170,7 +202,7 @@ func NewRouter(cfg *config.Config, rdb *redis.Client, h Handlers) *gin.Engine {
 	{
 		donationsG.GET("/creator/:creatorId/latest", h.Donation.GetLatest)
 		donationsG.GET("/creator/:creatorId/top", h.Donation.GetTopSupporters)
-		donationsG.POST("", optAuth, h.Donation.Create)
+		donationsG.POST("", auth, h.Payment.CheckoutDonation) // QA-9: redirect to checkout flow
 		donationsG.GET("/creator/:creatorId", auth, creatorOnly, h.Donation.ListByCreator)
 		donationsG.GET("/sent", auth, h.Donation.ListMySent)
 	}
@@ -252,162 +284,23 @@ func NewRouter(cfg *config.Config, rdb *redis.Client, h Handlers) *gin.Engine {
 	}
 
 	// ---- Overlay Tiers (public read, auth write) ----
-	api.GET("/overlay-tiers/:creatorId", func(c *gin.Context) {
-		cid, err := uuid.Parse(c.Param("creatorId"))
-		if err != nil { c.JSON(400, gin.H{"error": "invalid id"}); return }
-		tiers, _ := h.UserRepo.ListOverlayTiers(c.Request.Context(), cid)
-		// Also return overlay style settings for the creator
-		overlayStyle := "bounce"
-		overlayTextTemplate := "{donor} donated {amount} Credit!"
-		if profile, err := h.UserRepo.FindCreatorByUserID(c.Request.Context(), cid); err == nil {
-			if profile.OverlayStyle != "" { overlayStyle = profile.OverlayStyle }
-			if profile.OverlayTextTemplate != "" { overlayTextTemplate = profile.OverlayTextTemplate }
-		}
-		c.JSON(200, gin.H{"success": true, "data": tiers, "overlay_style": overlayStyle, "overlay_text_template": overlayTextTemplate})
-	})
-	api.POST("/overlay-tiers", auth, creatorOnly, func(c *gin.Context) {
-		var body struct {
-			MinCredits int     `json:"min_credits"`
-			ImageURL   string  `json:"image_url"`
-			SoundURL   *string `json:"sound_url"`
-			Label      *string `json:"label"`
-		}
-		if err := c.ShouldBindJSON(&body); err != nil { c.JSON(400, gin.H{"error": "invalid body"}); return }
-		uid := getUserID(c)
-		// Check overlay tier limit
-		existing, _ := h.UserRepo.ListOverlayTiers(c.Request.Context(), uid)
-		cp, _ := h.UserRepo.FindCreatorByUserID(c.Request.Context(), uid)
-		maxTiers := 3
-		if cp != nil && cp.Tier != nil { maxTiers = cp.Tier.MaxOverlayTiers }
-		if maxTiers > 0 && len(existing) >= maxTiers {
-			c.JSON(422, gin.H{"error": fmt.Sprintf("Batas overlay tier untuk tier kamu adalah %d. Upgrade untuk menambah.", maxTiers)}); return
-		}
-		t := &entity.OverlayTier{ID: uuid.New(), CreatorID: uid, MinCredits: body.MinCredits, ImageURL: body.ImageURL, SoundURL: body.SoundURL, Label: body.Label}
-		if err := h.UserRepo.CreateOverlayTier(c.Request.Context(), t); err != nil { c.JSON(500, gin.H{"error": "internal"}); return }
-		c.JSON(201, gin.H{"success": true, "data": t})
-	})
-	api.DELETE("/overlay-tiers/:id", auth, creatorOnly, func(c *gin.Context) {
-		id, err := uuid.Parse(c.Param("id"))
-		if err != nil { c.JSON(400, gin.H{"error": "invalid id"}); return }
-		h.UserRepo.DeleteOverlayTier(c.Request.Context(), id, getUserID(c))
-		c.JSON(200, gin.H{"success": true, "message": "deleted"})
-	})
+	api.GET("/overlay-tiers/:creatorId", h.Overlay.ListTiers)
+	api.POST("/overlay-tiers", auth, creatorOnly, h.Overlay.CreateTier)
+	api.DELETE("/overlay-tiers/:id", auth, creatorOnly, h.Overlay.DeleteTier)
 
 	// ---- Membership ----
-	api.GET("/membership-tiers/:creatorId", func(c *gin.Context) {
-		cid, err := uuid.Parse(c.Param("creatorId"))
-		if err != nil { c.JSON(400, gin.H{"error": "invalid id"}); return }
-		var tiers []entity.MembershipTier
-		h.AuditDB.Where("creator_id = ?", cid).Order("sort_order").Find(&tiers)
-		c.JSON(200, gin.H{"success": true, "data": tiers})
-	})
-	api.POST("/membership-tiers", auth, creatorOnly, func(c *gin.Context) {
-		var body struct {
-			Name string `json:"name"`; PriceCredits int `json:"price_credits"`
-			Description *string `json:"description"`; Perks *string `json:"perks"`
-		}
-		if err := c.ShouldBindJSON(&body); err != nil || body.Name == "" || body.PriceCredits < 1 { c.JSON(400, gin.H{"error": "name and price_credits required"}); return }
-		// 8.4: Limit tiers
-		var count int64
-		h.AuditDB.Model(&entity.MembershipTier{}).Where("creator_id = ?", getUserID(c)).Count(&count)
-		if count >= 5 { c.JSON(422, gin.H{"error": "Maksimal 5 tier membership"}); return }
-		t := entity.MembershipTier{ID: uuid.New(), CreatorID: getUserID(c), Name: body.Name, PriceCredits: body.PriceCredits, Description: body.Description, Perks: body.Perks}
-		if err := h.AuditDB.Create(&t).Error; err != nil { c.JSON(500, gin.H{"error": "Gagal membuat tier"}); return }
-		c.JSON(201, gin.H{"success": true, "data": t})
-	})
-	api.DELETE("/membership-tiers/:id", auth, creatorOnly, func(c *gin.Context) {
-		id, err := uuid.Parse(c.Param("id"))
-		if err != nil { c.JSON(400, gin.H{"error": "invalid id"}); return }
-		// 8.6: Check active members
-		var memberCount int64
-		h.AuditDB.Model(&entity.Membership{}).Where("tier_id = ? AND status = 'active'", id).Count(&memberCount)
-		if memberCount > 0 { c.JSON(422, gin.H{"error": fmt.Sprintf("Tidak bisa hapus tier yang masih punya %d member aktif", memberCount)}); return }
-		result := h.AuditDB.Where("id = ? AND creator_id = ?", id, getUserID(c)).Delete(&entity.MembershipTier{})
-		if result.RowsAffected == 0 { c.JSON(404, gin.H{"error": "Tier tidak ditemukan"}); return }
-		c.JSON(200, gin.H{"success": true})
-	})
-	api.POST("/memberships/subscribe", auth, func(c *gin.Context) {
-		var body struct { TierID string `json:"tier_id"` }
-		if err := c.ShouldBindJSON(&body); err != nil { c.JSON(400, gin.H{"error": "tier_id required"}); return }
-		tierID, _ := uuid.Parse(body.TierID)
-		var tier entity.MembershipTier
-		if err := h.AuditDB.Where("id = ?", tierID).First(&tier).Error; err != nil { c.JSON(404, gin.H{"error": "tier not found"}); return }
-		uid := getUserID(c)
-		if uid == tier.CreatorID { c.JSON(400, gin.H{"error": "Tidak bisa subscribe ke diri sendiri"}); return }
-		bal := int64(0)
-		var w entity.UserWallet
-		if err := h.AuditDB.Where("user_id = ?", uid).First(&w).Error; err == nil { bal = w.BalanceCredits }
-		if bal < int64(tier.PriceCredits) { c.JSON(422, gin.H{"error": "Credit tidak cukup"}); return }
-		// Deduct + create membership
-		result := h.AuditDB.Model(&entity.UserWallet{}).Where("user_id = ? AND balance_credits >= ?", uid, tier.PriceCredits).Update("balance_credits", gorm.Expr("balance_credits - ?", tier.PriceCredits))
-		if result.RowsAffected == 0 { c.JSON(422, gin.H{"error": "Credit tidak cukup (atomic check)"}); return }
-		// Log transaction for supporter (spend)
-		h.AuditDB.Create(&entity.CreditTransaction{ID: uuid.New(), UserID: uid, Type: "spend", Credits: -int64(tier.PriceCredits), IDRAmount: int64(tier.PriceCredits) * 1000, Description: fmt.Sprintf("Subscribe membership %s", tier.Name)})
-		// Ensure creator wallet exists + credit
-		h.AuditDB.Exec("INSERT INTO user_wallets (user_id, balance_credits) VALUES (?, 0) ON CONFLICT (user_id) DO NOTHING", tier.CreatorID)
-		h.AuditDB.Model(&entity.UserWallet{}).Where("user_id = ?", tier.CreatorID).Update("balance_credits", gorm.Expr("balance_credits + ?", tier.PriceCredits))
-		// Log transaction for creator (earning)
-		h.AuditDB.Create(&entity.CreditTransaction{ID: uuid.New(), UserID: tier.CreatorID, Type: "earning", Credits: int64(tier.PriceCredits), IDRAmount: int64(tier.PriceCredits) * 1000, Description: fmt.Sprintf("Member subscribe tier %s", tier.Name)})
-		now := time.Now()
-		mem := entity.Membership{ID: uuid.New(), SupporterID: uid, CreatorID: tier.CreatorID, TierID: tierID, Status: "active", StartedAt: now, ExpiresAt: now.AddDate(0, 1, 0)}
-		h.AuditDB.Clauses(clause.OnConflict{Columns: []clause.Column{{Name: "supporter_id"}, {Name: "creator_id"}}, DoUpdates: clause.AssignmentColumns([]string{"tier_id", "status", "started_at", "expires_at"})}).Create(&mem)
-		// 8.21: Notify creator
-		h.UserRepo.CreateNotification(c.Request.Context(), tier.CreatorID, "membership", "Member Baru! ⭐", fmt.Sprintf("Seseorang subscribe tier %s (%d Credit/bulan)", tier.Name, tier.PriceCredits), nil)
-		c.JSON(200, gin.H{"success": true, "data": mem})
-	})
-	api.GET("/memberships/my", auth, func(c *gin.Context) {
-		var mems []entity.Membership
-		h.AuditDB.Preload("Tier").Where("supporter_id = ? AND status = 'active'", getUserID(c)).Find(&mems)
-		c.JSON(200, gin.H{"success": true, "data": mems})
-	})
-	api.GET("/memberships/creator", auth, creatorOnly, func(c *gin.Context) {
-		var mems []entity.Membership
-		h.AuditDB.Preload("Tier").Where("creator_id = ? AND status = 'active'", getUserID(c)).Find(&mems)
-		c.JSON(200, gin.H{"success": true, "data": mems})
-	})
+	api.GET("/membership-tiers/:creatorId", h.Membership.ListTiers)
+	api.POST("/membership-tiers", auth, creatorOnly, h.Membership.CreateTier)
+	api.DELETE("/membership-tiers/:id", auth, creatorOnly, h.Membership.DeleteTier)
+	api.POST("/memberships/subscribe", auth, h.Membership.Subscribe)
+	api.GET("/memberships/my", auth, h.Membership.ListMy)
+	api.GET("/memberships/creator", auth, creatorOnly, h.Membership.ListCreatorMembers)
 
 	// ---- Referral ----
-	api.GET("/referral", auth, func(c *gin.Context) {
-		uid := getUserID(c)
-		ref, err := h.UserRepo.FindReferralCode(c.Request.Context(), "")
-		_ = ref; _ = err
-		// Find by user_id instead
-		var codes []entity.ReferralCode
-		h.AuditDB.Where("user_id = ?", uid).Find(&codes)
-		if len(codes) == 0 {
-			code := &entity.ReferralCode{ID: uuid.New(), UserID: uid, Code: uuid.NewString()[:8], RewardCredits: 10}
-			h.UserRepo.CreateReferralCode(c.Request.Context(), code)
-			codes = append(codes, *code)
-		}
-		c.JSON(200, gin.H{"success": true, "data": codes[0]})
-	})
+	api.GET("/referral", auth, h.Referral.GetMyCode)
 
 	// ---- Broadcast ----
-	api.POST("/creator/broadcast", auth, creatorOnly, func(c *gin.Context) {
-		var body struct { Message string `json:"message"` }
-		if err := c.ShouldBindJSON(&body); err != nil || body.Message == "" { c.JSON(400, gin.H{"error": "message required"}); return }
-		uid := getUserID(c)
-		cp, err := h.UserRepo.FindCreatorByUserID(c.Request.Context(), uid)
-		if err != nil { c.JSON(404, gin.H{"error": "not found"}); return }
-		// 11.4: Check tier by price, not name
-		if cp.Tier == nil || cp.Tier.PriceIDR == 0 { c.JSON(403, gin.H{"error": "Broadcast hanya untuk Pro ke atas"}); return }
-		// 11.5: Atomic update LastBroadcastAt with rate limit check
-		limit := 7 * 24 * time.Hour // Pro: 1x/week
-		if cp.Tier.PriceIDR >= 149000 { limit = 24 * time.Hour } // Business: 1x/day
-		result := h.AuditDB.Model(&entity.CreatorProfile{}).
-			Where("id = ? AND (last_broadcast_at IS NULL OR last_broadcast_at < ?)", cp.ID, time.Now().Add(-limit)).
-			Update("last_broadcast_at", time.Now())
-		if result.RowsAffected == 0 { c.JSON(429, gin.H{"error": "Kamu sudah broadcast baru-baru ini. Coba lagi nanti."}); return }
-		// 11.6: Send notifications in background
-		go func() {
-			ctx := context.Background()
-			followers, _ := h.UserRepo.ListFollowerIDs(ctx, uid)
-			for _, fid := range followers {
-				h.UserRepo.CreateNotification(ctx, fid, "broadcast", "📢 Broadcast", body.Message, &uid)
-			}
-		}()
-		c.JSON(200, gin.H{"success": true, "message": "Broadcast sedang dikirim ke semua follower"})
-	})
+	api.POST("/creator/broadcast", auth, creatorOnly, h.Broadcast.Send)
 
 	// ---- Chat ----
 	chatG := api.Group("/chat", auth)
@@ -421,8 +314,8 @@ func NewRouter(cfg *config.Config, rdb *redis.Client, h Handlers) *gin.Engine {
 	// ---- KYC & Reports ----
 	api.POST("/kyc", auth, h.KYC.SubmitKYC)
 	api.GET("/kyc", auth, h.KYC.GetMyKYC)
-	api.POST("/upload", auth, h.KYC.UploadFile)
-	api.POST("/reports", optAuth, h.KYC.CreateReport)
+	api.POST("/upload", auth, actionRL.Middleware(), h.KYC.UploadFile)
+	api.POST("/reports", auth, actionRL.Middleware(), h.KYC.CreateReport)
 
 	// ---- Admin ----
 	adminG := api.Group("/admin", auth, h.Admin.RequireAdmin, middleware.AdminAudit(h.AuditDB))
@@ -464,6 +357,16 @@ func NewRouter(cfg *config.Config, rdb *redis.Client, h Handlers) *gin.Engine {
 		adminG.GET("/export/payments", h.Admin.ExportPayments)
 		adminG.GET("/profit", h.Admin.GetProfitSummary)
 		adminG.POST("/profit/withdraw", h.Admin.CreateProfitWithdrawal)
+		adminG.GET("/audit-log", adminOnly, func(c *gin.Context) {
+			cursor, limit := parsePagination(c)
+			var logs []middleware.AuditLog
+			q := h.AuditDB.Model(&middleware.AuditLog{})
+			if cursor != nil { q = q.Where("id < ?", *cursor) } // QA-23: fix cursor direction for DESC
+			q.Order("created_at DESC").Limit(limit + 1).Find(&logs)
+			var next *string
+			if len(logs) > limit { s := logs[limit].ID.String(); next = &s; logs = logs[:limit] }
+			response.Paginated(c, logs, next)
+		})
 	}
 
 	return r

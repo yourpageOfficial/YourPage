@@ -29,6 +29,7 @@ func (r *walletRepo) FindOrCreateWallet(ctx context.Context, userID uuid.UUID) (
 }
 
 func (r *walletRepo) AddCredits(ctx context.Context, userID uuid.UUID, credits int64) error {
+	if credits <= 0 { return nil } // QA-37: guard against negative/zero
 	return r.db.WithContext(ctx).
 		Model(&entity.UserWallet{}).
 		Where("user_id = ?", userID).
@@ -66,7 +67,7 @@ func (r *walletRepo) ListTransactions(ctx context.Context, userID uuid.UUID, cur
 	var txs []entity.CreditTransaction
 	q := r.db.WithContext(ctx).Where("user_id = ?", userID)
 	if cursor != nil {
-		q = q.Where("id > ?", *cursor)
+		q = q.Where("id < ?", *cursor)
 	}
 	err := q.Order("created_at DESC").Limit(limit).Find(&txs).Error
 	return txs, err
@@ -103,7 +104,7 @@ func (r *walletRepo) ListTopupRequests(ctx context.Context, status string, curso
 		q = q.Where("status = ?", status)
 	}
 	if cursor != nil {
-		q = q.Where("id > ?", *cursor)
+		q = q.Where("id < ?", *cursor)
 	}
 	err := q.Order("created_at DESC").Limit(limit).Find(&reqs).Error
 	return reqs, err
@@ -119,5 +120,11 @@ func (r *walletRepo) UpdateTopupProof(ctx context.Context, id uuid.UUID, donorNa
 func (r *walletRepo) CountPendingTopups(ctx context.Context) (int64, error) {
 	var c int64
 	err := r.db.WithContext(ctx).Model(&entity.CreditTopupRequest{}).Where("status = 'pending'").Count(&c).Error
+	return c, err
+}
+
+func (r *walletRepo) CountPendingTopupsByUser(ctx context.Context, userID uuid.UUID) (int64, error) {
+	var c int64
+	err := r.db.WithContext(ctx).Model(&entity.CreditTopupRequest{}).Where("user_id = ? AND status = 'pending'", userID).Count(&c).Error
 	return c, err
 }

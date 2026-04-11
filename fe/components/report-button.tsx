@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import api from "@/lib/api";
+import { toast } from "@/lib/toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Flag, X, CheckCircle } from "lucide-react";
@@ -26,7 +27,7 @@ export function ReportButton({ targetType, targetId }: { targetType: "post" | "p
     try {
       await api.post("/reports", { target_type: targetType, target_id: targetId, reason, description: desc || undefined });
       setDone(true);
-    } catch {}
+    } catch (e: any) { toast.error(e.response?.data?.error || "Gagal") }
     setLoading(false);
   };
 
@@ -43,7 +44,7 @@ export function ReportButton({ targetType, targetId }: { targetType: "post" | "p
   );
 
   return (
-    <div className="mt-2 p-3 border rounded-lg bg-gray-50 dark:bg-gray-800 dark:border-gray-600 space-y-2">
+    <div className="mt-2 p-3 border rounded-xl bg-primary-50 dark:bg-navy-800 dark:border-primary-900/40 space-y-2">
       <div className="flex items-center justify-between">
         <p className="text-sm font-medium">Laporkan Konten</p>
         <button onClick={() => setOpen(false)}><X className="h-4 w-4 text-gray-400" /></button>
@@ -51,7 +52,7 @@ export function ReportButton({ targetType, targetId }: { targetType: "post" | "p
       <div className="flex flex-wrap gap-1">
         {reasons.map((r) => (
           <button key={r.value} onClick={() => setReason(r.value)}
-            className={`px-2 py-1 rounded text-xs border transition-colors ${reason === r.value ? "border-red-500 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400" : "border-gray-200 dark:border-gray-600 hover:border-gray-300"}`}>
+            className={`px-2 py-1 rounded text-xs border transition-colors ${reason === r.value ? "border-red-500 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400" : "border-primary-100 dark:border-primary-900/40 hover:border-primary-200"}`}>
             {r.label}
           </button>
         ))}

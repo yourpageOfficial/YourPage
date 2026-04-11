@@ -37,8 +37,12 @@ type CheckoutDonationRequest struct {
 }
 
 type CheckoutResponse struct {
-	PaymentID uuid.UUID `json:"payment_id"`
-	Status    string    `json:"status"`
+	PaymentID      uuid.UUID `json:"payment_id"`
+	Status         string    `json:"status"`
+	Subtotal       int64     `json:"subtotal_credits,omitempty"`
+	PlatformFee    int64     `json:"platform_fee_credits,omitempty"`
+	CreatorReceives int64    `json:"creator_receives_credits,omitempty"`
+	FeePercent     int       `json:"fee_percent,omitempty"`
 }
 
 // ---------------------------------------------------------------------------
@@ -361,7 +365,13 @@ func (s *paymentService) payWithCredits(
 		}
 	}
 
-	return &CheckoutResponse{PaymentID: paymentID, Status: string(entity.PaymentStatusPaid)}, nil
+	return &CheckoutResponse{
+		PaymentID:       paymentID,
+		Status:          string(entity.PaymentStatusPaid),
+		Subtotal:        creditsNeeded,
+		PlatformFee:     feeIDR / settings.CreditRateIDR,
+		CreatorReceives: netIDR / settings.CreditRateIDR,
+	}, nil
 }
 
 func (s *paymentService) ListCreatorSales(ctx context.Context, creatorID uuid.UUID, cursor *uuid.UUID, limit int) ([]entity.Payment, *uuid.UUID, error) {

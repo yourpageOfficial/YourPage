@@ -26,6 +26,7 @@ const (
 	NotificationNewLike           NotificationType = "new_like"
 	NotificationNewChat           NotificationType = "new_chat"
 	NotificationDonationReceived2 NotificationType = "donation_received"
+	NotificationRefund            NotificationType = "refund"
 )
 
 type Notification struct {

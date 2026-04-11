@@ -54,3 +54,10 @@ type ProductPurchase struct {
 	AmountIDR   int64     `json:"amount_idr" gorm:"column:amount_idr"`
 	CreatedAt   time.Time `json:"created_at"`
 }
+
+type ProductDownload struct {
+	ID           uuid.UUID `json:"id" gorm:"type:uuid;primaryKey;default:uuid_generate_v4()"`
+	ProductID    uuid.UUID `json:"product_id" gorm:"type:uuid;index;not null"`
+	UserID       uuid.UUID `json:"user_id" gorm:"type:uuid;index;not null"`
+	DownloadedAt time.Time `json:"downloaded_at" gorm:"default:NOW()"`
+}

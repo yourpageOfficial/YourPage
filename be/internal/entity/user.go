@@ -30,6 +30,9 @@ type User struct {
 	EmailVerified bool       `json:"email_verified" gorm:"default:false"`
 	ReferredBy    *uuid.UUID `json:"referred_by,omitempty" gorm:"type:uuid"`
 	IsBanned     bool       `json:"is_banned" gorm:"default:false"`
+	BanReason    *string    `json:"ban_reason,omitempty"`
+	BanExpiresAt *time.Time `json:"ban_expires_at,omitempty"`
+	DeletionScheduledAt *time.Time `json:"deletion_scheduled_at,omitempty"`
 	CreatedAt    time.Time  `json:"created_at"`
 	UpdatedAt    time.Time  `json:"updated_at"`
 	DeletedAt    *time.Time `json:"-" gorm:"index"`

@@ -70,6 +70,7 @@ type PostService interface {
 	LikePost(ctx context.Context, postID, userID uuid.UUID) error
 	UnlikePost(ctx context.Context, postID, userID uuid.UUID) error
 	CreateComment(ctx context.Context, postID, userID uuid.UUID, content string) (*entity.PostComment, error)
+	DeleteComment(ctx context.Context, commentID, postID, userID uuid.UUID) error
 	ListComments(ctx context.Context, postID uuid.UUID, cursor *uuid.UUID, limit int) ([]entity.PostComment, *uuid.UUID, error)
 	ListPurchased(ctx context.Context, supporterID uuid.UUID, cursor *uuid.UUID, limit int) ([]entity.Post, *uuid.UUID, error)
 }
@@ -511,6 +512,18 @@ func (s *postService) CreateComment(ctx context.Context, postID, userID uuid.UUI
 		})
 	}
 	return c, nil
+}
+
+func (s *postService) DeleteComment(ctx context.Context, commentID, postID, userID uuid.UUID) error {
+	// Creator of the post can delete any comment, commenter can delete their own
+	post, err := s.postRepo.FindByID(ctx, postID)
+	if err != nil { return err }
+	if post.CreatorID != userID {
+		// Not the post creator — can only delete own comment
+		return s.postRepo.DeleteComment(ctx, commentID, userID)
+	}
+	// Post creator — delete any comment on their post (pass uuid.Nil to bypass user check)
+	return s.postRepo.DeleteComment(ctx, commentID, uuid.Nil)
 }
 
 func (s *postService) ListComments(ctx context.Context, postID uuid.UUID, cursor *uuid.UUID, limit int) ([]entity.PostComment, *uuid.UUID, error) {

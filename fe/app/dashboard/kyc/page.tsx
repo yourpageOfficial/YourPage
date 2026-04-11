@@ -63,7 +63,7 @@ export default function DashboardKYC() {
     const Icon = cfg.icon;
     return (
       <div>
-        <h1 className="mb-6 text-2xl font-bold">Verifikasi KYC</h1>
+        <h1 className="mb-6 text-2xl font-display font-black tracking-tight">Verifikasi KYC</h1>
         <Card>
           <CardContent className="p-6 text-center">
             <Icon className="mx-auto h-12 w-12 mb-3" />
@@ -81,7 +81,7 @@ export default function DashboardKYC() {
 
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-bold">Verifikasi KYC</h1>
+      <h1 className="mb-6 text-2xl font-display font-black tracking-tight">Verifikasi KYC</h1>
       <Card>
         <CardHeader>
           <CardTitle>Upload KTP</CardTitle>
@@ -104,7 +104,7 @@ export default function DashboardKYC() {
             <Button type="button" variant="outline" size="sm" className="mt-1" onClick={() => fileRef.current?.click()}>
               <Upload className="mr-1 h-4 w-4" /> {ktpFile ? ktpFile.name : "Pilih foto KTP"}
             </Button>
-            {ktpFile && <img src={URL.createObjectURL(ktpFile)} alt="preview" className="mt-2 h-40 rounded border object-contain" />}
+            {ktpFile && <img loading="lazy" src={URL.createObjectURL(ktpFile)} alt="preview" className="mt-2 h-40 rounded border object-contain" />}
           </div>
           <Button onClick={() => submit.mutate()} disabled={submit.isPending || !fullName || idNumber.length < 16 || !ktpFile}>
             {submit.isPending ? "Mengirim..." : "Submit KYC"}

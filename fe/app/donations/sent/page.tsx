@@ -22,7 +22,7 @@ export default function DonationsSent() {
     <AuthGuard>
       <Navbar />
       <main className="mx-auto max-w-2xl px-3 sm:px-4 py-6 sm:py-8">
-        <h1 className="mb-6 text-2xl font-bold">Donasi Terkirim</h1>
+        <h1 className="mb-6 text-2xl font-display font-black tracking-tight">Donasi Terkirim</h1>
         <div className="space-y-3">
           {donations?.map((d) => (
             <Card key={d.id}>

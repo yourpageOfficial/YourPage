@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/yourpage/be/internal/entity"
@@ -66,7 +67,7 @@ func (r *userRepo) List(ctx context.Context, role string, cursor *uuid.UUID, lim
 		q = q.Where("role = ?", role)
 	}
 	if cursor != nil {
-		q = q.Where("id > ?", *cursor)
+		q = q.Where("id < ?", *cursor)
 	}
 	err := q.Order("created_at DESC").Limit(limit).Find(&users).Error
 	return users, err
@@ -232,4 +233,25 @@ func (r *userRepo) GetAnalyticsCounts(ctx context.Context) (map[string]int64, er
 	r.db.WithContext(ctx).Table("user_kyc").Where("status = 'pending'").Count(&v); result["kyc_pending"] = v
 	r.db.WithContext(ctx).Table("content_reports").Where("status = 'pending'").Count(&v); result["reports_pending"] = v
 	return result, nil
+}
+
+func (r *userRepo) CountCreatorDonationsRange(ctx context.Context, userID uuid.UUID, from, to time.Time) (int64, int64, error) {
+	var result struct{ Count int64; Total int64 }
+	err := r.db.WithContext(ctx).Model(&entity.Donation{}).Select("COUNT(*) as count, COALESCE(SUM(amount_idr),0) as total").Where("creator_id = ? AND created_at BETWEEN ? AND ?", userID, from, to).Scan(&result).Error
+	return result.Count, result.Total, err
+}
+
+func (r *userRepo) CountCreatorSalesRange(ctx context.Context, userID uuid.UUID, from, to time.Time) (int64, int64, error) {
+	var result struct{ Count int64; Total int64 }
+	// Join with posts/products/donations to filter by creator
+	err := r.db.WithContext(ctx).Table("payments p").
+		Select("COUNT(*) as count, COALESCE(SUM(p.net_amount_idr),0) as total").
+		Where("p.status = 'paid' AND p.created_at BETWEEN ? AND ?", from, to).
+		Where(`(p.reference_id IN (SELECT id FROM posts WHERE creator_id = ? AND deleted_at IS NULL)
+			OR p.reference_id IN (SELECT id FROM products WHERE creator_id = ? AND deleted_at IS NULL)
+			OR p.reference_id IN (SELECT id FROM donations WHERE creator_id = ?)
+			OR p.reference_id IN (SELECT id FROM chat_conversations WHERE creator_id = ?))`,
+			userID, userID, userID, userID).
+		Scan(&result).Error
+	return result.Count, result.Total, err
 }

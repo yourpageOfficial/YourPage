@@ -2,7 +2,8 @@
 
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { Pagination } from "@/components/ui/pagination";
+import { Search, ArrowUpDown, ArrowUp, ArrowDown, ChevronLeft, ChevronRight } from "lucide-react";
 
 interface FilterOption { label: string; value: string }
 interface SortOption { label: string; key: string }

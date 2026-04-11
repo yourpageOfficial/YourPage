@@ -92,8 +92,12 @@ func extractClaims(c *gin.Context, jwtCfg config.JWTConfig) (*pkgjwt.Claims, err
 	return claims, nil
 }
 
-// bearerToken extracts the token string from the Authorization header.
+// bearerToken extracts the token string from cookie first, fallback to Authorization header.
 func bearerToken(c *gin.Context) string {
+	// Batch 14: HttpOnly cookie first
+	if token, err := c.Cookie("access_token"); err == nil && token != "" {
+		return token
+	}
 	header := c.GetHeader("Authorization")
 	if !strings.HasPrefix(header, "Bearer ") {
 		return ""

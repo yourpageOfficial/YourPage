@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
+	"github.com/rs/zerolog/log"
 	"golang.org/x/crypto/bcrypt"
 	"github.com/yourpage/be/internal/entity"
 	"github.com/yourpage/be/internal/pkg/mailer"
@@ -483,8 +484,13 @@ func (s *adminService) RejectTopup(ctx context.Context, id uuid.UUID, adminNote 
 	if user, err := s.userRepo.FindByID(ctx, topup.UserID); err == nil {
 		reason := "Tidak memenuhi syarat"
 		if adminNote != nil { reason = *adminNote }
-		go s.mailer.SendTopupRejected(ctx, user.Email, reason)
+		go s.mailer.SendTopupRejected(context.Background(), user.Email, reason)
 	}
+	// QA-42: In-app notification
+	s.followRepo.CreateNotification(ctx, &entity.Notification{
+		ID: uuid.New(), UserID: topup.UserID, Type: entity.NotificationCreditTopupDone,
+		Title: "Top-up Ditolak", Body: "Top-up kamu ditolak. Cek email untuk detail.",
+	})
 	return nil
 }
 
@@ -565,21 +571,23 @@ func (s *adminService) RefundPayment(ctx context.Context, id uuid.UUID, adminNot
 	if payment.Provider == entity.PaymentProviderCredits && payment.PayerID != nil {
 		settings, _ := s.platformRepo.GetSettings(ctx)
 		rate := settings.CreditRateIDR
-		if rate <= 0 { rate = 1000 } // 4.24: div-by-zero guard
+		if rate <= 0 { rate = 1000 }
 		creditsToRefund := payment.AmountIDR / rate
-		_ = s.walletRepo.AddCredits(ctx, *payment.PayerID, creditsToRefund)
-		_ = s.walletRepo.CreateTransaction(ctx, &entity.CreditTransaction{
+		if err := s.walletRepo.AddCredits(ctx, *payment.PayerID, creditsToRefund); err != nil {
+			return fmt.Errorf("refund: add credits to buyer: %w", err)
+		}
+		s.walletRepo.CreateTransaction(ctx, &entity.CreditTransaction{
 			ID: uuid.New(), UserID: *payment.PayerID, Type: entity.CreditTransactionRefund,
 			Credits: creditsToRefund, IDRAmount: payment.AmountIDR, PaymentID: &id,
 			Description: fmt.Sprintf("Refund: %s", adminNote),
 		})
-		_ = s.followRepo.CreateNotification(ctx, &entity.Notification{
-			ID: uuid.New(), UserID: *payment.PayerID, Type: entity.NotificationPurchaseSuccess,
+		s.followRepo.CreateNotification(ctx, &entity.Notification{
+			ID: uuid.New(), UserID: *payment.PayerID, Type: entity.NotificationRefund,
 			Title: "Refund Diterima", Body: fmt.Sprintf("%d credit dikembalikan.", creditsToRefund),
 		})
 	}
 
-	// Deduct from creator + revoke access
+	// Deduct from creator + revoke access (best-effort — creator may have spent)
 	settings, _ := s.platformRepo.GetSettings(ctx)
 	rate := settings.CreditRateIDR
 	if rate <= 0 { rate = 1000 }
@@ -587,28 +595,31 @@ func (s *adminService) RefundPayment(ctx context.Context, id uuid.UUID, adminNot
 	switch payment.Usecase {
 	case entity.PaymentUsecasePostPurchase:
 		if post, err := s.postRepo.FindByID(ctx, payment.ReferenceID); err == nil {
-			_ = s.walletRepo.DeductCredits(ctx, post.CreatorID, payment.NetAmountIDR/rate)
-			// 4.20: Delete purchase record to revoke access
+			if err := s.walletRepo.DeductCredits(ctx, post.CreatorID, payment.NetAmountIDR/rate); err != nil {
+				log.Warn().Err(err).Str("creator", post.CreatorID.String()).Msg("refund: creator deduct failed (insufficient balance)")
+			}
 			s.postRepo.DeletePurchase(ctx, payment.ReferenceID, *payment.PayerID)
 			if p, err := s.userRepo.FindCreatorByUserID(ctx, post.CreatorID); err == nil {
-				p.TotalEarnings -= payment.NetAmountIDR; p.Tier = nil; _ = s.userRepo.UpdateCreatorProfile(ctx, p)
+				p.TotalEarnings -= payment.NetAmountIDR; p.Tier = nil; s.userRepo.UpdateCreatorProfile(ctx, p)
 			}
 		}
 	case entity.PaymentUsecaseProductPurchase:
 		if product, err := s.productRepo.FindByID(ctx, payment.ReferenceID); err == nil {
-			_ = s.walletRepo.DeductCredits(ctx, product.CreatorID, payment.NetAmountIDR/rate)
-			// 4.21: Delete purchase record
+			if err := s.walletRepo.DeductCredits(ctx, product.CreatorID, payment.NetAmountIDR/rate); err != nil {
+				log.Warn().Err(err).Str("creator", product.CreatorID.String()).Msg("refund: creator deduct failed (insufficient balance)")
+			}
 			s.productRepo.DeletePurchase(ctx, payment.ReferenceID, *payment.PayerID)
 			if p, err := s.userRepo.FindCreatorByUserID(ctx, product.CreatorID); err == nil {
-				p.TotalEarnings -= payment.NetAmountIDR; p.Tier = nil; _ = s.userRepo.UpdateCreatorProfile(ctx, p)
+				p.TotalEarnings -= payment.NetAmountIDR; p.Tier = nil; s.userRepo.UpdateCreatorProfile(ctx, p)
 			}
 		}
 	case entity.PaymentUsecaseDonation:
-		// 4.22: Deduct donation from creator
 		if donation, err := s.donationRepo.FindByID(ctx, payment.ReferenceID); err == nil {
-			_ = s.walletRepo.DeductCredits(ctx, donation.CreatorID, payment.NetAmountIDR/rate)
+			if err := s.walletRepo.DeductCredits(ctx, donation.CreatorID, payment.NetAmountIDR/rate); err != nil {
+				log.Warn().Err(err).Str("creator", donation.CreatorID.String()).Msg("refund: creator deduct failed (insufficient balance)")
+			}
 			if p, err := s.userRepo.FindCreatorByUserID(ctx, donation.CreatorID); err == nil {
-				p.TotalEarnings -= payment.NetAmountIDR; p.Tier = nil; _ = s.userRepo.UpdateCreatorProfile(ctx, p)
+				p.TotalEarnings -= payment.NetAmountIDR; p.Tier = nil; s.userRepo.UpdateCreatorProfile(ctx, p)
 			}
 		}
 	}
@@ -617,6 +628,12 @@ func (s *adminService) RefundPayment(ctx context.Context, id uuid.UUID, adminNot
 }
 
 func (s *adminService) UpdatePayment(ctx context.Context, id uuid.UUID, status entity.PaymentStatus, adminNote string) error {
+	// QA-7: Validate status whitelist
+	switch status {
+	case entity.PaymentStatusPending, entity.PaymentStatusPaid, entity.PaymentStatusFailed, entity.PaymentStatusExpired, entity.PaymentStatusRefunded:
+	default:
+		return fmt.Errorf("⚠ Status tidak valid: %s", status)
+	}
 	return s.paymentRepo.UpdateStatus(ctx, id, status, nil)
 }
 
@@ -631,13 +648,17 @@ func (s *adminService) UpdateSettings(ctx context.Context, req UpdatePlatformSet
 	if err != nil {
 		return nil, err
 	}
+	// QA-35: Validate settings ranges
 	if req.FeePercent != nil {
+		if *req.FeePercent < 0 || *req.FeePercent > 50 { return nil, fmt.Errorf("⚠ Fee percent harus antara 0-50%%") }
 		settings.FeePercent = *req.FeePercent
 	}
 	if req.MinWithdrawalIDR != nil {
+		if *req.MinWithdrawalIDR < 10000 { return nil, fmt.Errorf("⚠ Minimum withdrawal minimal Rp 10.000") }
 		settings.MinWithdrawalIDR = *req.MinWithdrawalIDR
 	}
 	if req.CreditRateIDR != nil {
+		if *req.CreditRateIDR < 100 || *req.CreditRateIDR > 100000 { return nil, fmt.Errorf("⚠ Credit rate harus antara 100-100.000") }
 		settings.CreditRateIDR = *req.CreditRateIDR
 	}
 	if req.PlatformQRISURL != nil {

@@ -50,7 +50,7 @@ export default function ChatSettingsPage() {
 
   return (
     <div>
-      <h1 className="text-xl sm:text-2xl font-bold mb-6">Pengaturan Chat</h1>
+      <h1 className="text-2xl font-display font-black tracking-tight mb-6">Pengaturan Chat</h1>
 
       {/* Chat Price */}
       <Card className="mb-4">
@@ -61,7 +61,7 @@ export default function ChatSettingsPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
-            <label className="text-sm font-medium">Harga per pesan (Credit)</label>
+            <label className="text-sm font-medium mb-1.5 block">Harga per pesan (Credit)</label>
             <div className="flex items-center gap-2 mt-1">
               <Input type="number" value={chatPrice} onChange={e => setChatPrice(e.target.value)} placeholder="0 = gratis" className="w-40" min={0} />
               <span className="text-sm text-gray-500 dark:text-gray-400">Credit</span>
@@ -69,18 +69,18 @@ export default function ChatSettingsPage() {
           </div>
 
           {priceNum > 0 ? (
-            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 space-y-1">
+            <div className="bg-primary-50/50 dark:bg-navy-800 rounded-xl p-3 space-y-1">
               <p className="text-sm font-medium">Simulasi per pesan:</p>
               <div className="grid grid-cols-3 gap-2 text-sm">
-                <div className="text-center p-2 rounded bg-white dark:bg-gray-700">
+                <div className="text-center p-2 rounded bg-white dark:bg-navy-800">
                   <p className="text-xs text-gray-500 dark:text-gray-400">Pengirim bayar</p>
                   <p className="font-bold text-primary">{priceNum} Credit</p>
                 </div>
-                <div className="text-center p-2 rounded bg-white dark:bg-gray-700">
+                <div className="text-center p-2 rounded bg-white dark:bg-navy-800">
                   <p className="text-xs text-gray-500 dark:text-gray-400">Kamu dapat</p>
-                  <p className="font-bold text-green-600">{creatorGets} Credit</p>
+                  <p className="font-bold text-yellow-600 dark:text-yellow-400">{creatorGets} Credit</p>
                 </div>
-                <div className="text-center p-2 rounded bg-white dark:bg-gray-700">
+                <div className="text-center p-2 rounded bg-white dark:bg-navy-800">
                   <p className="text-xs text-gray-500 dark:text-gray-400">Fee ({feePct}%)</p>
                   <p className="font-bold text-gray-500">{platformGets} Credit</p>
                 </div>
@@ -118,7 +118,7 @@ export default function ChatSettingsPage() {
               <button
                 key={opt.id}
                 onClick={() => setChatAllowFrom(opt.id)}
-                className={`p-3 rounded-lg border-2 text-left transition-all ${chatAllowFrom === opt.id ? "border-primary bg-primary/5" : "border-gray-200 dark:border-gray-700 hover:border-gray-300"}`}
+                className={`p-3 rounded-xl border-2 text-left transition-all ${chatAllowFrom === opt.id ? "border-primary bg-primary/5" : "border-primary-100 dark:border-primary-900/30 hover:border-primary-200"}`}
               >
                 <p className="text-sm font-medium">{opt.label}</p>
                 <p className="text-xs text-gray-500 dark:text-gray-400">{opt.desc}</p>

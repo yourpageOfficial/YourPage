@@ -15,39 +15,37 @@ export const useAuth = create<AuthState>((set) => ({
   user: null,
   loading: true,
   login: async (email, password) => {
-    const { data } = await api.post("/auth/login", { email, password });
-    localStorage.setItem("access_token", data.data.access_token);
-    localStorage.setItem("refresh_token", data.data.refresh_token);
-    const me = await api.get("/auth/me");
+    // Step 1: Login — BE sets HttpOnly cookies
+    const res = await api.post("/auth/login", { email, password });
+    const token = res.data.data.access_token;
+
+    // Step 2: Get user info using token from response (cookie may not be ready)
+    const me = await api.get("/auth/me", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
     const user = me.data.data;
-    set({ user });
-    // Set a session cookie for server-side middleware route protection
-    document.cookie = `auth-role=${user.role}; path=/; SameSite=Lax`;
-    // Redirect — first time to welcome, otherwise to dashboard
+    set({ user, loading: false });
+
+    // Step 3: Set auth-role cookie for middleware (backup — BE also sets it)
+    document.cookie = `auth-role=${user.role}; path=/; max-age=604800; SameSite=Lax`;
+
+    // Step 4: Redirect
     const isFirstLogin = !localStorage.getItem("has_logged_in");
     localStorage.setItem("has_logged_in", "true");
 
-    if (isFirstLogin) {
-      window.location.href = "/welcome";
-    } else if (user.role === "admin") {
-      window.location.href = "/admin";
-    } else if (user.role === "creator") {
-      window.location.href = "/dashboard";
-    } else {
-      window.location.href = "/s";
-    }
+    const dest = isFirstLogin ? "/welcome"
+      : user.role === "admin" ? "/admin"
+      : user.role === "creator" ? "/dashboard"
+      : "/s";
+    window.location.href = dest;
   },
   register: async (email, username, password, role, referralCode) => {
     await api.post("/auth/register", { email, username, password, role, referral_code: referralCode || undefined });
   },
   logout: () => {
-    const rt = localStorage.getItem("refresh_token");
-    if (rt) api.post("/auth/logout", { refresh_token: rt }).catch(() => {});
-    localStorage.removeItem("access_token");
-    localStorage.removeItem("refresh_token");
-    localStorage.removeItem("has_logged_in");
-    // Clear session cookie
+    api.post("/auth/logout").catch(() => {});
     document.cookie = "auth-role=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+    localStorage.removeItem("has_logged_in");
     set({ user: null });
     window.location.href = "/";
   },

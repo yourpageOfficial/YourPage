@@ -94,3 +94,19 @@ func (h *FollowHandler) MarkAllRead(c *gin.Context) {
 	}
 	response.OKMessage(c, "all marked as read")
 }
+
+func (h *FollowHandler) DeleteNotification(c *gin.Context) {
+	notifID, err := uuid.Parse(c.Param("id"))
+	if err != nil { response.BadRequest(c, "invalid notification id"); return }
+	if err := h.svc.DeleteNotification(c.Request.Context(), notifID, getUserID(c)); err != nil {
+		handleServiceError(c, err); return
+	}
+	response.OKMessage(c, "notification deleted")
+}
+
+func (h *FollowHandler) DeleteReadNotifications(c *gin.Context) {
+	if err := h.svc.DeleteReadNotifications(c.Request.Context(), getUserID(c)); err != nil {
+		handleServiceError(c, err); return
+	}
+	response.OKMessage(c, "read notifications deleted")
+}

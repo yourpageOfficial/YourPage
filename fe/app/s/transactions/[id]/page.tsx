@@ -28,7 +28,7 @@ export default function InvoicePage() {
       </div>
       <Card>
         <CardContent className="p-6 space-y-4">
-          <div className="text-center border-b dark:border-gray-700 pb-4">
+          <div className="text-center border-b dark:border-primary-900/30 pb-4">
             <h2 className="text-lg font-bold text-primary">YourPage</h2>
             <p className="text-xs text-gray-400">urpage.online</p>
           </div>
@@ -38,8 +38,8 @@ export default function InvoicePage() {
             <div><span className="text-gray-500 dark:text-gray-400">Tipe</span><p className="mt-1 capitalize">{tx.type}</p></div>
             <div><span className="text-gray-500 dark:text-gray-400">Jumlah</span><p className="mt-1 font-bold text-lg">{tx.credits} Credit</p></div>
           </div>
-          {tx.description && <p className="text-sm text-gray-600 dark:text-gray-400 border-t dark:border-gray-700 pt-3">{tx.description}</p>}
-          <div className="text-center border-t dark:border-gray-700 pt-4">
+          {tx.description && <p className="text-sm text-gray-600 dark:text-gray-400 border-t dark:border-primary-900/30 pt-3">{tx.description}</p>}
+          <div className="text-center border-t dark:border-primary-900/30 pt-4">
             <p className="text-xs text-gray-400">Bukti transaksi digital — YourPage</p>
             <p className="text-xs text-gray-400">1 Credit = Rp 1.000</p>
             <p className="text-sm font-bold mt-1">Total: {formatIDR(tx.credits * 1000)}</p>

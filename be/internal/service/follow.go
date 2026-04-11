@@ -21,6 +21,8 @@ type FollowService interface {
 	CountUnread(ctx context.Context, userID uuid.UUID) (int64, error)
 	MarkRead(ctx context.Context, notifID, userID uuid.UUID) error
 	MarkAllRead(ctx context.Context, userID uuid.UUID) error
+	DeleteNotification(ctx context.Context, notifID, userID uuid.UUID) error
+	DeleteReadNotifications(ctx context.Context, userID uuid.UUID) error
 }
 
 // ---------------------------------------------------------------------------
@@ -108,4 +110,12 @@ func (s *followService) MarkRead(ctx context.Context, notifID, userID uuid.UUID)
 
 func (s *followService) MarkAllRead(ctx context.Context, userID uuid.UUID) error {
 	return s.followRepo.MarkAllRead(ctx, userID)
+}
+
+func (s *followService) DeleteNotification(ctx context.Context, notifID, userID uuid.UUID) error {
+	return s.followRepo.DeleteNotification(ctx, notifID, userID)
+}
+
+func (s *followService) DeleteReadNotifications(ctx context.Context, userID uuid.UUID) error {
+	return s.followRepo.DeleteReadNotifications(ctx, userID)
 }

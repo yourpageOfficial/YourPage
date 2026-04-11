@@ -3,6 +3,9 @@
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 
+/**
+ * @deprecated Use InfiniteScroll component instead: `@/components/ui/infinite-scroll`
+ */
 export function LoadMore({ hasMore, loading, onLoad }: { hasMore: boolean; loading: boolean; onLoad: () => void }) {
   if (!hasMore) return null;
   return (

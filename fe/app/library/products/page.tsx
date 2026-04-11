@@ -20,7 +20,7 @@ export default function LibraryProducts() {
 
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-bold">Produk yang Dibeli</h1>
+      <h1 className="mb-6 text-2xl font-display font-black tracking-tight">Produk yang Dibeli</h1>
       <div className="space-y-3">
         {products?.map((p) => (
           <Card key={p.id}>

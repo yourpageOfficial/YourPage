@@ -11,6 +11,7 @@ import (
 	"github.com/yourpage/be/internal/pkg/response"
 	"github.com/yourpage/be/internal/pkg/storage"
 	"github.com/yourpage/be/internal/pkg/validator"
+	"github.com/yourpage/be/internal/repository"
 	"github.com/yourpage/be/internal/service"
 )
 
@@ -19,10 +20,11 @@ type KYCHandler struct {
 	validate *validator.Validator
 	storage  storage.StorageService
 	cfg      *config.Config
+	userRepo repository.UserRepository
 }
 
-func NewKYCHandler(svc service.KYCService, storageSvc storage.StorageService, cfg *config.Config) *KYCHandler {
-	return &KYCHandler{svc: svc, validate: validator.New(), storage: storageSvc, cfg: cfg}
+func NewKYCHandler(svc service.KYCService, storageSvc storage.StorageService, cfg *config.Config, userRepo repository.UserRepository) *KYCHandler {
+	return &KYCHandler{svc: svc, validate: validator.New(), storage: storageSvc, cfg: cfg, userRepo: userRepo}
 }
 
 func (h *KYCHandler) SubmitKYC(c *gin.Context) {
@@ -92,6 +94,13 @@ func (h *KYCHandler) UploadFile(c *gin.Context) {
 		response.InternalError(c)
 		return
 	}
+
+	// Track storage for creators
+	uid := getUserID(c)
+	if profile, err := h.userRepo.FindCreatorByUserID(c.Request.Context(), uid); err == nil && profile != nil {
+		_ = h.userRepo.IncrementCreatorStorage(c.Request.Context(), profile.ID, header.Size)
+	}
+
 	response.OK(c, gin.H{"url": url})
 }
 

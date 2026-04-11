@@ -15,7 +15,7 @@ export default function AdminDonations() {
 
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-bold">Donasi</h1>
+      <h1 className="mb-6 text-2xl font-display font-black tracking-tight">Donasi</h1>
       <AdminList
         filters={filters} activeFilter={list.filter} onFilter={list.setFilter}
         search={list.search} onSearch={list.setSearch} searchPlaceholder="Cari donor, creator..."
@@ -38,7 +38,7 @@ export default function AdminDonations() {
                   <div><span className="text-gray-500 dark:text-gray-400">Payment:</span> {d.payment_id?.slice(0, 8)}...</div>
                   <div><span className="text-gray-500 dark:text-gray-400">Tanggal:</span> {formatDate(d.created_at)}</div>
                 </div>
-                {d.message && <p className="text-sm bg-blue-50 dark:bg-blue-900/20 p-2 rounded mt-1">&ldquo;{d.message}&rdquo;</p>}
+                {d.message && <p className="text-sm bg-primary-50 dark:bg-primary-900/20 p-2 rounded mt-1">&ldquo;{d.message}&rdquo;</p>}
               </CardContent>
             </Card>
           ))}

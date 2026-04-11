@@ -368,7 +368,7 @@ func (h *AdminHandler) GetProfitSummary(c *gin.Context) {
 		withdrawals = wds
 	}
 
-	revenue := analytics["revenue"].(int64)
+	revenue, _ := analytics["revenue"].(int64)
 	available := revenue - totalWithdrawn
 
 	response.OK(c, gin.H{

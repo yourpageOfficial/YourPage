@@ -37,11 +37,7 @@ func (h *DonationHandler) Create(c *gin.Context) {
 }
 
 func (h *DonationHandler) ListByCreator(c *gin.Context) {
-	creatorID, err := uuid.Parse(c.Param("creatorId"))
-	if err != nil {
-		response.BadRequest(c, "invalid creator id")
-		return
-	}
+	creatorID := getUserID(c) // QA-2: use auth user, not URL param
 	cursor, limit := parsePagination(c)
 	donations, next, err := h.svc.ListByCreator(c.Request.Context(), creatorID, cursor, limit)
 	if err != nil {

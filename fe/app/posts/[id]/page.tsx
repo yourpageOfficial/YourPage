@@ -15,6 +15,10 @@ import { Lock, Eye, Heart, MessageCircle, Share2, Send } from "lucide-react";
 import Link from "next/link";
 import { ReportButton } from "@/components/report-button";
 import { ContentProtection } from "@/components/content-protection";
+import { PageTransition } from "@/components/ui/page-transition";
+import { Avatar } from "@/components/ui/avatar";
+import { ImageFallback } from "@/components/ui/image-fallback";
+import { toast } from "@/lib/toast";
 import { useAuth } from "@/lib/auth";
 import type { Post, ApiResponse } from "@/lib/types";
 
@@ -24,6 +28,7 @@ export default function PostDetailPage() {
   const { user } = useAuth();
   const [buying, setBuying] = useState(false);
   const [error, setError] = useState("");
+  const [shareOpen, setShareOpen] = useState(false);
   const [liked, setLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
   const [comments, setComments] = useState<any[]>([]);
@@ -56,12 +61,12 @@ export default function PostDetailPage() {
     try {
       if (liked) { await api.delete(`/posts/${id}/like`); setLiked(false); setLikeCount(c => c - 1); }
       else { await api.post(`/posts/${id}/like`); setLiked(true); setLikeCount(c => c + 1); }
-    } catch {}
+    } catch (e: any) { toast.error(e.response?.data?.error || "Gagal") }
   };
 
   const loadComments = async () => {
     if (!showComments) {
-      try { const { data } = await api.get(`/posts/${id}/comments?limit=50`); setComments(data.data || []); } catch {}
+      try { const { data } = await api.get(`/posts/${id}/comments?limit=50`); setComments(data.data || []); } catch (e: any) { toast.error(e.response?.data?.error || "Gagal") }
     }
     setShowComments(!showComments);
   };
@@ -72,7 +77,7 @@ export default function PostDetailPage() {
       const { data } = await api.post(`/posts/${id}/comments`, { content: commentText });
       setComments(prev => [...prev, data.data]);
       setCommentText("");
-    } catch {}
+    } catch (e: any) { toast.error(e.response?.data?.error || "Gagal") }
   };
 
   if (!post) return <><Navbar /><div className="p-8"><ListSkeleton count={3} /></div></>;
@@ -80,17 +85,12 @@ export default function PostDetailPage() {
   return (
     <>
       <Navbar />
+      <PageTransition>
       <main className="mx-auto max-w-3xl px-3 sm:px-4 py-6 sm:py-8">
         {/* Creator header */}
         {post.creator && (
           <Link href={`/c/${post.creator.username}`} className="flex items-center gap-3 mb-4 sm:mb-6 group">
-            {post.creator.avatar_url ? (
-              <img src={post.creator.avatar_url} alt="" className="h-12 w-12 rounded-full object-cover" />
-            ) : (
-              <div className="h-12 w-12 rounded-full bg-primary-100 flex items-center justify-center text-lg font-bold text-primary">
-                {post.creator.display_name?.[0]}
-              </div>
-            )}
+            <Avatar src={post.creator.avatar_url} name={post.creator.display_name} size="lg" />
             <div>
               <p className="font-semibold group-hover:text-primary">{post.creator.display_name}</p>
               <p className="text-sm text-gray-500 dark:text-gray-400">@{post.creator.username}</p>
@@ -121,7 +121,7 @@ export default function PostDetailPage() {
             )}
             <Card>
               <CardContent className="p-10 text-center">
-                <div className="h-20 w-20 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mx-auto">
+                <div className="h-20 w-20 rounded-xl bg-primary-50 dark:bg-navy-800 flex items-center justify-center mx-auto">
                   <Lock className="h-10 w-10 text-gray-400 dark:text-gray-500" />
                 </div>
                 <p className="mt-4 text-lg font-semibold text-gray-700 dark:text-gray-300">Konten Berbayar</p>
@@ -141,7 +141,7 @@ export default function PostDetailPage() {
                     <p className="text-xs text-gray-400">Kamu butuh <span className="font-semibold">{formatCredit(post.price || 0)}</span> untuk membuka konten ini</p>
                   </>
                 ) : (
-                  <Button size="lg" onClick={handleBuy} disabled={buying}>
+                  <Button size="lg" onClick={handleBuy} disabled={buying} loading={buying}>
                     {buying ? "Memproses..." : `Beli — ${formatCredit(post.price || 0)}`}
                   </Button>
                 )}
@@ -162,20 +162,20 @@ export default function PostDetailPage() {
             {post.media?.length > 0 && (
               <div className="mt-8 space-y-4" onContextMenu={post.access_type === "paid" ? (e) => e.preventDefault() : undefined}>
                 {post.media.map((m) => (
-                  <div key={m.id} className="rounded-lg overflow-hidden">
+                  <div key={m.id} className="rounded-xl overflow-hidden">
                     {m.media_type === "image" && m.url && (
-                      <img src={m.url} alt="" loading="lazy" className="w-full rounded-lg" />
+                      <ImageFallback src={m.url} alt={post.title || ""} width={800} height={600} className="w-full rounded-xl" />
                     )}
                     {m.media_type === "video" && m.url && (
-                      <video src={m.url} controls playsInline preload="metadata" className="w-full rounded-lg bg-black" />
+                      <video src={m.url} controls playsInline preload="metadata" className="w-full rounded-xl bg-black" />
                     )}
                     {m.media_type === "audio" && m.url && (
-                      <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+                      <div className="bg-primary-50/50 dark:bg-navy-800 rounded-xl p-4">
                         <audio src={m.url} controls className="w-full" />
                       </div>
                     )}
                     {m.media_type === "document" && (
-                      <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 text-center">
+                      <div className="bg-primary-50/50 dark:bg-navy-800 rounded-xl p-4 text-center">
                         <p className="text-gray-500 dark:text-gray-400">📄 Dokumen terlampir</p>
                       </div>
                     )}
@@ -195,15 +195,17 @@ export default function PostDetailPage() {
           <button onClick={loadComments} className="flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-primary transition-colors">
             <MessageCircle className="h-5 w-5" /> {post.comment_count || 0} Komentar
           </button>
-          <div className="relative group">
-            <button className="flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-primary transition-colors">
+          <div className="relative">
+            <button onClick={() => setShareOpen(!shareOpen)} className="flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-primary transition-colors" aria-label="Bagikan post">
               <Share2 className="h-5 w-5" /> Bagikan
             </button>
-            <div className="hidden group-hover:flex absolute bottom-full left-0 mb-2 bg-white dark:bg-gray-800 shadow-lg rounded-lg p-2 gap-1 z-10 border dark:border-gray-700">
-              <button onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent(post.title + " " + window.location.href)}`, "_blank")} className="px-3 py-1.5 text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded">WhatsApp</button>
-              <button onClick={() => window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(post.title)}&url=${encodeURIComponent(window.location.href)}`, "_blank")} className="px-3 py-1.5 text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded">Twitter</button>
-              <button onClick={() => { navigator.clipboard.writeText(window.location.href); alert("Link disalin!"); }} className="px-3 py-1.5 text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded">Copy Link</button>
-            </div>
+            {shareOpen && (
+              <div className="absolute bottom-full left-0 mb-2 bg-white dark:bg-navy-800 shadow-lg rounded-xl p-2 gap-1 z-10 border dark:border-primary-900/30 flex animate-scale-in">
+                <button onClick={() => { window.open(`https://wa.me/?text=${encodeURIComponent(post.title + " " + window.location.href)}`, "_blank"); setShareOpen(false); }} className="px-3 py-1.5 text-xs hover:bg-primary-50 dark:hover:bg-navy-800 rounded">WhatsApp</button>
+                <button onClick={() => { window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(post.title)}&url=${encodeURIComponent(window.location.href)}`, "_blank"); setShareOpen(false); }} className="px-3 py-1.5 text-xs hover:bg-primary-50 dark:hover:bg-navy-800 rounded">Twitter</button>
+                <button onClick={() => { navigator.clipboard.writeText(window.location.href); toast.success("Link disalin!"); setShareOpen(false); }} className="px-3 py-1.5 text-xs hover:bg-primary-50 dark:hover:bg-navy-800 rounded">Copy Link</button>
+              </div>
+            )}
           </div>
           <span className="ml-auto"><ReportButton targetType="post" targetId={id} /></span>
         </div>
@@ -214,10 +216,8 @@ export default function PostDetailPage() {
             {comments.length === 0 && <p className="text-sm text-gray-500 dark:text-gray-400">Belum ada komentar. Jadilah yang pertama!</p>}
             {comments.map((c: any) => (
               <div key={c.id} className="flex gap-3">
-                <div className="h-8 w-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-xs font-bold shrink-0">
-                  {c.user?.display_name?.[0] || "?"}
-                </div>
-                <div className="flex-1 bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2">
+                <Avatar src={c.user?.avatar_url} name={c.user?.display_name} size="md" className="mt-0.5" />
+                <div className="flex-1 bg-primary-50/50 dark:bg-navy-800 rounded-xl px-3 py-2">
                   <p className="text-sm font-medium">{c.user?.display_name || "User"} <span className="text-xs text-gray-400 font-normal">{formatDate(c.created_at)}</span></p>
                   <p className="text-sm text-gray-700 mt-0.5">{c.content}</p>
                 </div>
@@ -233,6 +233,7 @@ export default function PostDetailPage() {
           </div>
         )}
       </main>
+      </PageTransition>
     </>
   );
 }

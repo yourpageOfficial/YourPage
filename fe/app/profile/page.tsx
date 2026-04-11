@@ -7,13 +7,14 @@ import { Navbar } from "@/components/navbar";
 import { AuthGuard } from "@/components/auth-guard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Avatar } from "@/components/ui/avatar";
 
 export default function ProfilePage() {
   const { user, loading, fetchMe } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (typeof window !== "undefined" && localStorage.getItem("access_token") && !user && loading) {
+    if (typeof window !== "undefined" && !user && loading) {
       fetchMe();
     }
   }, [user, loading, fetchMe]);
@@ -41,13 +42,7 @@ export default function ProfilePage() {
             <CardContent className="pt-8 pb-6 px-4 sm:px-6">
               {/* Centered avatar */}
               <div className="flex flex-col items-center text-center">
-                {user.avatar_url ? (
-                  <img src={user.avatar_url} alt="" className="h-20 w-20 rounded-full object-cover border-4 border-white shadow" />
-                ) : (
-                  <div className="h-20 w-20 rounded-full bg-primary-100 flex items-center justify-center text-2xl font-bold text-primary shadow">
-                    {user.display_name[0]}
-                  </div>
-                )}
+                <Avatar src={user.avatar_url} name={user.display_name} size="xl" className="border-4 border-white shadow" />
                 <h1 className="mt-3 text-xl font-bold">{user.display_name}</h1>
                 <p className="text-sm text-gray-500 dark:text-gray-400">@{user.username}</p>
                 <Badge className="mt-2">{user.role}</Badge>
@@ -56,10 +51,10 @@ export default function ProfilePage() {
 
               {/* Actions */}
               <div className="mt-6 space-y-2">
-                <a href="/s" className="block w-full text-center py-2.5 rounded-md bg-primary text-white text-sm font-medium hover:bg-primary-700 transition-colors">
+                <a href="/s" className="block w-full text-center py-2.5 rounded-xl bg-primary text-white text-sm font-medium hover:bg-primary-700 transition-colors">
                   Dashboard
                 </a>
-                <a href="/upgrade" className="block w-full text-center py-2.5 rounded-md border text-sm font-medium text-primary hover:bg-primary-50 transition-colors">
+                <a href="/upgrade" className="block w-full text-center py-2.5 rounded-xl border text-sm font-medium text-primary hover:bg-primary-50 transition-colors">
                   Upgrade ke Creator
                 </a>
               </div>

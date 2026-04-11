@@ -7,6 +7,8 @@ import api from "@/lib/api";
 import { useAdminList } from "@/lib/use-admin-list";
 import { AdminList } from "@/components/admin-list";
 import { Button } from "@/components/ui/button";
+import { Breadcrumb } from "@/components/ui/breadcrumb";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -26,7 +28,7 @@ export default function AdminKYC() {
 
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-bold">KYC Verification</h1>
+      <h1 className="mb-6 text-2xl font-display font-black tracking-tight">KYC Verification</h1>
       <AdminList
         filters={filters} activeFilter={list.filter} onFilter={list.setFilter}
         search={list.search} onSearch={list.setSearch} searchPlaceholder="Cari nama, user ID..."
@@ -47,12 +49,14 @@ export default function AdminKYC() {
                   <div><span className="text-gray-500 dark:text-gray-400">Submitted:</span> {formatDate(k.created_at)}</div>
                   {k.reviewed_at && <div><span className="text-gray-500 dark:text-gray-400">Reviewed:</span> {formatDate(k.reviewed_at)}</div>}
                 </div>
-                {k.admin_note && <p className="text-sm bg-gray-50 dark:bg-gray-800 p-2 rounded">Note: {k.admin_note}</p>}
+                {k.admin_note && <p className="text-sm bg-primary-50/50 dark:bg-navy-800 p-2 rounded">Note: {k.admin_note}</p>}
                 {k.status === "pending" && <>
                   <Input placeholder="Catatan (opsional)" value={notes[k.id] || ""} onChange={(e) => setNotes({ ...notes, [k.id]: e.target.value })} />
                   <div className="flex gap-2">
                     <Button size="sm" onClick={() => update.mutate({ id: k.id, status: "approved" })}>Setujui</Button>
-                    <Button size="sm" variant="destructive" onClick={() => update.mutate({ id: k.id, status: "rejected" })}>Tolak</Button>
+                    <ConfirmDialog title="Tolak KYC?" message={`Yakin ingin menolak KYC ${k.full_name}?`} confirmLabel="Tolak" variant="destructive" onConfirm={() => update.mutate({ id: k.id, status: "rejected" })}>
+                      {(open) => <Button size="sm" variant="destructive" onClick={open}>Tolak</Button>}
+                    </ConfirmDialog>
                   </div>
                 </>}
               </CardContent>

@@ -61,7 +61,7 @@ func (r *paymentRepo) List(ctx context.Context, cursor *uuid.UUID, limit int) ([
 	var payments []entity.Payment
 	q := r.db.WithContext(ctx).Preload("Payer")
 	if cursor != nil {
-		q = q.Where("id > ?", *cursor)
+		q = q.Where("id < ?", *cursor)
 	}
 	err := q.Order("created_at DESC").Limit(limit).Find(&payments).Error
 	return payments, err
@@ -70,7 +70,7 @@ func (r *paymentRepo) List(ctx context.Context, cursor *uuid.UUID, limit int) ([
 func (r *paymentRepo) ListByPayer(ctx context.Context, payerID uuid.UUID, cursor *uuid.UUID, limit int) ([]entity.Payment, error) {
 	var payments []entity.Payment
 	q := r.db.WithContext(ctx).Where("payer_id = ?", payerID)
-	if cursor != nil { q = q.Where("id > ?", *cursor) }
+	if cursor != nil { q = q.Where("id < ?", *cursor) }
 	err := q.Order("created_at DESC").Limit(limit).Find(&payments).Error
 	return payments, err
 }
@@ -90,7 +90,7 @@ func (r *paymentRepo) ListByReferenceCreator(ctx context.Context, creatorID uuid
 	if len(allIDs) == 0 { return payments, nil }
 
 	q := r.db.WithContext(ctx).Preload("Payer").Where("status = 'paid' AND reference_id IN ?", allIDs)
-	if cursor != nil { q = q.Where("id > ?", *cursor) }
+	if cursor != nil { q = q.Where("id < ?", *cursor) }
 	err := q.Order("created_at DESC").Limit(limit).Find(&payments).Error
 	return payments, err
 }

@@ -2,6 +2,7 @@ services:
   # ─── Database ────────────────────────────────────────────
   postgres:
     image: postgres:15-alpine
+    container_name: yourpage-postgres
     environment:
       POSTGRES_USER: ${DB_USER:-yourpage}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
@@ -14,9 +15,22 @@ services:
       timeout: 3s
       retries: 5
     restart: unless-stopped
+    networks:
+      - backend
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "1.0"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   redis:
     image: redis:7-alpine
+    container_name: yourpage-redis
     command: redis-server --requirepass ${REDIS_PASSWORD}
     volumes:
       - redisdata:/data
@@ -26,25 +40,55 @@ services:
       timeout: 3s
       retries: 5
     restart: unless-stopped
+    networks:
+      - backend
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: "0.5"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   minio:
     image: minio/minio
+    container_name: yourpage-minio
     command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: ${MINIO_USER:-minioadmin}
       MINIO_ROOT_PASSWORD: ${MINIO_PASSWORD}
     volumes:
       - miniodata:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     restart: unless-stopped
+    networks:
+      - backend
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "1.0"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   minio-init:
     image: minio/mc
+    container_name: yourpage-minio-init
     depends_on:
       minio:
-        condition: service_started
+        condition: service_healthy
     entrypoint: >
       /bin/sh -c "
-      sleep 5;
       mc alias set local http://minio:9000 $${MINIO_ROOT_USER:-minioadmin} $${MINIO_ROOT_PASSWORD};
       mc mb --ignore-existing local/public-media;
       mc mb --ignore-existing local/private-media;
@@ -53,28 +97,35 @@ services:
     environment:
       MINIO_ROOT_USER: ${MINIO_USER:-minioadmin}
       MINIO_ROOT_PASSWORD: ${MINIO_PASSWORD}
+    networks:
+      - backend
 
   # ─── Migration ───────────────────────────────────────────
   migrate:
     build:
       context: ./be
       dockerfile: Dockerfile.migrate
+    container_name: yourpage-migrate
     environment:
       DATABASE_URL: postgres://${DB_USER:-yourpage}:${DB_PASSWORD}@postgres:5432/${DB_NAME:-yourpage}?sslmode=disable
     depends_on:
       postgres:
         condition: service_healthy
+    networks:
+      - backend
 
   # ─── Backend ─────────────────────────────────────────────
   be:
     build:
       context: ./be
       dockerfile: Dockerfile
+    container_name: yourpage-be
     environment:
       DATABASE_URL: postgres://${DB_USER:-yourpage}:${DB_PASSWORD}@postgres:5432/${DB_NAME:-yourpage}?sslmode=disable
       REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
       JWT_SECRET: ${JWT_SECRET}
       MINIO_ENDPOINT: minio:9000
+      MINIO_PUBLIC_ENDPOINT: ${DOMAIN:-localhost}/storage
       MINIO_ACCESS_KEY: ${MINIO_USER:-minioadmin}
       MINIO_SECRET_KEY: ${MINIO_PASSWORD}
       MINIO_USE_SSL: "false"
@@ -100,22 +151,50 @@ services:
       migrate:
         condition: service_completed_successfully
     restart: unless-stopped
+    networks:
+      - frontend
+      - backend
+      - monitoring
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "1.0"
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
 
   # ─── Frontend ────────────────────────────────────────────
   fe:
     build:
       context: ./fe
       dockerfile: Dockerfile
+    container_name: yourpage-fe
     environment:
       NODE_ENV: production
       NEXT_PUBLIC_API_URL: /api/v1
     depends_on:
       - be
     restart: unless-stopped
+    networks:
+      - frontend
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "1.0"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   # ─── Nginx Gateway ──────────────────────────────────────
   nginx:
     image: nginx:alpine
+    container_name: yourpage-nginx
     ports:
       - "80:80"
       - "443:443"
@@ -127,31 +206,100 @@ services:
       - be
       - fe
     restart: unless-stopped
+    networks:
+      - frontend
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: "0.5"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
 
   # ─── SSL (Certbot) ──────────────────────────────────────
   certbot:
     image: certbot/certbot
+    container_name: yourpage-certbot
     volumes:
       - ./nginx/ssl:/etc/letsencrypt
       - certbot-webroot:/var/www/certbot
     entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+    networks:
+      - frontend
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+          cpus: "0.25"
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "2"
 
   # ─── Monitoring ──────────────────────────────────────────
   prometheus:
     image: prom/prometheus:latest
+    container_name: yourpage-prometheus
     volumes:
-      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./alert.rules.yml:/etc/prometheus/alert.rules.yml:ro
       - promdata:/prometheus
     restart: unless-stopped
+    networks:
+      - monitoring
+      - backend
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: "0.5"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   grafana:
     image: grafana/grafana
+    container_name: yourpage-grafana
+    ports:
+      - "127.0.0.1:3002:3000"
     environment:
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin123}
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_SERVER_ROOT_URL: "%(protocol)s://%(domain)s:%(http_port)s/grafana/"
     volumes:
       - grafanadata:/var/lib/grafana
-      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+    depends_on:
+      - prometheus
     restart: unless-stopped
+    networks:
+      - monitoring
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: "0.5"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  frontend:
+    driver: bridge
+  backend:
+    driver: bridge
+    internal: true
+  monitoring:
+    driver: bridge
+    internal: true
 
 volumes:
   pgdata:

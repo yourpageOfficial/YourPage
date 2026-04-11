@@ -215,6 +215,17 @@ func (h *PostHandler) CreateComment(c *gin.Context) {
 	response.Created(c, comment)
 }
 
+func (h *PostHandler) DeleteComment(c *gin.Context) {
+	postID, err := uuid.Parse(c.Param("id"))
+	if err != nil { response.BadRequest(c, "invalid post id"); return }
+	commentID, err := uuid.Parse(c.Param("commentId"))
+	if err != nil { response.BadRequest(c, "invalid comment id"); return }
+	if err := h.svc.DeleteComment(c.Request.Context(), commentID, postID, getUserID(c)); err != nil {
+		handleServiceError(c, err); return
+	}
+	response.OKMessage(c, "comment deleted")
+}
+
 func (h *PostHandler) ListComments(c *gin.Context) {
 	postID, err := uuid.Parse(c.Param("id"))
 	if err != nil { response.BadRequest(c, "invalid post id"); return }

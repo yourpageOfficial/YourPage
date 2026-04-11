@@ -7,6 +7,8 @@ import api from "@/lib/api";
 import { useAdminList } from "@/lib/use-admin-list";
 import { AdminList } from "@/components/admin-list";
 import { Button } from "@/components/ui/button";
+import { Breadcrumb } from "@/components/ui/breadcrumb";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -37,12 +39,15 @@ export default function AdminTopups() {
 
   return (
     <div>
-      <h1 className="mb-6 text-xl sm:text-2xl font-bold">Top-up Credit</h1>
+      <Breadcrumb items={[{ label: "Admin", href: "/admin" }, { label: "Top-up" }]} className="mb-4" />
+      <h1 className="mb-6 text-2xl font-display font-black tracking-tight">Top-up Credit</h1>
       {bulk.count > 0 && (
-        <div className="mb-4 flex items-center gap-3 p-3 bg-primary/10 rounded-lg">
+        <div className="mb-4 flex items-center gap-3 p-3 bg-primary/10 rounded-xl">
           <span className="text-sm font-medium">{bulk.count} dipilih</span>
           <Button size="sm" onClick={() => bulkApprove.mutate()} disabled={bulkApprove.isPending}>✅ Setujui Semua</Button>
-          <Button size="sm" variant="destructive" onClick={() => bulkReject.mutate()} disabled={bulkReject.isPending}>❌ Tolak Semua</Button>
+          <ConfirmDialog title="Tolak Semua?" message={`Yakin ingin menolak ${bulk.count} topup?`} confirmLabel="Tolak Semua" variant="destructive" onConfirm={() => bulkReject.mutate()}>
+            {(open) => <Button size="sm" variant="destructive" onClick={open} disabled={bulkReject.isPending}>❌ Tolak Semua</Button>}
+          </ConfirmDialog>
           <Button size="sm" variant="ghost" onClick={bulk.clear}>Batal</Button>
         </div>
       )}
@@ -76,13 +81,15 @@ export default function AdminTopups() {
                   <div><span className="text-gray-500 dark:text-gray-400">Kode Unik:</span> <span className="font-bold text-primary">{t.unique_code || "-"}</span></div>
                   <div><span className="text-gray-500 dark:text-gray-400">Tanggal:</span> {formatDate(t.created_at)}</div>
                 </div>
-                {t.proof_image_url && <a href={t.proof_image_url} target="_blank"><img src={t.proof_image_url} alt="bukti" className="max-h-48 rounded border object-contain" /></a>}
-                {t.admin_note && <p className="text-sm bg-gray-50 dark:bg-gray-800 p-2 rounded">Note: {t.admin_note}</p>}
+                {t.proof_image_url && <a href={t.proof_image_url} target="_blank"><img loading="lazy" src={t.proof_image_url} alt="bukti" className="max-h-48 rounded border object-contain" /></a>}
+                {t.admin_note && <p className="text-sm bg-primary-50/50 dark:bg-navy-800 p-2 rounded">Note: {t.admin_note}</p>}
                 {t.status === "pending" && <>
                   <Input placeholder="Catatan (opsional)" value={notes[t.id] || ""} onChange={(e) => setNotes({ ...notes, [t.id]: e.target.value })} />
                   <div className="flex gap-2">
                     <Button size="sm" onClick={() => approve.mutate(t.id)}>Setujui</Button>
-                    <Button size="sm" variant="destructive" onClick={() => reject.mutate(t.id)}>Tolak</Button>
+                    <ConfirmDialog title="Tolak Top-up?" message={`Yakin ingin menolak top-up ${formatIDR(t.amount_idr)}?`} confirmLabel="Tolak" variant="destructive" onConfirm={() => reject.mutate(t.id)}>
+                      {(open) => <Button size="sm" variant="destructive" onClick={open}>Tolak</Button>}
+                    </ConfirmDialog>
                   </div>
                 </>}
               </CardContent>

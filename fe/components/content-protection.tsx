@@ -38,7 +38,7 @@ export function ContentProtection({ children, enabled }: { children: React.React
       </div>
 
       {hidden && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-20 rounded-lg">
+        <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-20 rounded-xl">
           <p className="text-white font-medium text-sm">Konten dilindungi</p>
         </div>
       )}

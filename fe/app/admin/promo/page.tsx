@@ -5,6 +5,8 @@ import api from "@/lib/api";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Breadcrumb } from "@/components/ui/breadcrumb";
+import { Avatar } from "@/components/ui/avatar";
 import { formatDate, formatIDR } from "@/lib/utils";
 import Link from "next/link";
 
@@ -35,7 +37,7 @@ export default function AdminPromoPage() {
       {/* Summary */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
         <Card><CardContent className="p-4 text-center">
-          <p className="text-2xl font-bold">{creators.length}</p>
+          <p className="text-2xl font-display font-black tracking-tight">{creators.length}</p>
           <p className="text-xs text-gray-500 dark:text-gray-400">Total Creator</p>
         </CardContent></Card>
         <Card><CardContent className="p-4 text-center">
@@ -60,14 +62,14 @@ export default function AdminPromoPage() {
             <Card key={c.user_id}>
               <CardContent className="p-3 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  {c.avatar_url ? <img src={c.avatar_url} className="h-10 w-10 rounded-full object-cover" /> : <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center font-bold text-primary">{c.display_name?.[0]}</div>}
+                  <Avatar src={c.avatar_url} name={c.display_name} size="md" />
                   <div>
                     <p className="font-medium">{c.display_name} <span className="text-gray-400 text-sm">@{c.username}</span></p>
                     <p className="text-xs text-gray-500 dark:text-gray-400">{c.follower_count} followers</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  {c.is_verified && <Badge className="bg-blue-600 text-white text-xs">Verified</Badge>}
+                  {c.is_verified && <Badge className="bg-primary text-white text-xs">Verified</Badge>}
                   <Link href={`/admin/users/${c.user_id}`}><Button size="sm" variant="outline">Edit Promo</Button></Link>
                 </div>
               </CardContent>
@@ -85,13 +87,13 @@ export default function AdminPromoPage() {
           <Card key={c.id} className="cursor-pointer hover:border-primary transition-colors" onClick={() => window.location.href = `/admin/users/${c.id}`}>
             <CardContent className="p-3 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                {c.avatar_url ? <img src={c.avatar_url} className="h-8 w-8 rounded-full object-cover" /> : <div className="h-8 w-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-xs font-bold">{c.display_name?.[0]}</div>}
+                <Avatar src={c.avatar_url} name={c.display_name} size="sm" />
                 <div>
                   <p className="text-sm font-medium">{c.display_name} <span className="text-gray-400 text-xs">@{c.username}</span></p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                {c.is_verified && <Badge className="bg-blue-600 text-white text-[10px]">✓</Badge>}
+                {c.is_verified && <Badge className="bg-primary text-white text-[10px]">✓</Badge>}
                 <Button size="sm" variant="ghost" className="text-xs">🎯 Set Promo</Button>
               </div>
             </CardContent>

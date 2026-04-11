@@ -75,7 +75,7 @@ func (r *productRepo) ListByCreator(ctx context.Context, creatorID uuid.UUID, cu
 	var products []entity.Product
 	q := r.db.WithContext(ctx).Preload("Assets").Where("creator_id = ? AND deleted_at IS NULL", creatorID)
 	if cursor != nil {
-		q = q.Where("id > ?", *cursor)
+		q = q.Where("id < ?", *cursor)
 	}
 	err := q.Order("created_at DESC").Limit(limit).Find(&products).Error
 	return products, err
@@ -85,7 +85,7 @@ func (r *productRepo) ListAll(ctx context.Context, cursor *uuid.UUID, limit int)
 	var products []entity.Product
 	q := r.db.WithContext(ctx).Preload("Creator").Where("deleted_at IS NULL")
 	if cursor != nil {
-		q = q.Where("id > ?", *cursor)
+		q = q.Where("id < ?", *cursor)
 	}
 	err := q.Order("created_at DESC").Limit(limit).Find(&products).Error
 	return products, err
@@ -155,4 +155,14 @@ func (r *productRepo) ListPurchasedProducts(ctx context.Context, supporterID uui
 
 func (r *productRepo) DeletePurchase(ctx context.Context, productID, supporterID uuid.UUID) error {
 	return r.db.WithContext(ctx).Where("product_id = ? AND supporter_id = ?", productID, supporterID).Delete(&entity.ProductPurchase{}).Error
+}
+
+func (r *productRepo) LogDownload(ctx context.Context, productID, userID uuid.UUID) error {
+	return r.db.WithContext(ctx).Create(&entity.ProductDownload{ID: uuid.New(), ProductID: productID, UserID: userID}).Error
+}
+
+func (r *productRepo) GetDownloadCount(ctx context.Context, productID uuid.UUID) (int64, error) {
+	var c int64
+	err := r.db.WithContext(ctx).Model(&entity.ProductDownload{}).Where("product_id = ?", productID).Count(&c).Error
+	return c, err
 }

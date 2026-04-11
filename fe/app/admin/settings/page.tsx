@@ -5,6 +5,7 @@ import { useState, useEffect, useRef } from "react";
 import api from "@/lib/api";
 import { toast } from "@/lib/toast";
 import { Button } from "@/components/ui/button";
+import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Upload } from "lucide-react";
@@ -58,7 +59,7 @@ export default function AdminSettings() {
 
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-bold">Platform Settings</h1>
+      <h1 className="mb-6 text-2xl font-display font-black tracking-tight">Platform Settings</h1>
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader><CardTitle>Konfigurasi</CardTitle></CardHeader>
@@ -86,9 +87,9 @@ export default function AdminSettings() {
           <CardContent className="space-y-4">
             <p className="text-sm text-gray-500 dark:text-gray-400">Gambar QRIS yang ditampilkan ke user saat top-up manual.</p>
             {qrisPreview ? (
-              <img src={qrisPreview} alt="QRIS" className="max-h-64 rounded border mx-auto" />
+              <img loading="lazy" src={qrisPreview} alt="QRIS" className="max-h-64 rounded border mx-auto" />
             ) : (
-              <div className="h-48 bg-gray-100 dark:bg-gray-800 rounded flex items-center justify-center text-gray-400 dark:text-gray-500">Belum ada QRIS</div>
+              <div className="h-48 bg-primary-50 dark:bg-navy-800 rounded flex items-center justify-center text-gray-400 dark:text-gray-500">Belum ada QRIS</div>
             )}
             <input ref={qrisRef} type="file" accept="image/*" className="hidden" onChange={(e) => { if (e.target.files?.[0]) uploadQris.mutate(e.target.files[0]); }} />
             <Button variant="outline" className="w-full" onClick={() => qrisRef.current?.click()} disabled={uploadQris.isPending}>

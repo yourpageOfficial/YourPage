@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"context"
 	"crypto/sha256"
 	"fmt"
 	"net/http"
@@ -34,6 +35,16 @@ func Cache(rdb *redis.Client, ttl time.Duration) gin.HandlerFunc {
 
 		if c.Writer.Status() == http.StatusOK && len(w.body) > 0 {
 			rdb.Set(c.Request.Context(), key, w.body, ttl)
+		}
+	}
+}
+
+// InvalidateCache deletes cache entries matching a prefix pattern.
+func InvalidateCache(rdb *redis.Client, ctx context.Context, patterns ...string) {
+	for _, p := range patterns {
+		iter := rdb.Scan(ctx, 0, "cache:"+p+"*", 100).Iterator()
+		for iter.Next(ctx) {
+			rdb.Del(ctx, iter.Val())
 		}
 	}
 }

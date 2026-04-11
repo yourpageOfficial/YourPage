@@ -113,6 +113,7 @@ func (h *PublicHandler) GetMyEarnings(c *gin.Context) {
 		"donation_goal_current": profile.DonationGoalCurrent,
 		"welcome_message":       profile.WelcomeMessage,
 		"overlay_style": profile.OverlayStyle, "overlay_text_template": profile.OverlayTextTemplate,
+		"category": profile.Category,
 	})
 }
 
@@ -131,11 +132,29 @@ func (h *PublicHandler) GetCreatorAnalytics(c *gin.Context) {
 		return
 	}
 
+	from, to := parseDateRange(c)
+
 	// Get counts
 	postCount, _ := h.userRepo.CountCreatorPosts(c.Request.Context(), userID)
 	productCount, _ := h.userRepo.CountCreatorProducts(c.Request.Context(), userID)
-	donationCount, totalDonations, _ := h.userRepo.CountCreatorDonations(c.Request.Context(), userID)
-	salesCount, totalSales, _ := h.userRepo.CountCreatorSales(c.Request.Context(), userID)
+	donationCount, totalDonations, _ := h.userRepo.CountCreatorDonationsRange(c.Request.Context(), userID, from, to)
+	salesCount, totalSales, _ := h.userRepo.CountCreatorSalesRange(c.Request.Context(), userID, from, to)
+
+	// Previous period for trend
+	duration := to.Sub(from)
+	prevFrom := from.Add(-duration)
+	_, prevDonations, _ := h.userRepo.CountCreatorDonationsRange(c.Request.Context(), userID, prevFrom, from)
+	_, prevSales, _ := h.userRepo.CountCreatorSalesRange(c.Request.Context(), userID, prevFrom, from)
+	currentTotal := totalDonations + totalSales
+	prevTotal := prevDonations + prevSales
+	trendPct := float64(0)
+	trendDir := "flat"
+	if prevTotal > 0 {
+		trendPct = float64(currentTotal-prevTotal) / float64(prevTotal) * 100
+		if trendPct > 0 { trendDir = "up" } else if trendPct < 0 { trendDir = "down" }
+	} else if currentTotal > 0 {
+		trendPct = 100; trendDir = "up"
+	}
 
 	response.OK(c, gin.H{
 		"post_count":       postCount,
@@ -145,9 +164,13 @@ func (h *PublicHandler) GetCreatorAnalytics(c *gin.Context) {
 		"sales_count":      salesCount,
 		"total_sales":      totalSales,
 		"total_earnings":   profile.TotalEarnings,
-		"balance_idr":      0, // deprecated, use wallet
+		"balance_idr":      0,
 		"follower_count":   profile.FollowerCount,
 		"fee_percent":      profile.CustomFeePercent,
+		"trend_percent":    trendPct,
+		"trend_dir":        trendDir,
+		"from":             from.Format("2006-01-02"),
+		"to":               to.Format("2006-01-02"),
 	})
 }
 
@@ -205,6 +228,7 @@ func (h *PublicHandler) SearchCreators(c *gin.Context) {
 
 	var items []creatorItem
 	for _, p := range profiles {
+		if p.User.ID == uuid.Nil { continue }
 		items = append(items, creatorItem{
 			UserID:        p.UserID,
 			Username:      p.User.Username,
@@ -230,4 +254,33 @@ func CreatorRequiredMiddleware() gin.HandlerFunc {
 		}
 		c.Next()
 	}
+}
+
+// parseDateRange extracts from/to or period query params.
+func parseDateRange(c *gin.Context) (time.Time, time.Time) {
+	now := time.Now()
+	to := now
+	from := now.AddDate(0, 0, -30) // default 30d
+
+	if p := c.Query("period"); p != "" {
+		switch p {
+		case "7d":
+			from = now.AddDate(0, 0, -7)
+		case "30d":
+			from = now.AddDate(0, 0, -30)
+		case "90d":
+			from = now.AddDate(0, 0, -90)
+		case "1y":
+			from = now.AddDate(-1, 0, 0)
+		case "all":
+			from = time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)
+		}
+	}
+	if f := c.Query("from"); f != "" {
+		if t, err := time.Parse("2006-01-02", f); err == nil { from = t }
+	}
+	if t := c.Query("to"); t != "" {
+		if parsed, err := time.Parse("2006-01-02", t); err == nil { to = parsed.Add(24*time.Hour - time.Second) }
+	}
+	return from, to
 }

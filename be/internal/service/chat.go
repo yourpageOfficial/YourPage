@@ -8,7 +8,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/yourpage/be/internal/entity"
 	"github.com/yourpage/be/internal/repository"
-	"github.com/yourpage/be/internal/repository/postgres"
 )
 
 type ChatService interface {
@@ -25,14 +24,14 @@ type SendMessageRequest struct {
 }
 
 type chatService struct {
-	chatRepo    *postgres.ChatRepo
+	chatRepo    repository.ChatRepository
 	userRepo    repository.UserRepository
 	walletRepo  repository.WalletRepository
 	followRepo  repository.FollowRepository
 	paymentRepo repository.PaymentRepository
 }
 
-func NewChatService(chatRepo *postgres.ChatRepo, userRepo repository.UserRepository, walletRepo repository.WalletRepository, followRepo repository.FollowRepository, paymentRepo repository.PaymentRepository) ChatService {
+func NewChatService(chatRepo repository.ChatRepository, userRepo repository.UserRepository, walletRepo repository.WalletRepository, followRepo repository.FollowRepository, paymentRepo repository.PaymentRepository) ChatService {
 	return &chatService{chatRepo: chatRepo, userRepo: userRepo, walletRepo: walletRepo, followRepo: followRepo, paymentRepo: paymentRepo}
 }
 
@@ -107,8 +106,9 @@ func (s *chatService) SendMessage(ctx context.Context, senderID uuid.UUID, req S
 	tierName := ""
 	if creatorProfile.Tier != nil { tierName = creatorProfile.Tier.Name }
 
-	// Paid chat
-	isPaid := creatorProfile.ChatPriceIDR > 0
+	// QA-27: Only charge on first message (new conversation — no last_message_at yet)
+	isNewConv := conv.LastMessageAt == nil
+	isPaid := creatorProfile.ChatPriceIDR > 0 && isNewConv
 	if isPaid {
 		chatCredits := creatorProfile.ChatPriceIDR / 1000 // IDR to Credit
 		wallet, err := s.walletRepo.FindOrCreateWallet(ctx, senderID)

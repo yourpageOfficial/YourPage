@@ -147,6 +147,7 @@ services:
     volumes:
       - ./fe:/app
       - /app/node_modules
+    tmpfs:
       - /app/.next
     depends_on:
       - be
@@ -168,6 +169,7 @@ services:
   prometheus:
     image: prom/prometheus:latest
     pull_policy: missing
+    profiles: ["monitoring"]
     ports:
       - "9090:9090"
     volumes:
@@ -180,11 +182,12 @@ services:
   grafana:
     image: grafana/grafana:latest
     pull_policy: missing
+    profiles: ["monitoring"]
     ports:
       - "3002:3000"
     environment:
       GF_SECURITY_ADMIN_PASSWORD: admin
-      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
     volumes:
       - grafana_data:/var/lib/grafana
       - ./grafana/provisioning:/etc/grafana/provisioning

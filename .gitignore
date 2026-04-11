@@ -29,3 +29,13 @@ backups/
 .env
 nginx/ssl/
 .claude/
+
+# Cloned skill repos (reference only)
+everything-claude-code/
+gstack/
+ui-ux-pro-max-skill/
+claude-mem/
+superpowers/
+
+# Kiro agent configs (personal, not project files)
+.kiro/

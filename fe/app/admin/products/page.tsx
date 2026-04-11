@@ -5,6 +5,8 @@ import api from "@/lib/api";
 import { useAdminList } from "@/lib/use-admin-list";
 import { AdminList } from "@/components/admin-list";
 import { Button } from "@/components/ui/button";
+import { Breadcrumb } from "@/components/ui/breadcrumb";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Trash2, ExternalLink } from "lucide-react";
@@ -20,7 +22,7 @@ export default function AdminProducts() {
 
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-bold">Products</h1>
+      <h1 className="mb-6 text-2xl font-display font-black tracking-tight">Products</h1>
       <AdminList
         search={list.search} onSearch={list.setSearch} searchPlaceholder="Cari nama produk, tipe..."
         sortOptions={sorts} sortKey={list.sortKey} sortDir={list.sortDir} onSort={list.toggleSort}
@@ -43,7 +45,9 @@ export default function AdminProducts() {
                 </div>
                 <div className="flex gap-1">
                   <Link href={`/products/${p.id}`}><Button variant="ghost" size="icon"><ExternalLink className="h-4 w-4" /></Button></Link>
-                  <Button variant="ghost" size="icon" onClick={() => del.mutate(p.id)}><Trash2 className="h-4 w-4 text-red-500" /></Button>
+                  <ConfirmDialog title="Hapus Produk?" message={`Yakin ingin hapus "${p.name}"?`} confirmLabel="Hapus" variant="destructive" onConfirm={() => del.mutate(p.id)}>
+                    {(open) => <Button variant="ghost" size="icon" onClick={open}><Trash2 className="h-4 w-4 text-red-500" /></Button>}
+                  </ConfirmDialog>
                 </div>
               </CardContent>
             </Card>

@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/api";
 import { toast } from "@/lib/toast";
 import { Button } from "@/components/ui/button";
+import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CollapsibleCard } from "@/components/ui/collapsible-card";
@@ -39,7 +40,7 @@ export default function AdminProfit() {
 
   return (
     <div>
-      <h1 className="mb-6 text-xl sm:text-2xl font-bold">Platform Profit</h1>
+      <h1 className="mb-6 text-2xl font-display font-black tracking-tight">Platform Profit</h1>
 
       {/* Summary cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">

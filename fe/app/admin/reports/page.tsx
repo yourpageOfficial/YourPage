@@ -7,6 +7,8 @@ import api from "@/lib/api";
 import { useAdminList } from "@/lib/use-admin-list";
 import { AdminList } from "@/components/admin-list";
 import { Button } from "@/components/ui/button";
+import { Breadcrumb } from "@/components/ui/breadcrumb";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -53,17 +55,17 @@ export default function AdminReports() {
 
   const handleAction = (r: any, action: string) => {
     if (action === "ban" && r.target_type === "user") {
-      if (confirm("Ban user ini?")) banUser.mutate(r.target_id);
+      banUser.mutate(r.target_id);
     } else if (action === "delete" && r.target_type === "post") {
-      if (confirm("Hapus post ini?")) deletePost.mutate(r.target_id);
+      deletePost.mutate(r.target_id);
     } else if (action === "delete" && r.target_type === "product") {
-      if (confirm("Hapus product ini?")) deleteProduct.mutate(r.target_id);
+      deleteProduct.mutate(r.target_id);
     }
   };
 
   return (
     <div>
-      <h1 className="mb-6 text-xl sm:text-2xl font-bold">Content Reports</h1>
+      <h1 className="mb-6 text-2xl font-display font-black tracking-tight">Content Reports</h1>
       <AdminList
         filters={filters} activeFilter={list.filter} onFilter={list.setFilter}
         search={list.search} onSearch={list.setSearch} searchPlaceholder="Cari reason, target..."
@@ -96,8 +98,8 @@ export default function AdminReports() {
                   <div><span className="text-gray-500 dark:text-gray-400">Tanggal:</span> {formatDate(r.created_at)}</div>
                 </div>
 
-                {r.description && <p className="text-sm bg-blue-50 dark:bg-blue-900/20 p-2 rounded">{r.description}</p>}
-                {r.admin_note && <p className="text-sm bg-gray-50 dark:bg-gray-800 p-2 rounded">Note: {r.admin_note}</p>}
+                {r.description && <p className="text-sm bg-primary-50 dark:bg-primary-900/20 p-2 rounded">{r.description}</p>}
+                {r.admin_note && <p className="text-sm bg-primary-50/50 dark:bg-navy-800 p-2 rounded">Note: {r.admin_note}</p>}
 
                 {/* Actions */}
                 {r.status === "pending" && (
@@ -115,14 +117,14 @@ export default function AdminReports() {
                           <Button size="sm" variant="outline"><ExternalLink className="mr-1 h-3 w-3" /> Lihat</Button>
                         </Link>
                         {r.target_type === "user" && (
-                          <Button size="sm" variant="destructive" onClick={() => handleAction(r, "ban")}>
-                            <Ban className="mr-1 h-3 w-3" /> Ban User
-                          </Button>
+                          <ConfirmDialog title="Ban User?" message="Yakin ingin ban user ini?" confirmLabel="Ban" variant="destructive" onConfirm={() => handleAction(r, "ban")}>
+                            {(open) => <Button size="sm" variant="destructive" onClick={open}><Ban className="mr-1 h-3 w-3" /> Ban User</Button>}
+                          </ConfirmDialog>
                         )}
                         {(r.target_type === "post" || r.target_type === "product") && (
-                          <Button size="sm" variant="destructive" onClick={() => handleAction(r, "delete")}>
-                            <Trash2 className="mr-1 h-3 w-3" /> Hapus {r.target_type === "post" ? "Post" : "Produk"}
-                          </Button>
+                          <ConfirmDialog title={`Hapus ${r.target_type === "post" ? "Post" : "Produk"}?`} message="Yakin ingin menghapus konten ini?" confirmLabel="Hapus" variant="destructive" onConfirm={() => handleAction(r, "delete")}>
+                            {(open) => <Button size="sm" variant="destructive" onClick={open}><Trash2 className="mr-1 h-3 w-3" /> Hapus {r.target_type === "post" ? "Post" : "Produk"}</Button>}
+                          </ConfirmDialog>
                         )}
                       </div>
                     </div>

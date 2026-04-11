@@ -5,10 +5,12 @@ import api from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { Navbar } from "@/components/navbar";
 import { AuthGuard } from "@/components/auth-guard";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { formatIDR, formatDate, idrToCredit } from "@/lib/utils";
+import { Wallet as WalletIcon, ArrowRight } from "lucide-react";
+import { formatIDR, formatDate } from "@/lib/utils";
+import { PageTransition } from "@/components/ui/page-transition";
 import Link from "next/link";
 import type { Wallet, CreditTransaction, ApiResponse, PaginatedResponse } from "@/lib/types";
 
@@ -30,40 +32,41 @@ export default function WalletPage() {
   return (
     <AuthGuard>
       <Navbar />
-      <main className="mx-auto max-w-2xl px-3 sm:px-4 py-6 sm:py-8">
-        <h1 className="mb-6 text-xl sm:text-2xl font-bold">Wallet</h1>
+      <PageTransition>
+      <main className="mx-auto max-w-2xl px-4 py-6 sm:py-8">
+        <h1 className="mb-6 text-xl sm:text-2xl font-display font-black tracking-tight">Wallet</h1>
 
-        <Card className="mb-4">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle>Saldo Credit</CardTitle>
-              <Link href="/wallet/topup"><Button size="sm">Top-up</Button></Link>
+        {/* Balance card */}
+        <Card className="mb-6 bg-gradient-hero dark:bg-gradient-hero-dark border-0 text-white overflow-hidden relative">
+          <div className="absolute -top-10 -right-10 w-40 h-40 bg-accent/10 rounded-full blur-2xl" />
+          <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-primary-300/10 rounded-full blur-2xl" />
+          <CardContent className="p-6 sm:p-8 relative">
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-primary-200 text-sm font-medium">Saldo Credit</p>
+              <Link href="/wallet/topup"><Button size="sm" variant="secondary">Top-up</Button></Link>
             </div>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl sm:text-3xl font-bold text-primary">{totalCredits} Credit</p>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">= {formatIDR(totalCredits * 1000)}</p>
-            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">1 Credit = Rp 1.000</p>
+            <p className="text-4xl sm:text-5xl font-black">{totalCredits}</p>
+            <p className="text-primary-200 text-sm mt-1">= {formatIDR(totalCredits * 1000)}</p>
           </CardContent>
         </Card>
 
         {user?.role === "creator" && (
-          <div className="mb-4">
-            <Link href="/dashboard/withdrawals" className="text-sm text-primary hover:underline">💰 Tarik saldo ke rekening bank →</Link>
-          </div>
+          <Link href="/dashboard/withdrawals" className="flex items-center gap-2 text-sm text-primary hover:underline font-medium mb-6">
+            💰 Tarik saldo ke rekening bank <ArrowRight className="h-3 w-3" />
+          </Link>
         )}
 
-        <h2 className="mb-4 text-base sm:text-lg font-semibold">Riwayat Transaksi</h2>
-        <div className="space-y-2 sm:space-y-3">
+        <h2 className="mb-4 text-base font-bold">Riwayat Transaksi</h2>
+        <div className="space-y-2.5">
           {txs?.map((tx) => (
-            <Card key={tx.id}>
-              <CardContent className="flex items-center justify-between p-3 sm:p-4">
+            <Card key={tx.id} hover>
+              <CardContent className="flex items-center justify-between p-4">
                 <div>
                   <p className="text-sm font-medium">{tx.description}</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">{formatDate(tx.created_at)}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{formatDate(tx.created_at)}</p>
                 </div>
                 <div className="text-right">
-                  <Badge className={["topup", "refund", "earning"].includes(tx.type) ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400" : "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400"}>
+                  <Badge variant={["topup", "refund", "earning"].includes(tx.type) ? "success" : "destructive"}>
                     {["topup", "refund", "earning"].includes(tx.type) ? "+" : "-"}{tx.credits} Credit
                   </Badge>
                   {tx.type === "withdrawal" && (
@@ -73,9 +76,19 @@ export default function WalletPage() {
               </CardContent>
             </Card>
           ))}
-          {txs?.length === 0 && <p className="text-sm text-gray-500 dark:text-gray-400">Belum ada transaksi.</p>}
+          {txs?.length === 0 && (
+            <div className="text-center py-16">
+              <div className="h-16 w-16 rounded-2xl bg-primary-50 dark:bg-primary-900/20 flex items-center justify-center mx-auto mb-4">
+                <WalletIcon className="h-8 w-8 text-primary" />
+              </div>
+              <p className="font-semibold">Belum ada transaksi</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Top-up Credit untuk mulai bertransaksi</p>
+              <Link href="/wallet/topup"><Button variant="outline" size="sm" className="mt-4">Top-up Credit</Button></Link>
+            </div>
+          )}
         </div>
       </main>
+      </PageTransition>
     </AuthGuard>
   );
 }

@@ -1,0 +1,7 @@
+{{define "content"}}
+<h2>Verifikasi Email Kamu</h2>
+<p>Hai {{.UserName}},</p>
+<p>Terima kasih sudah mendaftar di YourPage! Klik tombol di bawah untuk memverifikasi email kamu.</p>
+<a href="{{.FrontendURL}}/verify-email?token={{.Token}}" class="btn">Verifikasi Email</a>
+<p style="font-size:13px;color:#9ca3af;">Link berlaku 24 jam. Jika kamu tidak mendaftar, abaikan email ini.</p>
+{{end}}

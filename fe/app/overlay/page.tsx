@@ -50,7 +50,7 @@ function OverlayContent() {
           setDonation(data.data);
           setTimeout(() => { setDonation(null); setTierImage(""); }, 8000);
         }
-      } catch {}
+      } catch { /* silent */ }
     }, 3000);
     return () => clearInterval(poll);
   }, [creatorId, tiers]);

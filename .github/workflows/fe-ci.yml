@@ -1,0 +1,22 @@
+name: FE CI
+
+on:
+  push:
+    branches: [main]
+    paths: ['fe/**']
+  pull_request:
+    paths: ['fe/**']
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: fe/package-lock.json
+      - run: cd fe && npm ci
+      - run: cd fe && npx tsc --noEmit
+      - run: cd fe && npm run build

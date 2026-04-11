@@ -14,6 +14,9 @@ type visitor struct {
 	lastSeen time.Time
 }
 
+// RateLimiter implements a per-IP token bucket rate limiter using in-memory storage.
+// NOTE: This is in-memory only — state is lost on restart and not shared across instances.
+// For horizontal scaling, migrate to Redis-based rate limiting (INCR + EXPIRE pattern).
 type RateLimiter struct {
 	mu       sync.Mutex
 	visitors map[string]*visitor
@@ -62,9 +65,12 @@ func (rl *RateLimiter) Middleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		limiter := rl.getVisitor(c.ClientIP())
 		if !limiter.Allow() {
+			c.Header("Retry-After", "30")
 			c.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{
-				"success": false,
-				"error":   "rate limit exceeded",
+				"success":     false,
+				"error":       "rate_limited",
+				"message":     "Terlalu banyak request. Coba lagi dalam 30 detik.",
+				"retry_after": 30,
 			})
 			return
 		}

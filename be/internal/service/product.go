@@ -359,6 +359,7 @@ func (s *productService) GetDownloadURL(ctx context.Context, productID, supporte
 
 	// Link-type product — return the link directly
 	if product.DeliveryType == "link" && product.DeliveryURL != nil {
+		s.productRepo.LogDownload(ctx, productID, supporterID)
 		return []DownloadURLResponse{{
 			FileName:  "Link",
 			SignedURL: *product.DeliveryURL,
@@ -371,6 +372,8 @@ func (s *productService) GetDownloadURL(ctx context.Context, productID, supporte
 	if err != nil {
 		return nil, err
 	}
+
+	s.productRepo.LogDownload(ctx, productID, supporterID)
 
 	var result []DownloadURLResponse
 	for _, asset := range assets {

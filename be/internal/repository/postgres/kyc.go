@@ -51,7 +51,7 @@ func (r *kycRepo) ListKYC(ctx context.Context, status string, cursor *uuid.UUID,
 		q = q.Where("status = ?", status)
 	}
 	if cursor != nil {
-		q = q.Where("id > ?", *cursor)
+		q = q.Where("id < ?", *cursor)
 	}
 	err := q.Order("created_at DESC").Limit(limit).Find(&kycs).Error
 	return kycs, err
@@ -90,7 +90,7 @@ func (r *kycRepo) ListReports(ctx context.Context, status string, cursor *uuid.U
 		q = q.Where("status = ?", status)
 	}
 	if cursor != nil {
-		q = q.Where("id > ?", *cursor)
+		q = q.Where("id < ?", *cursor)
 	}
 	err := q.Order("created_at DESC").Limit(limit).Find(&reports).Error
 	return reports, err

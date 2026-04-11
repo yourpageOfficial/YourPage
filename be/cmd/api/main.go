@@ -138,19 +138,20 @@ func main() {
 
 	// ---- Handlers ----
 	h := handler.Handlers{
-		Auth:       handler.NewAuthHandler(authSvc),
+		Auth:       handler.NewAuthHandler(authSvc, cfg.JWT, cfg.App.Env == "production"),
 		Post:       handler.NewPostHandler(postSvc),
 		Product:    handler.NewProductHandler(productSvc),
 		Donation:   handler.NewDonationHandler(donationSvc),
 		Wallet:     handler.NewWalletHandler(walletSvc),
 		Follow:     handler.NewFollowHandler(followSvc),
 		Withdrawal: handler.NewWithdrawalHandler(withdrawalSvc),
-		KYC:        handler.NewKYCHandler(kycSvc, storageSvc, cfg),
+		KYC:        handler.NewKYCHandler(kycSvc, storageSvc, cfg, userRepo),
 		Admin:      handler.NewAdminHandler(adminSvc),
 		Public:     handler.NewPublicHandler(userRepo, followRepo),
 		Payment:    handler.NewPaymentHandler(paymentSvc, userRepo),
 		Webhook:    handler.NewWebhookHandler(paymentRepo, xenditClient),
 		Chat:       handler.NewChatHandler(chatSvc),
+		Membership: handler.NewMembershipHandler(db, userRepo),
 		PlatformRepo: platformRepo,
 		UserRepo:     userRepo,
 		AuditDB:      db,
@@ -190,11 +191,16 @@ func main() {
 			handleMembershipRenewal(context.Background(), db)
 			// 9.9: Cleanup old read notifications (>90 days)
 			db.Exec("DELETE FROM notifications WHERE is_read = true AND created_at < NOW() - INTERVAL '90 days'")
+			// Batch 10: Execute scheduled account deletions
+			handleAccountDeletions(db)
+			// Auto-unban expired bans
+			db.Model(&entity.User{}).Where("is_banned = true AND ban_expires_at IS NOT NULL AND ban_expires_at < NOW()").Updates(map[string]interface{}{"is_banned": false, "ban_reason": nil, "ban_expires_at": nil})
 		}
 	}()
 
-	// Admin pending digest — every 5 minutes, send to finance
+	// Admin pending digest — every 5 minutes
 	go func() {
+		defer func() { if r := recover(); r != nil { log.Error().Interface("panic", r).Msg("admin digest panic") } }()
 		financeEmail := os.Getenv("FINANCE_EMAIL")
 		adminEmail := os.Getenv("ADMIN_EMAIL")
 		if financeEmail == "" && adminEmail == "" { return }
@@ -210,15 +216,6 @@ func main() {
 			if pendingTopups+pendingWithdrawals+pendingKYC > 0 {
 				mailSvc.SendAdminPendingDigest(ctx, recipient, int(pendingWithdrawals), int(pendingTopups), int(pendingKYC))
 			}
-		}
-	}()
-
-	// Admin pending digest — every 5 minutes
-	go func() {
-		ticker := time.NewTicker(5 * time.Minute)
-		defer ticker.Stop()
-		for range ticker.C {
-			handleAdminDigest(context.Background(), withdrawalRepo, walletRepo, kycRepo, mailSvc, cfg.App.AdminEmail)
 		}
 	}()
 
@@ -313,24 +310,76 @@ func handleTierExpiry(ctx context.Context, userRepo repository.UserRepository, p
 }
 
 func handleMembershipRenewal(ctx context.Context, db *gorm.DB) {
+	// QA-5: Query platform settings for credit rate
+	var ps entity.PlatformSetting
+	var creditRate int64 = 1000
+	if err := db.First(&ps).Error; err == nil && ps.CreditRateIDR > 0 {
+		creditRate = ps.CreditRateIDR
+	}
+
 	var expired []entity.Membership
 	db.Preload("Tier").Where("status = 'active' AND expires_at < NOW()").Find(&expired)
 	for _, m := range expired {
+		tierName := "membership"
+		if m.Tier != nil { tierName = m.Tier.Name }
+
 		if !m.AutoRenew || m.Tier == nil {
 			db.Model(&m).Update("status", "expired")
+			db.Create(&entity.Notification{ID: uuid.New(), UserID: m.SupporterID, Type: "membership_expired", Title: "Membership Expired", Body: fmt.Sprintf("Membership tier %s telah berakhir.", tierName)})
 			continue
 		}
-		// Try auto-renew
-		result := db.Model(&entity.UserWallet{}).Where("user_id = ? AND balance_credits >= ?", m.SupporterID, m.Tier.PriceCredits).
-			Update("balance_credits", gorm.Expr("balance_credits - ?", m.Tier.PriceCredits))
-		if result.RowsAffected == 0 {
+		// Try auto-renew in transaction (QA-17)
+		txErr := db.Transaction(func(tx *gorm.DB) error {
+			result := tx.Model(&entity.UserWallet{}).Where("user_id = ? AND balance_credits >= ?", m.SupporterID, m.Tier.PriceCredits).
+				Update("balance_credits", gorm.Expr("balance_credits - ?", m.Tier.PriceCredits))
+			if result.RowsAffected == 0 {
+				return fmt.Errorf("insufficient")
+			}
+			feePct := 20
+			var cp entity.CreatorProfile
+			if err := tx.Preload("Tier").Where("user_id = ?", m.CreatorID).First(&cp).Error; err == nil {
+				if cp.PromoFeePercent != nil && cp.PromoFeeExpiresAt != nil && cp.PromoFeeExpiresAt.After(time.Now()) {
+					feePct = *cp.PromoFeePercent
+				} else if cp.CustomFeePercent != nil {
+					feePct = *cp.CustomFeePercent
+				}
+			}
+			totalCredits := int64(m.Tier.PriceCredits)
+			feeCredits := totalCredits * int64(feePct) / 100
+			netCredits := totalCredits - feeCredits
+			tx.Exec("INSERT INTO user_wallets (user_id, balance_credits) VALUES (?, 0) ON CONFLICT (user_id) DO NOTHING", m.CreatorID)
+			tx.Model(&entity.UserWallet{}).Where("user_id = ?", m.CreatorID).Update("balance_credits", gorm.Expr("balance_credits + ?", netCredits))
+			tx.Create(&entity.CreditTransaction{ID: uuid.New(), UserID: m.SupporterID, Type: "spend", Credits: -totalCredits, IDRAmount: totalCredits * creditRate, Description: fmt.Sprintf("Renewal membership %s", tierName)})
+			tx.Create(&entity.CreditTransaction{ID: uuid.New(), UserID: m.CreatorID, Type: "earning", Credits: netCredits, IDRAmount: netCredits * creditRate, Description: fmt.Sprintf("Renewal membership %s (fee %d%%)", tierName, feePct)})
+			tx.Model(&m).Updates(map[string]interface{}{"started_at": time.Now(), "expires_at": time.Now().AddDate(0, 1, 0)})
+			return nil
+		})
+		if txErr != nil {
 			db.Model(&m).Update("status", "expired")
+			db.Create(&entity.Notification{ID: uuid.New(), UserID: m.SupporterID, Type: "membership_expiring", Title: "Renewal Gagal ⚠️", Body: fmt.Sprintf("Saldo tidak cukup untuk renewal membership %s.", tierName)})
 			continue
 		}
-		// Credit creator
-		db.Model(&entity.UserWallet{}).Where("user_id = ?", m.CreatorID).Update("balance_credits", gorm.Expr("balance_credits + ?", m.Tier.PriceCredits))
-		// Extend 1 month
-		db.Model(&m).Updates(map[string]interface{}{"started_at": time.Now(), "expires_at": time.Now().AddDate(0, 1, 0)})
+		// Notify (outside tx — non-critical)
+		db.Create(&entity.Notification{ID: uuid.New(), UserID: m.SupporterID, Type: "membership_renewed", Title: "Membership Diperpanjang ✅", Body: fmt.Sprintf("Membership %s berhasil diperpanjang.", tierName)})
+		db.Create(&entity.Notification{ID: uuid.New(), UserID: m.CreatorID, Type: "membership_renewed", Title: "Member Diperpanjang ⭐", Body: fmt.Sprintf("Membership tier %s diperpanjang oleh supporter.", tierName)})
 		log.Info().Str("supporter", m.SupporterID.String()).Msg("membership renewed")
+	}
+}
+
+func handleAccountDeletions(db *gorm.DB) {
+	var users []entity.User
+	db.Where("deletion_scheduled_at IS NOT NULL AND deletion_scheduled_at <= NOW() AND deleted_at IS NULL").Find(&users)
+	for _, u := range users {
+		log.Info().Str("user_id", u.ID.String()).Msg("executing account deletion")
+		now := time.Now()
+		// QA-21: Anonymize user data + zero out wallet
+		db.Model(&u).Updates(map[string]interface{}{
+			"display_name": "Pengguna Dihapus", "bio": nil, "avatar_url": nil,
+			"email": fmt.Sprintf("deleted_%s@removed.local", u.ID),
+			"deleted_at": now, "deletion_scheduled_at": nil,
+		})
+		db.Where("follower_id = ? OR creator_id = ?", u.ID, u.ID).Delete(&entity.Follow{})
+		db.Where("user_id = ?", u.ID).Delete(&entity.Notification{})
+		db.Model(&entity.UserWallet{}).Where("user_id = ?", u.ID).Update("balance_credits", 0)
 	}
 }

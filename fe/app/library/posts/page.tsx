@@ -16,7 +16,7 @@ export default function LibraryPosts() {
 
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-bold">Post yang Dibeli</h1>
+      <h1 className="mb-6 text-2xl font-display font-black tracking-tight">Post yang Dibeli</h1>
       <div className="space-y-4">
         {posts?.map((p) => <PostCard key={p.id} post={p} />)}
         {posts?.length === 0 && <p className="text-sm text-gray-500 dark:text-gray-400">Belum ada post yang dibeli.</p>}

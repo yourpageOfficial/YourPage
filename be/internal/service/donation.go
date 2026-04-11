@@ -18,7 +18,6 @@ type CreateDonationRequest struct {
 	AmountIDR   int64     `json:"amount_idr"   validate:"required,min=1000"`
 	Message     *string   `json:"message"      validate:"omitempty,max=500"`
 	DonorName   string    `json:"donor_name"   validate:"required,max=100"`
-	DonorEmail  string    `json:"donor_email"  validate:"required,email"`
 	IsAnonymous bool      `json:"is_anonymous"`
 }
 
@@ -97,7 +96,6 @@ func (s *donationService) Create(ctx context.Context, supporterID *uuid.UUID, re
 		NetAmountIDR: netIDR,
 		Message:      req.Message,
 		DonorName:    req.DonorName,
-		DonorEmail:   req.DonorEmail,
 		IsAnonymous:  req.IsAnonymous,
 		Status:       entity.PaymentStatusPending,
 	}

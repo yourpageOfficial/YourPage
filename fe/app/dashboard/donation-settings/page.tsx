@@ -46,7 +46,7 @@ export default function DonationSettingsPage() {
 
   return (
     <div>
-      <h1 className="text-xl sm:text-2xl font-bold mb-6">Pengaturan Donasi</h1>
+      <h1 className="text-2xl font-display font-black tracking-tight mb-6">Pengaturan Donasi</h1>
 
       {/* Donation Goal */}
       <Card className="mb-4">
@@ -55,10 +55,16 @@ export default function DonationSettingsPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-gray-500 dark:text-gray-400">Tampilkan target donasi di halaman kamu untuk memotivasi supporter.</p>
-          <Input value={goalTitle} onChange={e => setGoalTitle(e.target.value)} placeholder="Contoh: Beli kamera baru untuk konten lebih bagus 📸" />
-          <div className="flex items-center gap-2">
-            <Input type="number" value={goalAmount} onChange={e => setGoalAmount(e.target.value)} placeholder="Target (Credit)" className="w-40" />
-            <span className="text-sm text-gray-500">Credit</span>
+          <div>
+            <label className="text-sm font-medium mb-1.5 block">Judul Target</label>
+            <Input value={goalTitle} onChange={e => setGoalTitle(e.target.value)} placeholder="Contoh: Beli kamera baru untuk konten lebih bagus 📸" />
+          </div>
+          <div>
+            <label className="text-sm font-medium mb-1.5 block">Target Nominal</label>
+            <div className="flex items-center gap-2">
+              <Input type="number" value={goalAmount} onChange={e => setGoalAmount(e.target.value)} placeholder="Target (Credit)" className="w-40" />
+              <span className="text-sm text-gray-500">Credit</span>
+            </div>
           </div>
           {goalTarget > 0 && (
             <div>
@@ -66,7 +72,7 @@ export default function DonationSettingsPage() {
                 <span>{formatCredit(goalCurrent)} terkumpul</span>
                 <span>{formatCredit(goalTarget)} target</span>
               </div>
-              <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+              <div className="h-3 bg-primary-100 dark:bg-navy-800 rounded-full overflow-hidden">
                 <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${goalPct}%` }} />
               </div>
               <p className="text-xs text-gray-400 mt-1">{goalPct.toFixed(0)}% tercapai</p>
