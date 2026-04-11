@@ -3,7 +3,6 @@ name: BE — Deploy Production
 on:
   push:
     branches: [main]
-    paths: [be/**]
     tags: ['v*']
 
 env:
