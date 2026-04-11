@@ -6,22 +6,23 @@ on:
 
 jobs:
   deploy:
-    name: Deploy to Production
+    name: Deploy
     runs-on: ubuntu-latest
     steps:
-      - name: Deploy via SSH
+      - name: SSH Deploy
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.VM_HOST }}
           username: ${{ secrets.VM_USER }}
           key: ${{ secrets.VM_SSH_KEY }}
+          command_timeout: 10m
           script: |
+            set -e
             cd ~/YourPage
             git fetch --all --tags
             git checkout main
             git pull origin main
-            sudo docker compose -f docker-compose.production.yml down fe
-            sudo docker compose -f docker-compose.production.yml up -d --build
-            sudo docker compose -f docker-compose.production.yml restart nginx
+            sudo docker compose -f docker-compose.production.yml build --no-cache fe be
+            sudo docker compose -f docker-compose.production.yml up -d
             sudo docker image prune -f
-            echo "Deployed $(git describe --tags) at $(date)"
+            echo "✅ Deployed $(git describe --tags) at $(date)"
