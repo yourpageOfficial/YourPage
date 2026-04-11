@@ -1,0 +1,25 @@
+name: Deploy Production
+
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  deploy:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USER }}
+          key: ${{ secrets.VM_SSH_KEY }}
+          script: |
+            cd ~/YourPage
+            git fetch --all --tags
+            git checkout main
+            git pull origin main
+            sudo docker compose -f docker-compose.production.yml up -d --build
+            sudo docker image prune -f
+            echo "Deployed $(git describe --tags) at $(date)"
