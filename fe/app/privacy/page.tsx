@@ -1,9 +1,8 @@
+"use client";
 import { Navbar } from "@/components/navbar";
 import { ScrollToTop } from "@/components/ui/scroll-to-top";
 import { PageTransition } from "@/components/ui/page-transition";
-import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Kebijakan Privasi — YourPage", description: "Kebijakan privasi platform YourPage." };
 
 const sections = [
   { id: "data", title: "1. Data yang Kami Kumpulkan", items: ["Akun: Email, username, password (terenkripsi).", "Profil: Nama tampilan, bio, avatar (opsional).", "KYC: Nama lengkap, nomor KTP, foto KTP (hanya untuk verifikasi penarikan).", "Transaksi: Riwayat pembelian, donasi, dan penarikan."] },

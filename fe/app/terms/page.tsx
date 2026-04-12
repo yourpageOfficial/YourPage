@@ -1,9 +1,8 @@
+"use client";
 import { Navbar } from "@/components/navbar";
 import { ScrollToTop } from "@/components/ui/scroll-to-top";
 import { PageTransition } from "@/components/ui/page-transition";
-import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Syarat & Ketentuan — YourPage", description: "Syarat dan ketentuan penggunaan platform YourPage." };
 
 const sections = [
   { id: "tentang", title: "1. Tentang YourPage", content: "YourPage adalah platform monetisasi konten untuk kreator Indonesia. Dengan menggunakan layanan ini, Anda menyetujui syarat dan ketentuan berikut." },

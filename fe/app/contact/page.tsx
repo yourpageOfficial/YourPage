@@ -1,10 +1,9 @@
+"use client";
+
 import { Navbar } from "@/components/navbar";
 import { PageTransition } from "@/components/ui/page-transition";
 import { Card, CardContent } from "@/components/ui/card";
 import { Mail, MessageCircle } from "lucide-react";
-import type { Metadata } from "next";
-
-export const metadata: Metadata = { title: "Hubungi Kami — YourPage", description: "Hubungi tim YourPage untuk pertanyaan atau bantuan." };
 
 export default function ContactPage() {
   return (
@@ -27,7 +26,6 @@ export default function ContactPage() {
               <div className="text-left"><p className="font-semibold">WhatsApp</p><p className="text-sm text-gray-500 dark:text-gray-400">+62 812-xxxx-xxxx</p></div>
             </CardContent></Card>
           </div>
-          <p className="mt-8 text-[10px] text-gray-400">Respon dalam 1x24 jam di hari kerja.</p>
         </main>
       </PageTransition>
     </>
