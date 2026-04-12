@@ -8,6 +8,9 @@ import { OfflineIndicator } from "@/components/offline-indicator";
 import { InstallPrompt } from "@/components/install-prompt";
 import { CookieConsent } from "@/components/cookie-consent";
 
+// Skip static prerendering — all pages are client-side
+export const dynamic = "force-dynamic";
+
 // Hardcoded theme detection script — no user input, safe usage of dangerouslySetInnerHTML
 const THEME_SCRIPT = `try{var t=localStorage.getItem("theme");if(t==="dark"||(!t&&matchMedia("(prefers-color-scheme:dark)").matches))document.documentElement.classList.add("dark")}catch(e){}`;
 

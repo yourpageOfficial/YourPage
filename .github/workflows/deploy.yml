@@ -1,4 +1,4 @@
-name: Deploy Full (Tag Release)
+name: Deploy Full
 
 on:
   push:
@@ -6,23 +6,22 @@ on:
 
 jobs:
   deploy:
-    name: Deploy All
+    name: Build & Deploy All
     runs-on: ubuntu-latest
     steps:
-      - name: SSH Deploy
-        uses: appleboy/ssh-action@v1
+      - uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.VM_HOST }}
           username: ${{ secrets.VM_USER }}
           key: ${{ secrets.VM_SSH_KEY }}
-          command_timeout: 10m
+          command_timeout: 15m
           script: |
             set -e
             cd ~/YourPage
             git fetch --all --tags
             git checkout main
             git pull origin main
-            sudo docker compose -f docker-compose.production.yml build --no-cache be fe
+            sudo docker compose -f docker-compose.production.yml build be fe
             sudo docker compose -f docker-compose.production.yml up -d
             sudo docker image prune -f
             echo "✅ Full deploy $(git describe --tags) at $(date)"

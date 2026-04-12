@@ -3,27 +3,24 @@ name: Deploy FE
 on:
   push:
     branches: [main]
-    paths:
-      - 'fe/**'
-      - 'docker-compose.production.yml'
+    paths: ['fe/**']
 
 jobs:
-  deploy-fe:
-    name: Deploy Frontend
+  deploy:
+    name: Build & Deploy FE
     runs-on: ubuntu-latest
     steps:
-      - name: SSH Deploy FE
-        uses: appleboy/ssh-action@v1
+      - uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.VM_HOST }}
           username: ${{ secrets.VM_USER }}
           key: ${{ secrets.VM_SSH_KEY }}
-          command_timeout: 10m
+          command_timeout: 8m
           script: |
             set -e
             cd ~/YourPage
             git pull origin main
-            sudo docker compose -f docker-compose.production.yml build --no-cache fe
+            sudo docker compose -f docker-compose.production.yml build fe
             sudo docker compose -f docker-compose.production.yml up -d fe
             sudo docker image prune -f
             echo "✅ FE deployed at $(date)"

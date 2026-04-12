@@ -3,27 +3,24 @@ name: Deploy BE
 on:
   push:
     branches: [main]
-    paths:
-      - 'be/**'
-      - 'docker-compose.production.yml'
+    paths: ['be/**']
 
 jobs:
-  deploy-be:
-    name: Deploy Backend
+  deploy:
+    name: Build & Deploy BE
     runs-on: ubuntu-latest
     steps:
-      - name: SSH Deploy BE
-        uses: appleboy/ssh-action@v1
+      - uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.VM_HOST }}
           username: ${{ secrets.VM_USER }}
           key: ${{ secrets.VM_SSH_KEY }}
-          command_timeout: 10m
+          command_timeout: 8m
           script: |
             set -e
             cd ~/YourPage
             git pull origin main
-            sudo docker compose -f docker-compose.production.yml build --no-cache be
+            sudo docker compose -f docker-compose.production.yml build be
             sudo docker compose -f docker-compose.production.yml up -d be
             sudo docker image prune -f
             echo "✅ BE deployed at $(date)"
