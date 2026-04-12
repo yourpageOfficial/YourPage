@@ -1,15 +1,18 @@
-name: Deploy Full (Tag Release)
+name: Deploy BE
 
 on:
   push:
-    tags: ['v*']
+    branches: [main]
+    paths:
+      - 'be/**'
+      - 'docker-compose.production.yml'
 
 jobs:
-  deploy:
-    name: Deploy All
+  deploy-be:
+    name: Deploy Backend
     runs-on: ubuntu-latest
     steps:
-      - name: SSH Deploy
+      - name: SSH Deploy BE
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.VM_HOST }}
@@ -19,10 +22,8 @@ jobs:
           script: |
             set -e
             cd ~/YourPage
-            git fetch --all --tags
-            git checkout main
             git pull origin main
-            sudo docker compose -f docker-compose.production.yml build --no-cache be fe
-            sudo docker compose -f docker-compose.production.yml up -d
+            sudo docker compose -f docker-compose.production.yml build --no-cache be
+            sudo docker compose -f docker-compose.production.yml up -d be
             sudo docker image prune -f
-            echo "✅ Full deploy $(git describe --tags) at $(date)"
+            echo "✅ BE deployed at $(date)"
