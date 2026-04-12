@@ -208,6 +208,7 @@ services:
     restart: unless-stopped
     networks:
       - frontend
+      - backend
     deploy:
       resources:
         limits:
