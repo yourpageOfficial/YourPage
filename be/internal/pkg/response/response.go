@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/yourpage/be/internal/pkg/i18n"
 )
 
 type Response struct {
@@ -66,4 +67,34 @@ func InternalError(c *gin.Context) {
 
 func UnprocessableEntity(c *gin.Context, message string) {
 	c.JSON(http.StatusUnprocessableEntity, Response{Success: false, Error: message})
+}
+
+func LocalizedBadRequest(c *gin.Context, key string, params ...string) {
+	msg := i18n.Tr(c, key, params...)
+	c.JSON(http.StatusBadRequest, Response{Success: false, Error: msg})
+}
+
+func LocalizedUnauthorized(c *gin.Context, key string, params ...string) {
+	msg := i18n.Tr(c, key, params...)
+	c.JSON(http.StatusUnauthorized, Response{Success: false, Error: msg})
+}
+
+func LocalizedForbidden(c *gin.Context, key string, params ...string) {
+	msg := i18n.Tr(c, key, params...)
+	c.JSON(http.StatusForbidden, Response{Success: false, Error: msg})
+}
+
+func LocalizedNotFound(c *gin.Context, key string, params ...string) {
+	msg := i18n.Tr(c, key, params...)
+	c.JSON(http.StatusNotFound, Response{Success: false, Error: msg})
+}
+
+func LocalizedConflict(c *gin.Context, key string, params ...string) {
+	msg := i18n.Tr(c, key, params...)
+	c.JSON(http.StatusConflict, Response{Success: false, Error: msg})
+}
+
+func LocalizedInternalError(c *gin.Context, key string, params ...string) {
+	msg := i18n.Tr(c, key, params...)
+	c.JSON(http.StatusInternalServerError, Response{Success: false, Error: msg})
 }

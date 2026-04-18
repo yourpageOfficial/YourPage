@@ -1,0 +1,27 @@
+package locale
+
+var IndonesianCommon = map[string]string{
+	"common.success": "Berhasil",
+	"common.failed": "Gagal",
+	"common.loading": "Memuat...",
+	"common.save": "Simpan",
+	"common.cancel": "Batal",
+	"common.delete": "Hapus",
+	"common.edit": "Edit",
+	"common.add": "Tambah",
+	"common.search": "Cari",
+	"common.filter": "Filter",
+	"common.sort": "Urutkan",
+	"common.load_more": "Muat lebih banyak",
+	"common.no_data": "Tidak ada data",
+	"common.confirm": "Konfirmasi",
+	"common.yes": "Ya",
+	"common.no": "Tidak",
+	"common.back": "Kembali",
+	"common.next": "Berikutnya",
+	"common.prev": "Sebelumnya",
+	"common.close": "Tutup",
+	"common.submit": "Kirim",
+	"common.required": "Wajib diisi",
+	"common.optional": "Opsional",
+}

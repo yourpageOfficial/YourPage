@@ -1,0 +1,411 @@
+package i18n
+
+var indonesian = map[string]string{
+	// Auth
+	"auth.login.success": "Berhasil masuk",
+	"auth.login.failed": "Email atau password salah",
+	"auth.register.success": "Berhasil daftar",
+	"auth.register.failed": "Email sudah terdaftar",
+	"auth.logout.success": "Berhasil keluar",
+	"auth.token.expired": "Sesi berakhir, silakan login kembali",
+	"auth.token.invalid": "Token tidak valid",
+	"auth.password.changed": "Password berhasil diubah",
+	"auth.password.wrong": "Password lama salah",
+	"auth.email.verify.success": "Email berhasil diverifikasi",
+	"auth.email.verify.failed": "Link verifikasi tidak valid",
+	"auth.reset.success": "Link reset password dikirim ke email",
+	"auth.reset.invalid": "Link tidak valid atau sudah expire",
+	"auth.tier.success": "Berhasil upgrade tier",
+	"auth.tier.failed": "Gagal upgrade tier",
+	"auth.upgrade.success": "Berhasil upgrade ke creator",
+	"auth.upgrade.failed": "Gagal upgrade ke creator",
+
+	// Common
+	"common.success": "Berhasil",
+	"common.failed": "Gagal",
+	"common.loading": "Memuat...",
+	"common.save": "Simpan",
+	"common.cancel": "Batal",
+	"common.delete": "Hapus",
+	"common.edit": "Edit",
+	"common.add": "Tambah",
+	"common.search": "Cari",
+	"common.filter": "Filter",
+	"common.sort": "Urutkan",
+	"common.load_more": "Muat lebih banyak",
+	"common.no_data": "Tidak ada data",
+	"common.confirm": "Konfirmasi",
+	"common.yes": "Ya",
+	"common.no": "Tidak",
+	"common.back": "Kembali",
+	"common.next": "Berikutnya",
+	"common.prev": "Sebelumnya",
+	"common.close": "Tutup",
+	"common.submit": "Kirim",
+	"common.required": "Wajib diisi",
+	"common.optional": "Opsional",
+
+	// Validation
+	"validation.email.invalid": "Email tidak valid",
+	"validation.password.short": "Password minimal 8 karakter",
+	"validation.password.mismatch": "Password tidak cocok",
+	"validation.username.short": "Username minimal 3 karakter",
+	"validation.username.invalid": "Username hanya boleh huruf, angka, dan underscore",
+	"validation.name.required": "Nama wajib diisi",
+	"validation.amount.positive": "Jumlah harus positif",
+	"validation.min_withdrawal": "Minimal penarikan %s Credit",
+	"validation.insufficient_credits": "Saldo tidak mencukupi",
+	"validation.post.title.required": "Judul post wajib diisi",
+	"validation.post.content.required": "Konten post wajib diisi",
+	"validation.product.name.required": "Nama produk wajib diisi",
+	"validation.product.price.positive": "Harga produk harus positif",
+	"validation.file.size": "Ukuran file maksimal %s MB",
+	"validation.file.type": "Tipe file tidak didukung",
+	"validation.date.future": "Tanggal harus masa depan",
+	"validation.date.past": "Tanggal tidak boleh masa lalu",
+	"validation.kyc.required": "Silakan verifikasi identitas terlebih dahulu",
+
+	// Errors
+	"error.server": "Terjadi kesalahan, coba lagi nanti",
+	"error.not_found": "Data tidak ditemukan",
+	"error.unauthorized": "Silakan login terlebih dahulu",
+	"error.forbidden": "Anda tidak memiliki akses",
+	"error.rate_limit": "Terlalu banyak permintaan, coba lagi nanti",
+	"error.payment.failed": "Pembayaran gagal",
+	"error.payment.cancelled": "Pembayaran dibatalkan",
+	"error.already.purchased": "Anda sudah membeli ini",
+	"error.self.purchase": "Tidak bisa membeli konten sendiri",
+	"error.account.suspended": "Akun ditangguhkan",
+	"error.account.banned": "Akun diblokir",
+	"error.creator.not_found": "Kreator tidak ditemukan",
+	"error.post.not_found": "Post tidak ditemukan",
+	"error.product.not_found": "Produk tidak ditemukan",
+	"error.donation.not_found": "Donasi tidak ditemukan",
+	"error.transaction.not_found": "Transaksi tidak ditemukan",
+	"error.withdrawal.pending": "Penarikan masih dalam proses",
+	"error.kyc.pending": "Verifikasi masih dalam proses",
+	"error.storage.limit": "Storage limit tercapai",
+	"error.product.limit": "Batas produk tercapai untuk tier ini",
+
+	// Posts
+	"post.create.success": "Post berhasil dibuat",
+	"post.update.success": "Post berhasil diperbarui",
+	"post.delete.success": "Post berhasil dihapus",
+	"post.like.success": "Post berhasil ditandai suka",
+	"post.unlike.success": "Post berhasil dihapus dari suka",
+	"post.comment.success": "Komentar berhasil ditambahkan",
+	"post.comment.delete": "Komentar berhasil dihapus",
+	"post.purchase.success": "Post berhasil dibeli",
+	"post.media.added": "Media berhasil ditambahkan",
+	"post.media.deleted": "Media berhasil dihapus",
+	"post.scheduled": "Post dijadwalkan untuk %s",
+
+	// Products
+	"product.create.success": "Produk berhasil dibuat",
+	"product.update.success": "Produk berhasil diperbarui",
+	"product.delete.success": "Produk berhasil dihapus",
+	"product.purchase.success": "Produk berhasil dibeli",
+	"product.asset.added": "Asset berhasil ditambahkan",
+	"product.asset.deleted": "Asset berhasil dihapus",
+	"product.download.ready": "Produk siap diunduh",
+	"product.download.expired": "Link unduh sudah expire",
+
+	// Donations
+	"donation.success": "Donasi berhasil dikirim",
+	"donation.anonymous": "Donasi anonim",
+	"donation.goal.reached": "Target donasi tercapai!",
+
+	// Wallet
+	"wallet.balance": "Saldo Credit",
+	"wallet.topup.requested": "Request top-up berhasil",
+	"wallet.topup.approved": "Top-up berhasil disetujui",
+	"wallet.topup.rejected": "Top-up ditolak",
+	"wallet.topup.proof.uploaded": "Bukti transfer berhasil diunggah",
+	"wallet.withdraw.requested": "Request penarikan berhasil",
+	"wallet.withdraw.approved": "Penarikan disetujui",
+	"wallet.withdraw.rejected": "Penarikan ditolak",
+	"wallet.transaction.history": "Riwayat Transaksi",
+
+	// Follow
+	"follow.success": "Berhasil mengikuti",
+	"follow.unfollow.success": "Berhasil berhenti mengikuti",
+	"follow.already": "Anda sudah mengikuti",
+	"follow.self": "Tidak bisa mengikuti diri sendiri",
+
+	// Chat
+	"chat.send.success": "Pesan terkirim",
+	"chat.read": "Pesan ditandai sudah dibaca",
+	"chat.empty": "Belum ada percakapan",
+	"chat.limit.reached": "Batas chat hari ini tercapai",
+
+	// Membership
+	"membership.create.success": "Tier membership berhasil dibuat",
+	"membership.delete.success": "Tier membership berhasil dihapus",
+	"membership.subscribe.success": "Berhasil subscribe membership",
+	"membership.cancel.success": "Membership berhasil dibatalkan",
+	"membership.has.active": "Anda sudah memiliki membership aktif",
+	"membership.cannot.delete": "Tidak bisa hapus tier dengan member aktif",
+	"membership.max.reached": "Batas maksimal 5 tier",
+
+	// Overlay
+	"overlay.tier.create.success": "Overlay tier berhasil dibuat",
+	"overlay.tier.delete.success": "Overlay tier berhasil dihapus",
+
+	// Referral
+	"referral.code.generated": "Kode referral berhasil dibuat",
+	"referral.used": "Referral berhasil digunakan",
+
+	// Broadcast
+	"broadcast.success": "Broadcast berhasil dikirim",
+	"broadcast.limit.reached": "Batas broadcast tercapai untuk periode ini",
+	"broadcast.tier.required": "Tier Pro atau Business diperlukan untuk broadcast",
+
+	// KYC
+	"kyc.submit.success": "Data KYC berhasil dikirim",
+	"kyc.approved": "KYC berhasil diverifikasi",
+	"kyc.rejected": "KYC ditolak",
+	"kyc.pending": "KYC masih dalam verifikasi",
+
+	// Admin
+	"admin.user.ban.success": "User berhasil diblokir",
+	"admin.user.unban.success": "User berhasil di-unban",
+	"admin.user.verify.success": "Creator berhasil diverifikasi",
+	"admin.user.promo.success": "Promo berhasil diterapkan",
+	"admin.withdrawal.approved": "Penarikan disetujui",
+	"admin.withdrawal.rejected": "Penarikan ditolak",
+	"admin.kyc.approved": "KYC disetujui",
+	"admin.kyc.rejected": "KYC ditolak",
+	"admin.topup.approved": "Top-up disetujui",
+	"admin.topup.rejected": "Top-up ditolak",
+	"admin.report.resolved": "Laporan sudah diproses",
+	"admin.refund.success": "Refund berhasil",
+	"admin.settings.updated": "Pengaturan berhasil diperbarui",
+
+	// Notifications
+	"notification.new.follower": " baru mengikuti Anda",
+	"notification.new.post": " membuat post baru",
+	"notification.new.donation": " memberikan donasi",
+	"notification.new.membership": " subscribe ke membership Anda",
+	"notification.new.chat": " mengirim pesan baru",
+	"notification.new.purchase": " membeli konten Anda",
+	"notification.marked.read": "Notifikasi ditandai sudah dibaca",
+	"notification.dismissed": "Notifikasi dihapus",
+
+	// Time
+	"time.just_now": "Baru saja",
+	"time.minutes_ago": "%s menit lalu",
+	"time.hours_ago": "%s jam lalu",
+	"time.days_ago": "%s hari lalu",
+	"time.weeks_ago": "%s minggu lalu",
+	"time.months_ago": "%s bulan lalu",
+	"time.years_ago": "%s tahun lalu",
+
+	// Currency
+	"currency.credit": "%s Credit",
+	"currency.idr": "Rp %s",
+}
+
+var english = map[string]string{
+	// Auth
+	"auth.login.success": "Successfully logged in",
+	"auth.login.failed": "Invalid email or password",
+	"auth.register.success": "Successfully registered",
+	"auth.register.failed": "Email already registered",
+	"auth.logout.success": "Successfully logged out",
+	"auth.token.expired": "Session expired, please log in again",
+	"auth.token.invalid": "Invalid token",
+	"auth.password.changed": "Password changed successfully",
+	"auth.password.wrong": "Old password is incorrect",
+	"auth.email.verify.success": "Email verified successfully",
+	"auth.email.verify.failed": "Invalid verification link",
+	"auth.reset.success": "Password reset link sent to email",
+	"auth.reset.invalid": "Invalid or expired link",
+	"auth.tier.success": "Tier upgraded successfully",
+	"auth.tier.failed": "Failed to upgrade tier",
+	"auth.upgrade.success": "Successfully upgraded to creator",
+	"auth.upgrade.failed": "Failed to upgrade to creator",
+
+	// Common
+	"common.success": "Success",
+	"common.failed": "Failed",
+	"common.loading": "Loading...",
+	"common.save": "Save",
+	"common.cancel": "Cancel",
+	"common.delete": "Delete",
+	"common.edit": "Edit",
+	"common.add": "Add",
+	"common.search": "Search",
+	"common.filter": "Filter",
+	"common.sort": "Sort",
+	"common.load_more": "Load more",
+	"common.no_data": "No data available",
+	"common.confirm": "Confirm",
+	"common.yes": "Yes",
+	"common.no": "No",
+	"common.back": "Back",
+	"common.next": "Next",
+	"common.prev": "Previous",
+	"common.close": "Close",
+	"common.submit": "Submit",
+	"common.required": "Required",
+	"common.optional": "Optional",
+
+	// Validation
+	"validation.email.invalid": "Invalid email address",
+	"validation.password.short": "Password must be at least 8 characters",
+	"validation.password.mismatch": "Passwords do not match",
+	"validation.username.short": "Username must be at least 3 characters",
+	"validation.username.invalid": "Username can only contain letters, numbers, and underscores",
+	"validation.name.required": "Name is required",
+	"validation.amount.positive": "Amount must be positive",
+	"validation.min_withdrawal": "Minimum withdrawal is %s Credits",
+	"validation.insufficient_credits": "Insufficient balance",
+	"validation.post.title.required": "Post title is required",
+	"validation.post.content.required": "Post content is required",
+	"validation.product.name.required": "Product name is required",
+	"validation.product.price.positive": "Product price must be positive",
+	"validation.file.size": "Maximum file size is %s MB",
+	"validation.file.type": "Unsupported file type",
+	"validation.date.future": "Date must be in the future",
+	"validation.date.past": "Date cannot be in the past",
+	"validation.kyc.required": "Please verify your identity first",
+
+	// Errors
+	"error.server": "An error occurred, please try again later",
+	"error.not_found": "Data not found",
+	"error.unauthorized": "Please log in first",
+	"error.forbidden": "You do not have access",
+	"error.rate_limit": "Too many requests, please try again later",
+	"error.payment.failed": "Payment failed",
+	"error.payment.cancelled": "Payment cancelled",
+	"error.already.purchased": "You already purchased this",
+	"error.self.purchase": "Cannot purchase your own content",
+	"error.account.suspended": "Account suspended",
+	"error.account.banned": "Account banned",
+	"error.creator.not_found": "Creator not found",
+	"error.post.not_found": "Post not found",
+	"error.product.not_found": "Product not found",
+	"error.donation.not_found": "Donation not found",
+	"error.transaction.not_found": "Transaction not found",
+	"error.withdrawal.pending": "Withdrawal still in progress",
+	"error.kyc.pending": "Verification still in progress",
+	"error.storage.limit": "Storage limit reached",
+	"error.product.limit": "Product limit reached for this tier",
+
+	// Posts
+	"post.create.success": "Post created successfully",
+	"post.update.success": "Post updated successfully",
+	"post.delete.success": "Post deleted successfully",
+	"post.like.success": "Post liked",
+	"post.unlike.success": "Post unliked",
+	"post.comment.success": "Comment added successfully",
+	"post.comment.delete": "Comment deleted successfully",
+	"post.purchase.success": "Post purchased successfully",
+	"post.media.added": "Media added successfully",
+	"post.media.deleted": "Media deleted successfully",
+	"post.scheduled": "Post scheduled for %s",
+
+	// Products
+	"product.create.success": "Product created successfully",
+	"product.update.success": "Product updated successfully",
+	"product.delete.success": "Product deleted successfully",
+	"product.purchase.success": "Product purchased successfully",
+	"product.asset.added": "Asset added successfully",
+	"product.asset.deleted": "Asset deleted successfully",
+	"product.download.ready": "Product ready for download",
+	"product.download.expired": "Download link expired",
+
+	// Donations
+	"donation.success": "Donation sent successfully",
+	"donation.anonymous": "Anonymous donation",
+	"donation.goal.reached": "Donation goal reached!",
+
+	// Wallet
+	"wallet.balance": "Credit Balance",
+	"wallet.topup.requested": "Top-up requested successfully",
+	"wallet.topup.approved": "Top-up approved",
+	"wallet.topup.rejected": "Top-up rejected",
+	"wallet.topup.proof.uploaded": "Proof of transfer uploaded successfully",
+	"wallet.withdraw.requested": "Withdrawal requested successfully",
+	"wallet.withdraw.approved": "Withdrawal approved",
+	"wallet.withdraw.rejected": "Withdrawal rejected",
+	"wallet.transaction.history": "Transaction History",
+
+	// Follow
+	"follow.success": "Successfully followed",
+	"follow.unfollow.success": "Successfully unfollowed",
+	"follow.already": "Already following",
+	"follow.self": "Cannot follow yourself",
+
+	// Chat
+	"chat.send.success": "Message sent",
+	"chat.read": "Message marked as read",
+	"chat.empty": "No conversations yet",
+	"chat.limit.reached": "Daily chat limit reached",
+
+	// Membership
+	"membership.create.success": "Membership tier created successfully",
+	"membership.delete.success": "Membership tier deleted successfully",
+	"membership.subscribe.success": "Successfully subscribed to membership",
+	"membership.cancel.success": "Membership cancelled successfully",
+	"membership.has.active": "You already have an active membership",
+	"membership.cannot.delete": "Cannot delete tier with active members",
+	"membership.max.reached": "Maximum of 5 tiers reached",
+
+	// Overlay
+	"overlay.tier.create.success": "Overlay tier created successfully",
+	"overlay.tier.delete.success": "Overlay tier deleted successfully",
+
+	// Referral
+	"referral.code.generated": "Referral code generated successfully",
+	"referral.used": "Referral used successfully",
+
+	// Broadcast
+	"broadcast.success": "Broadcast sent successfully",
+	"broadcast.limit.reached": "Broadcast limit reached for this period",
+	"broadcast.tier.required": "Pro or Business tier required for broadcasting",
+
+	// KYC
+	"kyc.submit.success": "KYC data submitted successfully",
+	"kyc.approved": "KYC verified successfully",
+	"kyc.rejected": "KYC rejected",
+	"kyc.pending": "KYC still under review",
+
+	// Admin
+	"admin.user.ban.success": "User banned successfully",
+	"admin.user.unban.success": "User unbanned successfully",
+	"admin.user.verify.success": "Creator verified successfully",
+	"admin.user.promo.success": "Promo applied successfully",
+	"admin.withdrawal.approved": "Withdrawal approved",
+	"admin.withdrawal.rejected": "Withdrawal rejected",
+	"admin.kyc.approved": "KYC approved",
+	"admin.kyc.rejected": "KYC rejected",
+	"admin.topup.approved": "Top-up approved",
+	"admin.topup.rejected": "Top-up rejected",
+	"admin.report.resolved": "Report resolved",
+	"admin.refund.success": "Refund successful",
+	"admin.settings.updated": "Settings updated successfully",
+
+	// Notifications
+	"notification.new.follower": " started following you",
+	"notification.new.post": " posted new content",
+	"notification.new.donation": " made a donation",
+	"notification.new.membership": " subscribed to your membership",
+	"notification.new.chat": " sent you a message",
+	"notification.new.purchase": " purchased your content",
+	"notification.marked.read": "Notification marked as read",
+	"notification.dismissed": "Notification dismissed",
+
+	// Time
+	"time.just_now": "Just now",
+	"time.minutes_ago": "%s minutes ago",
+	"time.hours_ago": "%s hours ago",
+	"time.days_ago": "%s days ago",
+	"time.weeks_ago": "%s weeks ago",
+	"time.months_ago": "%s months ago",
+	"time.years_ago": "%s years ago",
+
+	// Currency
+	"currency.credit": "%s Credits",
+	"currency.idr": "Rp %s",
+}

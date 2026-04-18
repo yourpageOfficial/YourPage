@@ -33,6 +33,7 @@ type User struct {
 	BanReason    *string    `json:"ban_reason,omitempty"`
 	BanExpiresAt *time.Time `json:"ban_expires_at,omitempty"`
 	DeletionScheduledAt *time.Time `json:"deletion_scheduled_at,omitempty"`
+	Locale       string     `json:"locale" gorm:"default:'id'"`
 	CreatedAt    time.Time  `json:"created_at"`
 	UpdatedAt    time.Time  `json:"updated_at"`
 	DeletedAt    *time.Time `json:"-" gorm:"index"`

@@ -62,6 +62,7 @@ type UserProfileResponse struct {
 	DisplayName string           `json:"display_name"`
 	AvatarURL   *string          `json:"avatar_url"`
 	Bio         *string          `json:"bio"`
+	Locale      string           `json:"locale"`
 	Role          entity.UserRole  `json:"role"`
 	EmailVerified bool             `json:"email_verified"`
 	Creator       *creatorSnapshot `json:"creator_profile,omitempty"`
@@ -89,7 +90,7 @@ type AuthService interface {
 	ForgotPassword(ctx context.Context, email string) error
 	ResetPassword(ctx context.Context, token, newPassword string) error
 	UpgradeToCreator(ctx context.Context, userID uuid.UUID, req UpgradeCreatorRequest) error
-	UpdateProfile(ctx context.Context, userID uuid.UUID, displayName, bio, avatarURL, pageColor, headerImage *string, chatPrice *int64, chatAllowFrom *string, autoReply *string, socialLinks map[string]interface{}, goalTitle *string, goalAmount *int64, welcomeMsg, overlayStyle, overlayText, category *string) error
+	UpdateProfile(ctx context.Context, userID uuid.UUID, displayName, bio, avatarURL, locale, pageColor, headerImage *string, chatPrice *int64, chatAllowFrom *string, autoReply *string, socialLinks map[string]interface{}, goalTitle *string, goalAmount *int64, welcomeMsg, overlayStyle, overlayText, category *string) error
 	ChangePassword(ctx context.Context, userID uuid.UUID, oldPassword, newPassword string) error
 	VerifyEmail(ctx context.Context, token string) error
 	ResendVerification(ctx context.Context, userID uuid.UUID) error
@@ -305,6 +306,7 @@ func (s *authService) GetMe(ctx context.Context, userID uuid.UUID) (*UserProfile
 		DisplayName:   user.DisplayName,
 		AvatarURL:     user.AvatarURL,
 		Bio:           user.Bio,
+		Locale:        user.Locale,
 		Role:          user.Role,
 		EmailVerified: user.EmailVerified,
 	}
@@ -427,7 +429,7 @@ func (s *authService) UpgradeToCreator(ctx context.Context, userID uuid.UUID, re
 }
 
 // UpdateProfile updates display name, bio, and avatar.
-func (s *authService) UpdateProfile(ctx context.Context, userID uuid.UUID, displayName, bio, avatarURL, pageColor, headerImage *string, chatPrice *int64, chatAllowFrom *string, autoReply *string, socialLinks map[string]interface{}, goalTitle *string, goalAmount *int64, welcomeMsg, overlayStyle, overlayText, category *string) error {
+func (s *authService) UpdateProfile(ctx context.Context, userID uuid.UUID, displayName, bio, avatarURL, locale, pageColor, headerImage *string, chatPrice *int64, chatAllowFrom *string, autoReply *string, socialLinks map[string]interface{}, goalTitle *string, goalAmount *int64, welcomeMsg, overlayStyle, overlayText, category *string) error {
 	user, err := s.userRepo.FindByID(ctx, userID)
 	if err != nil {
 		return err
@@ -441,6 +443,9 @@ func (s *authService) UpdateProfile(ctx context.Context, userID uuid.UUID, displ
 	}
 	if avatarURL != nil {
 		user.AvatarURL = avatarURL
+	}
+	if locale != nil && (*locale == "id" || *locale == "en") {
+		user.Locale = *locale
 	}
 	if err := s.userRepo.Update(ctx, user); err != nil {
 		return err
@@ -498,12 +503,18 @@ func (s *authService) ChangePassword(ctx context.Context, userID uuid.UUID, oldP
 
 // issueTokenPair generates access + refresh tokens and persists the refresh token.
 func (s *authService) issueTokenPair(ctx context.Context, userID uuid.UUID, role string) (*LoginResponse, error) {
-	accessToken, err := pkgjwt.GenerateAccessToken(s.jwtCfg, userID, role)
+	user, err := s.userRepo.FindByID(ctx, userID)
+	locale := "id"
+	if err == nil && user.Locale != "" {
+		locale = user.Locale
+	}
+
+	accessToken, err := pkgjwt.GenerateAccessToken(s.jwtCfg, userID, role, locale)
 	if err != nil {
 		return nil, fmt.Errorf("issue_tokens: generate access: %w", err)
 	}
 
-	refreshToken, err := pkgjwt.GenerateRefreshToken(s.jwtCfg, userID, role)
+	refreshToken, err := pkgjwt.GenerateRefreshToken(s.jwtCfg, userID, role, locale)
 	if err != nil {
 		return nil, fmt.Errorf("issue_tokens: generate refresh: %w", err)
 	}

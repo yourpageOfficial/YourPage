@@ -9,6 +9,7 @@ import (
 	"github.com/redis/go-redis/v9"
 	"github.com/yourpage/be/internal/config"
 	"github.com/yourpage/be/internal/handler/middleware"
+	"github.com/yourpage/be/internal/pkg/i18n"
 	"github.com/yourpage/be/internal/pkg/response"
 	"github.com/yourpage/be/internal/repository"
 	"gorm.io/gorm"
@@ -50,6 +51,7 @@ func NewRouter(cfg *config.Config, rdb *redis.Client, h Handlers) *gin.Engine {
 	r.Use(middleware.SecurityHeaders())
 	r.Use(middleware.Metrics())
 	r.Use(middleware.AccessLog())
+	r.Use(i18n.AcceptLanguageMiddleware())
 
 	// Prometheus metrics (internal only - check header)
 	r.GET("/metrics", func(c *gin.Context) {

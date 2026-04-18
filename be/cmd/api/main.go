@@ -17,6 +17,7 @@ import (
 	"github.com/yourpage/be/internal/entity"
 	"github.com/yourpage/be/internal/handler"
 	infraredis "github.com/yourpage/be/internal/infrastructure/redis"
+	"github.com/yourpage/be/internal/pkg/i18n"
 	"github.com/yourpage/be/internal/pkg/logger"
 	"github.com/yourpage/be/internal/pkg/mailer"
 	"github.com/yourpage/be/internal/pkg/payment/xendit"
@@ -34,6 +35,9 @@ func main() {
 	}
 
 	logger.Init(cfg.App.Env)
+
+	// Initialize i18n
+	i18n.Init("")
 
 	// ---- Database ----
 	db, err := postgres.NewDB(cfg.DB.URL)

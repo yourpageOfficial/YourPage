@@ -1,0 +1,27 @@
+package locale
+
+var EnglishCommon = map[string]string{
+	"common.success": "Success",
+	"common.failed": "Failed",
+	"common.loading": "Loading...",
+	"common.save": "Save",
+	"common.cancel": "Cancel",
+	"common.delete": "Delete",
+	"common.edit": "Edit",
+	"common.add": "Add",
+	"common.search": "Search",
+	"common.filter": "Filter",
+	"common.sort": "Sort",
+	"common.load_more": "Load more",
+	"common.no_data": "No data available",
+	"common.confirm": "Confirm",
+	"common.yes": "Yes",
+	"common.no": "No",
+	"common.back": "Back",
+	"common.next": "Next",
+	"common.prev": "Previous",
+	"common.close": "Close",
+	"common.submit": "Submit",
+	"common.required": "Required",
+	"common.optional": "Optional",
+}
