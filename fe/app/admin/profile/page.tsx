@@ -1,19 +1,21 @@
 "use client";
 
 import { useAuth } from "@/lib/auth";
+import { useTranslation } from "@/lib/use-translation";
 import { Badge } from "@/components/ui/badge";
 import { Avatar } from "@/components/ui/avatar";
 import { CollapsibleCard } from "@/components/ui/collapsible-card";
 import { ChangePasswordCard } from "@/components/change-password";
 
 export default function AdminProfile() {
+  const { t } = useTranslation();
   const { user } = useAuth();
 
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-display font-black tracking-tight">Admin Profile</h1>
+      <h1 className="mb-6 text-2xl font-display font-black tracking-tight">{t("admin_profile.title")}</h1>
       <div className="space-y-4">
-        <CollapsibleCard title="👤 Profil" defaultOpen>
+        <CollapsibleCard title={"👤 " + t("admin_profile.profile")} defaultOpen>
           <div className="flex items-center gap-4">
             <Avatar src={user?.avatar_url} name={user?.display_name} size="xl" />
             <div>

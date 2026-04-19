@@ -5,20 +5,22 @@ import { usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { Home, Bell, User, MessageCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/lib/use-translation";
 
 export function BottomNav() {
   const { user } = useAuth();
   const pathname = usePathname();
+  const { t } = useTranslation();
 
   if (!user) return null;
 
   const dashboardLink = user.role === "admin" ? "/admin" : user.role === "creator" ? "/dashboard" : "/s";
 
   const items = [
-    { href: dashboardLink, icon: Home, label: "Beranda" },
-    { href: "/chat", icon: MessageCircle, label: "Chat" },
-    { href: "/notifications", icon: Bell, label: "Notifikasi" },
-    { href: user.role === "admin" ? "/admin/profile" : "/profile", icon: User, label: "Profil" },
+    { href: dashboardLink, icon: Home, label: t("bottom_nav.home") },
+    { href: "/chat", icon: MessageCircle, label: t("bottom_nav.chat") },
+    { href: "/notifications", icon: Bell, label: t("bottom_nav.notifications") },
+    { href: user.role === "admin" ? "/admin/profile" : "/profile", icon: User, label: t("bottom_nav.profile") },
   ];
 
   return (

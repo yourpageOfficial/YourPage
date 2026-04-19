@@ -3,6 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useParams, useRouter } from "next/navigation";
 import api from "@/lib/api";
+import { useTranslation } from "@/lib/use-translation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -20,21 +21,19 @@ import { useState } from "react";
 const roleBadge: Record<string, string> = { admin: "bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400", creator: "bg-primary-100 dark:bg-primary-900/30 text-blue-700 dark:text-blue-400", supporter: "bg-primary-50 dark:bg-navy-800 text-gray-700 dark:text-gray-400" };
 
 export default function AdminUserDetail() {
+  const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const qc = useQueryClient();
 
-  // Fetch user from admin users list (no dedicated endpoint, use list with filter)
   const { data: user } = useQuery({
     queryKey: ["admin-user", id],
     queryFn: async () => {
-      // Get all users and find by id (simple approach)
       const { data } = await api.get(`/admin/users?limit=100`);
       return (data.data as any[]).find((u: any) => u.id === id) || null;
     },
   });
 
-  // Fetch user's payments
   const { data: payments } = useQuery({
     queryKey: ["admin-user-payments", id],
     queryFn: async () => {
@@ -43,7 +42,6 @@ export default function AdminUserDetail() {
     },
   });
 
-  // Fetch user's donations (sent)
   const { data: donations } = useQuery({
     queryKey: ["admin-user-donations", id],
     queryFn: async () => {
@@ -73,7 +71,7 @@ export default function AdminUserDetail() {
       note: promoNote,
     }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin-user", id] }); toast.success("Promo updated"); },
-    onError: (e: any) => toast.error(e.response?.data?.error || "Gagal"),
+    onError: (e: any) => toast.error(e.response?.data?.error || t("common.error")),
   });
 
   if (!user) return <ListSkeleton count={3} />;
@@ -81,12 +79,11 @@ export default function AdminUserDetail() {
   return (
     <div>
       <Button variant="ghost" size="sm" onClick={() => router.push("/admin/users")} className="mb-4">
-        <ArrowLeft className="mr-1 h-4 w-4" /> Kembali
+        <ArrowLeft className="mr-1 h-4 w-4" /> {t("common.back")}
       </Button>
 
-      {/* Profile Card */}
       <Card className="mb-6">
-        <CardHeader><CardTitle>Detail User</CardTitle></CardHeader>
+        <CardHeader><CardTitle>{t("admin_users.title")} Detail</CardTitle></CardHeader>
         <CardContent className="space-y-3">
           <div className="flex items-center gap-4">
             <Avatar src={user.avatar_url} name={user.display_name} size="xl" />
@@ -95,22 +92,22 @@ export default function AdminUserDetail() {
               <p className="text-gray-500 dark:text-gray-400">@{user.username}</p>
               <div className="flex gap-2 mt-1">
                 <Badge className={roleBadge[user.role] || ""}>{user.role}</Badge>
-                {user.is_banned && <Badge className="bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400">Banned</Badge>}
+                {user.is_banned && <Badge className="bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400">{t("admin_users.banned")}</Badge>}
               </div>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
             <div><span className="text-gray-500 dark:text-gray-400">ID:</span> {user.id}</div>
-            <div><span className="text-gray-500 dark:text-gray-400">Joined:</span> {formatDate(user.created_at)}</div>
+            <div><span className="text-gray-500 dark:text-gray-400">{t("common.join")}:</span> {formatDate(user.created_at)}</div>
             {user.bio && <div className="col-span-2"><span className="text-gray-500 dark:text-gray-400">Bio:</span> {user.bio}</div>}
           </div>
           <div className="flex gap-2 pt-2">
-            {user.role === "creator" && <Link href={`/c/${user.username}`}><Button size="sm" variant="outline">Lihat Page</Button></Link>}
+            {user.role === "creator" && <Link href={`/c/${user.username}`}><Button size="sm" variant="outline">{t("admin_users.page")}</Button></Link>}
             {user.is_banned
-              ? <Button size="sm" onClick={() => unban.mutate()}>Unban</Button>
+              ? <Button size="sm" onClick={() => unban.mutate()}>{t("admin_users.unban")}</Button>
               : user.role !== "admin" && (
-                <ConfirmDialog title="Ban User?" message={`Yakin ingin ban ${user.display_name}?`} confirmLabel="Ban" variant="destructive" onConfirm={() => ban.mutate()}>
-                  {(open) => <Button size="sm" variant="destructive" onClick={open}>Ban User</Button>}
+                <ConfirmDialog title={t("admin_users.ban_confirm_title")} message={t("admin_users.ban_confirm_message", user.display_name)} confirmLabel={t("admin_users.ban")} variant="destructive" onConfirm={() => ban.mutate()}>
+                  {(open) => <Button size="sm" variant="destructive" onClick={open}>{t("admin_users.ban")} {t("common.user")}</Button>}
                 </ConfirmDialog>
               )
             }
@@ -118,10 +115,9 @@ export default function AdminUserDetail() {
         </CardContent>
       </Card>
 
-      {/* Creator Promo (only for creators) */}
       {user.role === "creator" && (
         <Card className="mb-6">
-          <CardHeader><CardTitle>🎯 Promo Creator</CardTitle></CardHeader>
+          <CardHeader><CardTitle>🎯 {t("admin_promo.title")}</CardTitle></CardHeader>
           <CardContent className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -129,28 +125,27 @@ export default function AdminUserDetail() {
                 <Input type="number" placeholder="Kosong = pakai tier" value={promoFee} onChange={e => setPromoFee(e.target.value)} />
               </div>
               <div>
-                <label className="text-xs text-gray-500 dark:text-gray-400">Durasi (hari)</label>
+                <label className="text-xs text-gray-500 dark:text-gray-400">Duration (days)</label>
                 <Input type="number" value={promoDays} onChange={e => setPromoDays(e.target.value)} />
               </div>
             </div>
             <label className="flex items-center gap-2 text-sm cursor-pointer">
               <input type="checkbox" checked={featured} onChange={e => setFeatured(e.target.checked)} className="rounded" />
-              Featured di homepage
+              {t("admin_promo.featured")} homepage
             </label>
-            <Input placeholder="Catatan admin (opsional)" value={promoNote} onChange={e => setPromoNote(e.target.value)} />
+            <Input placeholder={t("admin_reports.note")} value={promoNote} onChange={e => setPromoNote(e.target.value)} />
             <div className="flex gap-2">
-              <Button size="sm" onClick={() => setPromo.mutate()}>Simpan Promo</Button>
-              <Button size="sm" variant="ghost" onClick={() => { setPromoFee(""); setPromoDays("90"); setFeatured(false); setPromoNote(""); setPromo.mutate(); }}>Reset Promo</Button>
+              <Button size="sm" onClick={() => setPromo.mutate()}>{t("common.save")} Promo</Button>
+              <Button size="sm" variant="ghost" onClick={() => { setPromoFee(""); setPromoDays("90"); setFeatured(false); setPromoNote(""); setPromo.mutate(); }}>{t("common.reset")}</Button>
             </div>
           </CardContent>
         </Card>
       )}
 
-      {/* Payment History */}
       <Card className="mb-6">
-        <CardHeader><CardTitle>Riwayat Payment ({payments?.length || 0})</CardTitle></CardHeader>
+        <CardHeader><CardTitle>{t("admin_payments.title")} ({payments?.length || 0})</CardTitle></CardHeader>
         <CardContent>
-          {payments?.length === 0 && <p className="text-sm text-gray-500 dark:text-gray-400">Tidak ada payment.</p>}
+          {payments?.length === 0 && <p className="text-sm text-gray-500 dark:text-gray-400">{t("admin_payments.no_data")}</p>}
           <div className="space-y-2">
             {payments?.slice(0, 20).map((p: any) => (
               <div key={p.id} className="flex items-center justify-between text-sm border-b pb-2">
@@ -168,11 +163,10 @@ export default function AdminUserDetail() {
         </CardContent>
       </Card>
 
-      {/* Donation History */}
       <Card>
-        <CardHeader><CardTitle>Riwayat Donasi ({donations?.length || 0})</CardTitle></CardHeader>
+        <CardHeader><CardTitle>{t("donations.donate")} ({donations?.length || 0})</CardTitle></CardHeader>
         <CardContent>
-          {donations?.length === 0 && <p className="text-sm text-gray-500 dark:text-gray-400">Tidak ada donasi.</p>}
+          {donations?.length === 0 && <p className="text-sm text-gray-500 dark:text-gray-400">{t("admin_donations.no_data")}</p>}
           <div className="space-y-2">
             {donations?.slice(0, 20).map((d: any) => (
               <div key={d.id} className="flex items-center justify-between text-sm border-b pb-2">

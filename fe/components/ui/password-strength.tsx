@@ -2,16 +2,19 @@
 
 import { useMemo } from "react";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/lib/use-translation";
 import { Check, X } from "lucide-react";
 
-const rules = [
-  { label: "Minimal 8 karakter", test: (p: string) => p.length >= 8 },
-  { label: "Huruf besar", test: (p: string) => /[A-Z]/.test(p) },
-  { label: "Angka", test: (p: string) => /\d/.test(p) },
-  { label: "Simbol", test: (p: string) => /[^A-Za-z0-9]/.test(p) },
-];
-
 export function PasswordStrength({ password }: { password: string }) {
+  const { t } = useTranslation();
+
+  const rules = [
+    { label: t("password_strength.min_8_chars"), test: (p: string) => p.length >= 8 },
+    { label: t("password_strength.uppercase"), test: (p: string) => /[A-Z]/.test(p) },
+    { label: t("password_strength.number"), test: (p: string) => /\d/.test(p) },
+    { label: t("password_strength.symbol"), test: (p: string) => /[^A-Za-z0-9]/.test(p) },
+  ];
+
   const passed = useMemo(() => rules.filter(r => r.test(password)).length, [password]);
   const strength = passed <= 1 ? "weak" : passed <= 2 ? "medium" : "strong";
   const colors = { weak: "bg-red-500", medium: "bg-yellow-500", strong: "bg-green-500" };

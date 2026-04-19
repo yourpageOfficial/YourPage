@@ -5,6 +5,7 @@ export interface User {
   avatar_url?: string;
   bio?: string;
   role: "supporter" | "creator" | "admin";
+  locale?: string;
   is_banned?: boolean;
   ban_reason?: string;
   deletion_scheduled_at?: string;

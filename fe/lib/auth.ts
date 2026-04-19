@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import api from "./api";
+import { useLocale } from "./use-locale";
 import type { User } from "./types";
 
 interface AuthState {
@@ -52,7 +53,11 @@ export const useAuth = create<AuthState>((set) => ({
   fetchMe: async () => {
     try {
       const { data } = await api.get("/auth/me");
-      set({ user: data.data, loading: false });
+      const user = data.data;
+      set({ user, loading: false });
+      if (user.locale) {
+        useLocale.getState().setLocale(user.locale as "id" | "en");
+      }
     } catch {
       set({ user: null, loading: false });
     }
