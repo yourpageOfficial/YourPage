@@ -4,8 +4,19 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { toast } from "@/lib/toast";
+import { useTranslation } from "@/lib/use-translation";
+
+function ErrorToast({ message }: { message: string }) {
+  useState(() => {
+    toast.error(message);
+  });
+  return null;
+}
 
 export function Providers({ children }: { children: React.ReactNode }) {
+  const { t } = useTranslation();
+  const defaultError = t("common.error");
+
   const [queryClient] = useState(() => new QueryClient({
     defaultOptions: {
       queries: {
@@ -17,7 +28,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       mutations: {
         retry: 0,
         onError: (error: any) => {
-          const msg = error?.response?.data?.error || error?.message || "Terjadi kesalahan";
+          const msg = error?.response?.data?.error || error?.message || defaultError;
           toast.error(msg);
         },
       },

@@ -64,6 +64,10 @@ Each file contains nested translation keys organized by category:
 - `report.*` — report reasons/buttons
 - `bottom_nav.*` — bottom navigation
 - `language.*` — language switcher
+- `home.*` — home page (hero, features, pricing, footer)
+- `not_found.*` — 404 page
+- `error.*` — error boundary
+- `cara_kerja.*` — how it works page
 
 ### 3. Translation Hook
 
@@ -273,8 +277,8 @@ All responses include `Content-Language` header.
 |------|--------|
 | `lib/use-locale.ts` | New — locale store |
 | `lib/use-translation.ts` | New — translation hook |
-| `messages/id.json` | Modified — added admin translations |
-| `messages/en.json` | Modified — added admin translations |
+| `messages/id.json` | Modified — added home, not_found, error, cara_kerja translations |
+| `messages/en.json` | Modified — added home, not_found, error, cara_kerja translations |
 | `lib/types.ts` | Modified — added locale field |
 | `lib/api.ts` | Modified — Accept-Language header |
 | `lib/auth.ts` | Modified — sync locale |
@@ -310,6 +314,14 @@ All responses include `Content-Language` header.
 | `app/admin/users/[id]/page.tsx` | Modified — i18n |
 | `app/admin/layout.tsx` | Modified — i18n sidebar navigation |
 | `app/c/[slug]/page.tsx` | Modified — i18n creator page |
+| `app/page.tsx` | Modified — i18n (hero, features, pricing, footer) |
+| `app/not-found.tsx` | Modified — i18n |
+| `app/error.tsx` | Modified — i18n |
+| `app/providers.tsx` | Modified — uses translated error message |
+| `app/cara-kerja/page.tsx` | Modified — i18n |
+| `app/layout.tsx` | Modified — dynamic lang, metadata from middleware |
+| `components/skip-link.tsx` | New — i18n skip link |
+| `middleware.ts` | Modified — sets x-locale header |
 
 ---
 
@@ -336,5 +348,4 @@ cd fe && npm run lint
 ## Next Steps
 
 - Add more translation keys as needed
-- Consider using translation keys in page files too
 - Add language detection from browser preferences
