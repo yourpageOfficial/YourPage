@@ -4,45 +4,47 @@ import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import api from "@/lib/api";
 import { toast } from "@/lib/toast";
+import { useTranslation } from "@/lib/use-translation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-function getStrength(pw: string): { score: number; label: string; color: string } {
+function getStrength(pw: string, t: (key: string) => string): { score: number; label: string; color: string } {
   let s = 0;
   if (pw.length >= 8) s++;
   if (pw.length >= 12) s++;
   if (/[A-Z]/.test(pw)) s++;
   if (/[0-9]/.test(pw)) s++;
   if (/[^A-Za-z0-9]/.test(pw)) s++;
-  if (s <= 1) return { score: s, label: "Lemah", color: "bg-red-500" };
-  if (s <= 2) return { score: s, label: "Sedang", color: "bg-yellow-500" };
-  if (s <= 3) return { score: s, label: "Kuat", color: "bg-primary-500" };
-  return { score: s, label: "Sangat Kuat", color: "bg-green-500" };
+  if (s <= 1) return { score: s, label: t("password_strength.weak"), color: "bg-red-500" };
+  if (s <= 2) return { score: s, label: t("password_strength.medium"), color: "bg-yellow-500" };
+  if (s <= 3) return { score: s, label: t("password_strength.strong"), color: "bg-primary-500" };
+  return { score: s, label: t("password_strength.very_strong"), color: "bg-green-500" };
 }
 
 export function ChangePasswordCard() {
+  const { t } = useTranslation();
   const [oldPw, setOldPw] = useState("");
   const [newPw, setNewPw] = useState("");
   const [confirmPw, setConfirmPw] = useState("");
   const mismatch = newPw && confirmPw && newPw !== confirmPw;
-  const strength = getStrength(newPw);
+  const strength = getStrength(newPw, t);
 
   const change = useMutation({
     mutationFn: () => api.post("/auth/change-password", { old_password: oldPw, new_password: newPw }),
-    onSuccess: () => { toast.success("Password berhasil diubah!"); setOldPw(""); setNewPw(""); setConfirmPw(""); },
-    onError: (e: any) => toast.error(e.response?.data?.error?.includes("Sesi") ? "Password lama salah" : "Gagal mengubah password"),
+    onSuccess: () => { toast.success(t("change_password.success")); setOldPw(""); setNewPw(""); setConfirmPw(""); },
+    onError: (e: any) => toast.error(e.response?.data?.error?.includes("Sesi") ? t("change_password.old_password_wrong") : t("change_password.failed")),
   });
 
   return (
     <Card>
-      <CardHeader className="pb-2"><CardTitle className="text-base">🔒 Ganti Password</CardTitle></CardHeader>
+      <CardHeader className="pb-2"><CardTitle className="text-base">🔒 {t("common.update")} Password</CardTitle></CardHeader>
       <CardContent className="space-y-3">
-        <p className="text-xs text-gray-500 dark:text-gray-400">Akun kamu memiliki saldo Credit. Gunakan password yang kuat.</p>
-        <div><label className="text-sm font-medium mb-1 block">Password Lama</label><Input type="password" placeholder="Password lama" value={oldPw} onChange={e => setOldPw(e.target.value)} /></div>
+        <p className="text-xs text-gray-500 dark:text-gray-400">{t("wallet.credits")}</p>
+        <div><label className="text-sm font-medium mb-1 block">{t("change_password.old_password")}</label><Input type="password" placeholder={t("change_password.old_password")} value={oldPw} onChange={e => setOldPw(e.target.value)} /></div>
         <div>
-          <label className="text-sm font-medium mb-1 block">Password Baru</label>
-          <Input type="password" placeholder="Min 8 karakter" value={newPw} onChange={e => setNewPw(e.target.value)} />
+          <label className="text-sm font-medium mb-1 block">{t("change_password.new_password")}</label>
+          <Input type="password" placeholder={t("change_password.min_8_chars")} value={newPw} onChange={e => setNewPw(e.target.value)} />
           {newPw && (
             <div className="mt-2">
               <div className="flex gap-1">
@@ -55,12 +57,12 @@ export function ChangePasswordCard() {
           )}
         </div>
         <div>
-          <label className="text-sm font-medium mb-1 block">Konfirmasi Password</label>
-          <Input type="password" placeholder="Ulangi password baru" value={confirmPw} onChange={e => setConfirmPw(e.target.value)} />
-          {mismatch && <p className="text-xs text-red-500 mt-1">Password tidak cocok</p>}
+          <label className="text-sm font-medium mb-1 block">{t("change_password.confirm_new_password")}</label>
+          <Input type="password" placeholder={t("change_password.confirm_new_password")} value={confirmPw} onChange={e => setConfirmPw(e.target.value)} />
+          {mismatch && <p className="text-xs text-red-500 mt-1">{t("auth.password_mismatch")}</p>}
         </div>
         <Button onClick={() => change.mutate()} disabled={change.isPending || !oldPw || newPw.length < 8 || !!mismatch}>
-          {change.isPending ? "Memproses..." : "Ganti Password"}
+          {change.isPending ? t("common.processing") : `${t("common.update")} Password`}
         </Button>
       </CardContent>
     </Card>

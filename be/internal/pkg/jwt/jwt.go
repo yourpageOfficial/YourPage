@@ -19,18 +19,19 @@ const (
 type Claims struct {
 	UserID    uuid.UUID `json:"user_id"`
 	Role      string    `json:"role"`
+	Locale    string    `json:"locale,omitempty"`
 	TokenType string    `json:"token_type"`
 	gojwt.RegisteredClaims
 }
 
 // GenerateAccessToken creates a signed access JWT.
-func GenerateAccessToken(cfg config.JWTConfig, userID uuid.UUID, role string) (string, error) {
-	return generate(cfg, userID, role, TokenTypeAccess, cfg.AccessTTL)
+func GenerateAccessToken(cfg config.JWTConfig, userID uuid.UUID, role, locale string) (string, error) {
+	return generate(cfg, userID, role, locale, TokenTypeAccess, cfg.AccessTTL)
 }
 
 // GenerateRefreshToken creates a signed refresh JWT.
-func GenerateRefreshToken(cfg config.JWTConfig, userID uuid.UUID, role string) (string, error) {
-	return generate(cfg, userID, role, TokenTypeRefresh, cfg.RefreshTTL)
+func GenerateRefreshToken(cfg config.JWTConfig, userID uuid.UUID, role, locale string) (string, error) {
+	return generate(cfg, userID, role, locale, TokenTypeRefresh, cfg.RefreshTTL)
 }
 
 // ParseToken validates tokenStr and returns the claims on success.
@@ -62,11 +63,12 @@ func ParseToken(cfg config.JWTConfig, tokenStr string) (*Claims, error) {
 }
 
 // generate is the shared token creation helper.
-func generate(cfg config.JWTConfig, userID uuid.UUID, role, tokenType string, ttl time.Duration) (string, error) {
+func generate(cfg config.JWTConfig, userID uuid.UUID, role, locale, tokenType string, ttl time.Duration) (string, error) {
 	now := time.Now()
 	claims := &Claims{
 		UserID:    userID,
 		Role:      role,
+		Locale:    locale,
 		TokenType: tokenType,
 		RegisteredClaims: gojwt.RegisteredClaims{
 			Subject:   userID.String(),

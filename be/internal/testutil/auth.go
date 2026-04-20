@@ -15,6 +15,6 @@ var TestJWTConfig = config.JWTConfig{
 
 // GenerateTestToken creates a valid access token for testing.
 func GenerateTestToken(userID uuid.UUID, role string) string {
-	token, _ := pkgjwt.GenerateAccessToken(TestJWTConfig, userID, role)
+	token, _ := pkgjwt.GenerateAccessToken(TestJWTConfig, userID, role, "id")
 	return token
 }

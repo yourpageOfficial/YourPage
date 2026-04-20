@@ -1,4 +1,5 @@
 import axios from "axios";
+import { useLocale } from "./use-locale";
 
 const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL || "/api/v1",
@@ -7,11 +8,15 @@ const api = axios.create({
   withCredentials: true,
 });
 
-// Simple 401 handler — only redirect for non-auth API calls
+api.interceptors.request.use((config) => {
+  const locale = useLocale.getState().locale;
+  config.headers["Accept-Language"] = locale;
+  return config;
+});
+
 api.interceptors.response.use(
   (res) => res,
   (error) => {
-    // Never auto-redirect — let each page handle auth errors
     return Promise.reject(error);
   }
 );

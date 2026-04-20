@@ -47,6 +47,7 @@ func AuthRequired(jwtCfg config.JWTConfig, rdb *redis.Client) gin.HandlerFunc {
 
 		c.Set(ContextKeyUserID, claims.UserID)
 		c.Set(ContextKeyRole, entity.UserRole(claims.Role))
+		c.Set("user_locale", claims.Locale)
 		c.Next()
 	}
 }
@@ -69,6 +70,7 @@ func OptionalAuth(jwtCfg config.JWTConfig, rdb *redis.Client) gin.HandlerFunc {
 
 		c.Set(ContextKeyUserID, claims.UserID)
 		c.Set(ContextKeyRole, entity.UserRole(claims.Role))
+		c.Set("user_locale", claims.Locale)
 		c.Next()
 	}
 }

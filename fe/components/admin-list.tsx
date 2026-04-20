@@ -3,6 +3,7 @@
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Pagination } from "@/components/ui/pagination";
+import { useTranslation } from "@/lib/use-translation";
 import { Search, ArrowUpDown, ArrowUp, ArrowDown, ChevronLeft, ChevronRight } from "lucide-react";
 
 interface FilterOption { label: string; value: string }
@@ -28,13 +29,15 @@ interface AdminListProps {
 }
 
 export function AdminList({ filters, activeFilter, onFilter, search, onSearch, searchPlaceholder, sortOptions, sortKey, sortDir, onSort, nextCursor, onNext, onPrev, hasPrev, count, children }: AdminListProps) {
+  const { t } = useTranslation();
+
   return (
     <div className="space-y-3 sm:space-y-4">
       <div className="flex flex-col sm:flex-row gap-2">
         {onSearch && (
           <div className="relative flex-1">
             <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
-            <Input placeholder={searchPlaceholder || "Cari..."} value={search || ""} onChange={(e) => onSearch(e.target.value)} className="pl-9" />
+            <Input placeholder={searchPlaceholder || t("admin_list.search")} value={search || ""} onChange={(e) => onSearch(e.target.value)} className="pl-9" />
           </div>
         )}
         {filters && onFilter && (

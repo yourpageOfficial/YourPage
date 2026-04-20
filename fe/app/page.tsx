@@ -9,8 +9,11 @@ import Link from "next/link";
 import { FileText, Package, Heart, Shield, CreditCard, MessageCircle, Monitor, Check, ArrowRight, TrendingUp, Users, ShoppingBag, Building, Palette, BookOpen, Gamepad2, Sparkles, Zap } from "lucide-react";
 import { motion } from "framer-motion";
 import { staggerChildren, staggerItem, scaleIn } from "@/lib/motion-variants";
+import { useTranslation } from "@/lib/use-translation";
 
 export default function Home() {
+  const { t } = useTranslation();
+
   return (
     <>
       <Navbar />
@@ -22,21 +25,22 @@ export default function Home() {
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
               <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm text-white text-sm font-medium px-5 py-2 rounded-full mb-8 border border-white/20">
                 <Sparkles className="h-4 w-4 text-accent" />
-                Platform #1 untuk Kreator Indonesia
+                {t("home.hero_badge")}
               </div>
               <h1 className="text-4xl sm:text-6xl lg:text-7xl font-display font-black tracking-tight leading-[1.1] text-white">
-                Ubah Kontenmu<br />
-                Jadi <span className="text-accent">Penghasilan</span>
+                {t("home.hero_title_line1")}<br />
+                {t("home.hero_title_line2")}
+                 <span className="text-accent">{t("home.hero_title_line3")}</span>
               </h1>
               <p className="mt-6 text-lg sm:text-xl text-primary-100 max-w-2xl mx-auto leading-relaxed">
-                Jual konten eksklusif, terima donasi, chat berbayar — tanpa ribet. Mulai dalam 2 menit, gratis selamanya.
+                {t("home.hero_subtitle")}
               </p>
             </motion.div>
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3, duration: 0.4 }} className="mt-10 flex flex-col sm:flex-row justify-center gap-3">
-              <Link href="/register"><Button size="lg" variant="secondary" className="w-full sm:w-auto text-base px-8">Mulai Gratis Sekarang <ArrowRight className="ml-2 h-4 w-4" /></Button></Link>
-              <Link href="/explore"><Button size="lg" variant="outline" className="w-full sm:w-auto text-base px-8 border-white/30 text-white hover:bg-white/10 hover:border-white/50">Lihat Kreator</Button></Link>
+              <Link href="/register"><Button size="lg" variant="secondary" className="w-full sm:w-auto text-base px-8">{t("home.cta_register")} <ArrowRight className="ml-2 h-4 w-4" /></Button></Link>
+              <Link href="/explore"><Button size="lg" variant="outline" className="w-full sm:w-auto text-base px-8 border-white/30 text-white hover:bg-white/10 hover:border-white/50">{t("home.cta_explore")}</Button></Link>
             </motion.div>
-            <p className="mt-5 text-sm text-primary-200/60">Tanpa kartu kredit · Tanpa biaya bulanan · Langsung jualan</p>
+            <p className="mt-5 text-sm text-primary-200/60">{t("home.hero_footer")}</p>
           </div>
           {/* Decorative blobs */}
           <div className="absolute -top-20 -right-20 w-72 h-72 bg-accent/10 rounded-full blur-3xl" />
@@ -47,10 +51,10 @@ export default function Home() {
         <section className="relative -mt-8 z-10 px-4">
           <motion.div variants={staggerChildren} initial="hidden" whileInView="visible" viewport={{ once: true }} className="mx-auto max-w-4xl grid grid-cols-2 sm:grid-cols-4 gap-3">
             {[
-              { val: "1 Credit", sub: "= Rp 1.000", icon: "💰" },
-              { val: "5%", sub: "Fee terendah", icon: "⚡" },
-              { val: "2 menit", sub: "Setup halaman", icon: "🚀" },
-              { val: "24 jam", sub: "Cairkan dana", icon: "🏦" },
+              { val: t("home.social_proof_1_credit"), sub: t("home.social_proof_1_credit_sub"), icon: "💰" },
+              { val: t("home.social_proof_5_percent"), sub: t("home.social_proof_5_percent_sub"), icon: "⚡" },
+              { val: t("home.social_proof_2_minutes"), sub: t("home.social_proof_2_minutes_sub"), icon: "🚀" },
+              { val: t("home.social_proof_24_hours"), sub: t("home.social_proof_24_hours_sub"), icon: "🏦" },
             ].map(s => (
               <motion.div key={s.val} variants={staggerItem}>
                 <Card className="text-center bg-white/90 dark:bg-navy-800/90 backdrop-blur-lg border-primary-100/50 dark:border-primary-900/20">
@@ -69,20 +73,20 @@ export default function Home() {
         <section className="py-20 sm:py-28 bg-mesh-pattern">
           <div className="mx-auto max-w-5xl px-4">
             <div className="text-center mb-14">
-              <h2 className="text-3xl sm:text-5xl font-display font-black tracking-tight">Berhenti Kasih Konten <span className="text-accent">Gratis</span></h2>
-              <p className="mt-4 text-gray-500 dark:text-gray-400 max-w-xl mx-auto text-lg">Kamu sudah buat konten bagus. Saatnya dihargai.</p>
+              <h2 className="text-3xl sm:text-5xl font-display font-black tracking-tight">{t("home.features_title")} <span className="text-accent">{t("home.features_title_accent")}</span></h2>
+              <p className="mt-4 text-gray-500 dark:text-gray-400 max-w-xl mx-auto text-lg">{t("home.features_subtitle")}</p>
             </div>
             <motion.div variants={staggerChildren} initial="hidden" whileInView="visible" viewport={{ once: true }} className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <FeatureCard icon={FileText} title="Post Berbayar" desc="Konten eksklusif yang hanya bisa diakses setelah bayar." color="bg-primary-500" />
-              <FeatureCard icon={Package} title="Produk Digital" desc="Jual e-book, preset, template, course link, license key." color="bg-purple-500" />
-              <FeatureCard icon={Heart} title="Donasi + Goal" desc="Fans kirim donasi dengan pesan. Set target goal." color="bg-pink-500" />
-              <FeatureCard icon={MessageCircle} title="Chat Berbayar" desc="DM dari fans, gratis atau berbayar per pesan." color="bg-green-500" />
+              <FeatureCard icon={FileText} title={t("home.feature_post_berbayar")} desc={t("home.feature_post_berbayar_desc")} color="bg-primary-500" />
+              <FeatureCard icon={Package} title={t("home.feature_produk_digital")} desc={t("home.feature_produk_digital_desc")} color="bg-purple-500" />
+              <FeatureCard icon={Heart} title={t("home.feature_donasi_goal")} desc={t("home.feature_donasi_goal_desc")} color="bg-pink-500" />
+              <FeatureCard icon={MessageCircle} title={t("home.feature_chat_berbayar")} desc={t("home.feature_chat_berbayar_desc")} color="bg-green-500" />
             </motion.div>
             <motion.div variants={staggerChildren} initial="hidden" whileInView="visible" viewport={{ once: true }} className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
-              <FeatureCard icon={Monitor} title="OBS Overlay" desc="Notifikasi donasi saat live streaming." color="bg-orange-500" />
-              <FeatureCard icon={Shield} title="Konten Aman" desc="Media private, watermark, blur saat tab switch." color="bg-red-500" />
-              <FeatureCard icon={TrendingUp} title="Analytics" desc="Dashboard lengkap — penjualan, donasi, chart." color="bg-indigo-500" />
-              <FeatureCard icon={Users} title="Custom Page" desc="Warna aksen, banner, social links — branding kamu." color="bg-teal-500" />
+              <FeatureCard icon={Monitor} title={t("home.feature_obs_overlay")} desc={t("home.feature_obs_overlay_desc")} color="bg-orange-500" />
+              <FeatureCard icon={Shield} title={t("home.feature_konten_aman")} desc={t("home.feature_konten_aman_desc")} color="bg-red-500" />
+              <FeatureCard icon={TrendingUp} title={t("home.feature_analytics")} desc={t("home.feature_analytics_desc")} color="bg-indigo-500" />
+              <FeatureCard icon={Users} title={t("home.feature_custom_page")} desc={t("home.feature_custom_page_desc")} color="bg-teal-500" />
             </motion.div>
           </div>
         </section>
@@ -90,12 +94,12 @@ export default function Home() {
         {/* How it works — timeline style */}
         <section className="py-20 sm:py-28 bg-gradient-to-b from-primary-50 to-white dark:from-navy-800/50 dark:to-navy-900">
           <div className="mx-auto max-w-4xl px-4">
-            <h2 className="text-3xl sm:text-5xl font-black text-center mb-16 tracking-tight">Mulai dalam <span className="text-accent">3 Langkah</span></h2>
+            <h2 className="text-3xl sm:text-5xl font-black text-center mb-16 tracking-tight">{t("home.how_it_works_title")}</h2>
             <motion.div variants={staggerChildren} initial="hidden" whileInView="visible" viewport={{ once: true }} className="grid sm:grid-cols-3 gap-8 sm:gap-12">
               {[
-                { step: "1", title: "Daftar Gratis", desc: "Buat akun, pilih username, atur profil. Selesai dalam 2 menit.", emoji: "✨" },
-                { step: "2", title: "Upload & Atur Harga", desc: "Buat post berbayar, upload produk, set harga dalam Credit.", emoji: "📦" },
-                { step: "3", title: "Terima Uang", desc: "Fans beli, donasi, chat. Credit masuk wallet, cairkan ke rekening.", emoji: "💸" },
+                { step: "1", title: t("home.how_it_works_step1"), desc: t("home.how_it_works_step1_desc"), emoji: "✨" },
+                { step: "2", title: t("home.how_it_works_step2"), desc: t("home.how_it_works_step2_desc"), emoji: "📦" },
+                { step: "3", title: t("home.how_it_works_step3"), desc: t("home.how_it_works_step3_desc"), emoji: "💸" },
               ].map((s) => (
                 <motion.div key={s.step} variants={staggerItem} className="text-center relative">
                   <div className="mx-auto h-16 w-16 rounded-2xl bg-gradient-to-br from-primary to-primary-700 text-white flex items-center justify-center text-3xl font-black shadow-lg shadow-primary/20">{s.emoji}</div>
@@ -111,13 +115,13 @@ export default function Home() {
         {/* Credit System */}
         <section className="py-20 sm:py-28">
           <div className="mx-auto max-w-4xl px-4 text-center">
-            <h2 className="text-3xl sm:text-5xl font-display font-black tracking-tight">Sistem Credit yang <span className="text-primary">Simpel</span></h2>
-            <p className="mt-4 text-gray-500 dark:text-gray-400 text-lg">Satu mata uang untuk semua transaksi</p>
+            <h2 className="text-3xl sm:text-5xl font-display font-black tracking-tight">{t("home.credit_title")}</h2>
+            <p className="mt-4 text-gray-500 dark:text-gray-400 text-lg">{t("home.credit_subtitle")}</p>
             <motion.div variants={staggerChildren} initial="hidden" whileInView="visible" viewport={{ once: true }} className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-12">
-              <CreditStep icon={<CreditCard className="h-6 w-6" />} label="Top-up" line1="Bayar Rp 50.000" line2="→ Dapat 50 Credit" color="text-blue-500" bg="bg-primary-50 dark:bg-primary-900/20" />
-              <CreditStep icon={<ShoppingBag className="h-6 w-6" />} label="Beli Konten" line1="Post 5 Credit" line2="→ Potong dari wallet" color="text-purple-500" bg="bg-purple-50 dark:bg-purple-900/20" />
-              <CreditStep icon={<Heart className="h-6 w-6" />} label="Donasi" line1="Kirim 10 Credit" line2="→ Creator dapat 8-9.5" color="text-pink-500" bg="bg-pink-50 dark:bg-pink-900/20" />
-              <CreditStep icon={<Building className="h-6 w-6" />} label="Cairkan" line1="Tarik 100 Credit" line2="→ Rp 100.000 ke bank" color="text-green-500" bg="bg-green-50 dark:bg-green-900/20" />
+              <CreditStep icon={<CreditCard className="h-6 w-6" />} label={t("home.credit_topup")} line1={t("home.credit_topup_line1")} line2={t("home.credit_topup_line2")} color="text-blue-500" bg="bg-primary-50 dark:bg-primary-900/20" />
+              <CreditStep icon={<ShoppingBag className="h-6 w-6" />} label={t("home.credit_beli")} line1={t("home.credit_beli_line1")} line2={t("home.credit_beli_line2")} color="text-purple-500" bg="bg-purple-50 dark:bg-purple-900/20" />
+              <CreditStep icon={<Heart className="h-6 w-6" />} label={t("home.credit_donasi")} line1={t("home.credit_donasi_line1")} line2={t("home.credit_donasi_line2")} color="text-pink-500" bg="bg-pink-50 dark:bg-pink-900/20" />
+              <CreditStep icon={<Building className="h-6 w-6" />} label={t("home.credit_cairkan")} line1={t("home.credit_cairkan_line1")} line2={t("home.credit_cairkan_line2")} color="text-green-500" bg="bg-green-50 dark:bg-green-900/20" />
             </motion.div>
           </div>
         </section>
@@ -125,21 +129,21 @@ export default function Home() {
         {/* Pricing */}
         <section className="py-20 sm:py-28 bg-gradient-to-b from-primary-50 to-white dark:from-navy-800/50 dark:to-navy-900">
           <div className="mx-auto max-w-4xl px-4">
-            <h2 className="text-3xl sm:text-5xl font-black text-center tracking-tight">Pilih Paket yang <span className="text-accent">Tepat</span></h2>
-            <p className="text-center text-gray-500 dark:text-gray-400 mt-4 text-lg">Mulai gratis, upgrade kapan saja</p>
+            <h2 className="text-3xl sm:text-5xl font-black text-center tracking-tight">{t("home.pricing_title")}</h2>
+            <p className="text-center text-gray-500 dark:text-gray-400 mt-4 text-lg">{t("home.pricing_subtitle")}</p>
             <motion.div variants={staggerChildren} initial="hidden" whileInView="visible" viewport={{ once: true }} className="grid sm:grid-cols-3 gap-5 mt-12">
-              <PricingCard name="Free" price="Gratis" sub="selamanya" features={[
-                { text: "Post berbayar", ok: true }, { text: "Produk max 3", ok: true }, { text: "Storage 1 GB", ok: true }, { text: "Fee 20%", ok: true },
-                { text: "Chat 10 reply/hari", ok: true }, { text: "Analytics basic", ok: true }, { text: "Custom page", ok: false }, { text: "Scheduled posts", ok: false },
-              ]} cta="Mulai Gratis" />
-              <PricingCard name="Pro" price="Rp 49.000" sub="/bulan (49 Credit)" popular features={[
-                { text: "Produk max 20", ok: true }, { text: "Storage 10 GB", ok: true }, { text: "Fee 10%", ok: true }, { text: "Chat unlimited", ok: true },
-                { text: "Analytics advanced", ok: true }, { text: "Custom page & warna", ok: true }, { text: "Scheduled posts", ok: true }, { text: "Pro badge 💙", ok: true },
-              ]} cta="Upgrade Pro" />
-              <PricingCard name="Business" price="Rp 149.000" sub="/bulan (149 Credit)" features={[
-                { text: "Produk unlimited", ok: true }, { text: "Storage 50 GB", ok: true }, { text: "Fee 5%", ok: true }, { text: "Export CSV", ok: true },
-                { text: "Auto-reply chat", ok: true }, { text: "OBS overlay custom", ok: true }, { text: "Priority support", ok: true }, { text: "Business badge 💜", ok: true },
-              ]} cta="Upgrade Business" />
+              <PricingCard name={t("home.pricing_free")} price={t("home.pricing_free_price")} sub={t("home.pricing_free_sub")} features={[
+                { text: t("home.pricing_feature_post_berbayar"), ok: true }, { text: t("home.pricing_feature_produk_max"), ok: true }, { text: t("home.pricing_feature_storage"), ok: true }, { text: t("home.pricing_feature_fee"), ok: true },
+                { text: t("home.pricing_feature_chat"), ok: true }, { text: t("home.pricing_feature_analytics"), ok: true }, { text: t("home.pricing_feature_custom"), ok: false }, { text: t("home.pricing_feature_scheduled"), ok: false },
+              ]} cta={t("home.pricing_cta_start")} />
+              <PricingCard name={t("home.pricing_pro")} price={t("home.pricing_pro_price")} sub={t("home.pricing_pro_sub")} popular features={[
+                { text: t("home.pricing_feature_produk_max_20"), ok: true }, { text: t("home.pricing_feature_storage_10"), ok: true }, { text: t("home.pricing_feature_fee_10"), ok: true }, { text: t("home.pricing_feature_chat_unlimited"), ok: true },
+                { text: t("home.pricing_feature_analytics_advanced"), ok: true }, { text: t("home.pricing_feature_custom_warna"), ok: true }, { text: t("home.pricing_feature_scheduled_posts"), ok: true }, { text: t("home.pricing_feature_pro_badge"), ok: true },
+              ]} cta={t("home.pricing_cta_upgrade")} />
+              <PricingCard name={t("home.pricing_business")} price={t("home.pricing_business_price")} sub={t("home.pricing_business_sub")} features={[
+                { text: t("home.pricing_feature_produk_unlimited"), ok: true }, { text: t("home.pricing_feature_storage_50"), ok: true }, { text: t("home.pricing_feature_fee_5"), ok: true }, { text: t("home.pricing_feature_export_csv"), ok: true },
+                { text: t("home.pricing_feature_auto_reply"), ok: true }, { text: t("home.pricing_feature_obs_custom"), ok: true }, { text: t("home.pricing_feature_priority"), ok: true }, { text: t("home.pricing_feature_business_badge"), ok: true },
+              ]} cta={t("home.pricing_cta_upgrade")} />
             </motion.div>
           </div>
         </section>
@@ -147,12 +151,12 @@ export default function Home() {
         {/* Use cases */}
         <section className="py-20 sm:py-28">
           <div className="mx-auto max-w-4xl px-4">
-            <h2 className="text-3xl sm:text-5xl font-black text-center tracking-tight mb-14">Cocok untuk <span className="text-primary">Semua Kreator</span></h2>
+            <h2 className="text-3xl sm:text-5xl font-black text-center tracking-tight mb-14">{t("home.usecases_title")}</h2>
             <motion.div variants={staggerChildren} initial="hidden" whileInView="visible" viewport={{ once: true }} className="grid sm:grid-cols-3 gap-5">
               {[
-                { icon: <Palette className="h-7 w-7" />, title: "Desainer & Seniman", desc: "Jual preset, template, wallpaper. Upload file, fans download setelah bayar.", color: "text-pink-500", bg: "bg-pink-50 dark:bg-pink-900/20" },
-                { icon: <BookOpen className="h-7 w-7" />, title: "Edukator & Writer", desc: "Konten eksklusif, e-book, tips berbayar. Bangun komunitas.", color: "text-blue-500", bg: "bg-primary-50 dark:bg-primary-900/20" },
-                { icon: <Gamepad2 className="h-7 w-7" />, title: "Streamer & Gamer", desc: "Terima donasi saat live, overlay OBS custom, chat dengan fans.", color: "text-purple-500", bg: "bg-purple-50 dark:bg-purple-900/20" },
+                { icon: <Palette className="h-7 w-7" />, title: t("home.usecase_desainer"), desc: t("home.usecase_desainer_desc"), color: "text-pink-500", bg: "bg-pink-50 dark:bg-pink-900/20" },
+                { icon: <BookOpen className="h-7 w-7" />, title: t("home.usecase_edukator"), desc: t("home.usecase_edukator_desc"), color: "text-blue-500", bg: "bg-primary-50 dark:bg-primary-900/20" },
+                { icon: <Gamepad2 className="h-7 w-7" />, title: t("home.usecase_streamer"), desc: t("home.usecase_streamer_desc"), color: "text-purple-500", bg: "bg-purple-50 dark:bg-purple-900/20" },
               ].map(u => (
                 <motion.div key={u.title} variants={staggerItem}>
                   <Card hover className="h-full">
@@ -172,9 +176,9 @@ export default function Home() {
         <section className="relative overflow-hidden bg-gradient-hero dark:bg-gradient-hero-dark py-20 sm:py-28 text-center px-4">
           <div className="absolute -top-20 -right-20 w-72 h-72 bg-accent/10 rounded-full blur-3xl" />
           <div className="relative">
-            <h2 className="text-3xl sm:text-5xl font-black text-white tracking-tight">Siap Menghasilkan dari Kontenmu?</h2>
-            <p className="mt-4 text-primary-100 text-lg">Gratis selamanya. Upgrade kapan saja. Cairkan kapan saja.</p>
-            <Link href="/register"><Button size="lg" variant="secondary" className="mt-8 text-base px-10">Daftar Sekarang — Gratis <ArrowRight className="ml-2 h-4 w-4" /></Button></Link>
+            <h2 className="text-3xl sm:text-5xl font-black text-white tracking-tight">{t("home.cta_final_title")}</h2>
+            <p className="mt-4 text-primary-100 text-lg">{t("home.cta_final_subtitle")}</p>
+            <Link href="/register"><Button size="lg" variant="secondary" className="mt-8 text-base px-10">{t("home.cta_final_register")} <ArrowRight className="ml-2 h-4 w-4" /></Button></Link>
           </div>
         </section>
 
@@ -185,35 +189,35 @@ export default function Home() {
               <p className="text-xl font-black mb-4">
                 <span className="text-primary-400">Your</span><span className="text-accent">.</span><span>Page</span>
               </p>
-              <p className="text-sm text-gray-400">Platform monetisasi konten untuk kreator Indonesia.</p>
+              <p className="text-sm text-gray-400">{t("home.footer_tagline_sub")}</p>
             </div>
             <div>
-              <p className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-4">Produk</p>
+              <p className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-4">{t("home.footer_product")}</p>
               <nav className="space-y-2.5 text-sm text-gray-400">
-                <Link href="/pricing" className="block hover:text-accent transition-colors">Harga</Link>
-                <Link href="/cara-kerja" className="block hover:text-accent transition-colors">Cara Kerja</Link>
-                <Link href="/explore" className="block hover:text-accent transition-colors">Explore Kreator</Link>
+                <Link href="/pricing" className="block hover:text-accent transition-colors">{t("home.footer_pricing")}</Link>
+                <Link href="/cara-kerja" className="block hover:text-accent transition-colors">{t("home.footer_how_it_works")}</Link>
+                <Link href="/explore" className="block hover:text-accent transition-colors">{t("home.footer_explore")}</Link>
               </nav>
             </div>
             <div>
-              <p className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-4">Legal</p>
+              <p className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-4">{t("home.footer_legal")}</p>
               <nav className="space-y-2.5 text-sm text-gray-400">
-                <Link href="/terms" className="block hover:text-accent transition-colors">Syarat & Ketentuan</Link>
-                <Link href="/privacy" className="block hover:text-accent transition-colors">Kebijakan Privasi</Link>
-                <Link href="/contact" className="block hover:text-accent transition-colors">Kontak</Link>
+                <Link href="/terms" className="block hover:text-accent transition-colors">{t("home.footer_terms")}</Link>
+                <Link href="/privacy" className="block hover:text-accent transition-colors">{t("home.footer_privacy")}</Link>
+                <Link href="/contact" className="block hover:text-accent transition-colors">{t("home.footer_contact")}</Link>
               </nav>
             </div>
             <div>
-              <p className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-4">Ikuti Kami</p>
+              <p className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-4">{t("home.footer_follow")}</p>
               <nav className="space-y-2.5 text-sm text-gray-400">
-                <a href="#" className="block hover:text-accent transition-colors">Instagram</a>
-                <a href="#" className="block hover:text-accent transition-colors">Twitter/X</a>
-                <a href="#" className="block hover:text-accent transition-colors">TikTok</a>
+                <a href="#" className="block hover:text-accent transition-colors">{t("home.footer_instagram")}</a>
+                <a href="#" className="block hover:text-accent transition-colors">{t("home.footer_twitter")}</a>
+                <a href="#" className="block hover:text-accent transition-colors">{t("home.footer_tiktok")}</a>
               </nav>
             </div>
           </div>
           <div className="mx-auto max-w-4xl mt-12 pt-8 border-t border-white/10 text-center">
-            <p className="text-xs text-gray-500">© 2026 YourPage. Semua hak dilindungi.</p>
+            <p className="text-xs text-gray-500">{t("home.footer_copyright")}</p>
           </div>
         </footer>
       </PageTransition>
@@ -242,7 +246,7 @@ function PricingCard({ name, price, sub, features, cta, popular }: { name: strin
   return (
     <motion.div variants={staggerItem}>
       <Card className={`h-full ${popular ? "border-accent ring-2 ring-accent/20 relative sm:scale-105 shadow-glow-accent" : ""}`}>
-        {popular && <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-accent text-navy-900 text-xs font-black px-5 py-1.5 rounded-full shadow-md">🔥 Paling Populer</div>}
+        {popular && <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-accent text-navy-900 text-xs font-black px-5 py-1.5 rounded-full shadow-md">🔥</div>}
         <CardContent className="p-6 sm:p-7">
           <h3 className="text-lg font-bold text-center">{name}</h3>
           <p className="text-4xl font-black text-center mt-3">{price}</p>

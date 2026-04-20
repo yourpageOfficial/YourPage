@@ -2,9 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { Moon, Sun } from "lucide-react";
+import { useTranslation } from "@/lib/use-translation";
 
 export function ThemeToggle() {
   const [dark, setDark] = useState(false);
+  const { t } = useTranslation();
 
   useEffect(() => {
     const saved = localStorage.getItem("theme");
@@ -22,7 +24,7 @@ export function ThemeToggle() {
   };
 
   return (
-    <button onClick={toggle} className="h-9 w-9 flex items-center justify-center rounded-xl hover:bg-primary-50 dark:hover:bg-navy-800 transition-colors" title="Toggle dark mode">
+    <button onClick={toggle} className="h-9 w-9 flex items-center justify-center rounded-xl hover:bg-primary-50 dark:hover:bg-navy-800 transition-colors" title={t("common.toggle_dark_mode")}>
       {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
     </button>
   );

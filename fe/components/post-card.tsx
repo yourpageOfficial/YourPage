@@ -10,11 +10,13 @@ import { Input } from "@/components/ui/input";
 import { Lock, Eye, Heart, MessageCircle, Share2, Send } from "lucide-react";
 import { formatIDR, formatCredit, formatDate } from "@/lib/utils";
 import { toast } from "@/lib/toast";
+import { useTranslation } from "@/lib/use-translation";
 import Link from "next/link";
 import { ReportButton } from "@/components/report-button";
 import type { Post } from "@/lib/types";
 
 export function PostCard({ post }: { post: Post }) {
+  const { t } = useTranslation();
   const [buying, setBuying] = useState(false);
   const [error, setError] = useState("");
   const [unlocked, setUnlocked] = useState(false);
@@ -33,8 +35,8 @@ export function PostCard({ post }: { post: Post }) {
       setUnlocked(true);
       qc.invalidateQueries({ queryKey: ["feed"] });
     } catch (err: any) {
-      const msg = err.response?.data?.error || "Gagal";
-      setError(msg.includes("Credit") || msg.includes("insufficient") ? "Credit tidak cukup. Top-up dulu." : msg.includes("already") || msg.includes("sudah") ? "" : msg);
+      const msg = err.response?.data?.error || t("common.error");
+      setError(msg.includes("Credit") || msg.includes("insufficient") ? t("post_card.insufficient_credit") : msg.includes("already") || msg.includes("sudah") ? "" : msg);
       if (msg.includes("already")) setUnlocked(true);
     } finally { setBuying(false); }
   };
@@ -48,7 +50,7 @@ export function PostCard({ post }: { post: Post }) {
         await api.post(`/posts/${post.id}/like`);
         setLiked(true); setLikeCount(c => c + 1);
       }
-    } catch (e: any) { toast.error(e.response?.data?.error || "Gagal") }
+    } catch (e: any) { toast.error(e.response?.data?.error || t("common.error")) }
   };
 
   const loadComments = async () => {
@@ -56,7 +58,7 @@ export function PostCard({ post }: { post: Post }) {
       try {
         const { data } = await api.get(`/posts/${post.id}/comments?limit=20`);
         setComments(data.data || []);
-      } catch (e: any) { toast.error(e.response?.data?.error || "Gagal") }
+      } catch (e: any) { toast.error(e.response?.data?.error || t("common.error")) }
     }
     setShowComments(!showComments);
   };
@@ -68,7 +70,7 @@ export function PostCard({ post }: { post: Post }) {
       setComments(prev => [...prev, data.data]);
       setCommentText("");
       setCommentCount(c => c + 1);
-    } catch (e: any) { toast.error(e.response?.data?.error || "Gagal") }
+    } catch (e: any) { toast.error(e.response?.data?.error || t("common.error")) }
   };
 
   const handleShare = () => {
@@ -77,7 +79,7 @@ export function PostCard({ post }: { post: Post }) {
       navigator.share({ title: post.title, url });
     } else {
       navigator.clipboard.writeText(url);
-      alert("Link disalin!");
+      alert(t("post_card.link_copied"));
     }
   };
 
@@ -100,7 +102,7 @@ export function PostCard({ post }: { post: Post }) {
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
               <Link href={`/c/${post.creator?.username || ""}`} className="hover:underline">
-                <span className="font-semibold text-sm">{post.creator?.display_name || "Creator"}</span>
+                <span className="font-semibold text-sm">{post.creator?.display_name || t("post_card.creator")}</span>
               </Link>
               <span className="text-xs text-gray-400">@{post.creator?.username}</span>
             </div>
@@ -121,14 +123,14 @@ export function PostCard({ post }: { post: Post }) {
             <div className="h-14 w-14 rounded-2xl bg-white dark:bg-navy-800 shadow-sm flex items-center justify-center mx-auto mb-3">
               <Lock className="h-6 w-6 text-primary" />
             </div>
-            <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Konten berbayar</p>
+            <p className="text-sm font-medium text-gray-600 dark:text-gray-400">{t("posts.paid")}</p>
             {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
             <div className="mt-4">
               {error.includes("Top-up") || error.includes("Credit") ? (
-                <Link href="/wallet/topup"><Button size="sm">Top-up Credit</Button></Link>
+                <Link href="/wallet/topup"><Button size="sm">{t("wallet.topup")} {t("wallet.credits")}</Button></Link>
               ) : (
                 <Button size="sm" onClick={handleBuy} disabled={buying}>
-                  {buying ? "Memproses..." : `Beli ${formatCredit(post.price || 0)}`}
+                  {buying ? t("common.processing") : `${t("post_card.buy")} ${formatCredit(post.price || 0)}`}
                 </Button>
               )}
             </div>
@@ -176,13 +178,13 @@ export function PostCard({ post }: { post: Post }) {
                   {c.user?.display_name?.[0] || "?"}
                 </div>
                 <div className="bg-primary-50/50 dark:bg-navy-800 rounded-2xl px-3 py-2">
-                  <span className="font-semibold text-xs">{c.user?.display_name || "User"}</span>
+                  <span className="font-semibold text-xs">{c.user?.display_name || t("post_card.creator")}</span>
                   <p className="text-gray-600 dark:text-gray-400 text-xs mt-0.5">{c.content}</p>
                 </div>
               </div>
             ))}
             <div className="flex gap-2">
-              <Input placeholder="Tulis komentar..." value={commentText} onChange={(e) => setCommentText(e.target.value)}
+              <Input placeholder={t("post_card.write_comment")} value={commentText} onChange={(e) => setCommentText(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && submitComment()} className="h-9 text-sm rounded-xl" />
               <Button size="sm" variant="ghost" onClick={submitComment} disabled={!commentText.trim()} className="rounded-xl">
                 <Send className="h-4 w-4" />

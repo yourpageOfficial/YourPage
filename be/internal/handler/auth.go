@@ -162,6 +162,7 @@ func (h *AuthHandler) UpdateMe(c *gin.Context) {
 		DisplayName *string `json:"display_name"`
 		Bio         *string `json:"bio"`
 		AvatarURL   *string `json:"avatar_url"`
+		Locale      *string `json:"locale"`
 		PageColor    *string `json:"page_color"`
 		HeaderImage  *string `json:"header_image"`
 		ChatPriceIDR  *int64  `json:"chat_price_idr"`
@@ -179,7 +180,7 @@ func (h *AuthHandler) UpdateMe(c *gin.Context) {
 		response.BadRequest(c, "invalid request body")
 		return
 	}
-	err := h.svc.UpdateProfile(c.Request.Context(), userID, body.DisplayName, body.Bio, body.AvatarURL, body.PageColor, body.HeaderImage, body.ChatPriceIDR, body.ChatAllowFrom, body.AutoReply, body.SocialLinks, body.DonationGoalTitle, body.DonationGoalAmount, body.WelcomeMessage, body.OverlayStyle, body.OverlayTextTemplate, body.Category)
+	err := h.svc.UpdateProfile(c.Request.Context(), userID, body.DisplayName, body.Bio, body.AvatarURL, body.Locale, body.PageColor, body.HeaderImage, body.ChatPriceIDR, body.ChatAllowFrom, body.AutoReply, body.SocialLinks, body.DonationGoalTitle, body.DonationGoalAmount, body.WelcomeMessage, body.OverlayStyle, body.OverlayTextTemplate, body.Category)
 	if err != nil {
 		handleServiceError(c, err)
 		return

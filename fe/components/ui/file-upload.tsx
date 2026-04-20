@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { Upload, X, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/lib/use-translation";
 
 interface FileUploadProps {
   accept?: string;
@@ -19,6 +20,7 @@ interface FileUploadProps {
 }
 
 export function FileUpload({ accept, multiple, label, file, files, preview, onFile, onFiles, uploading, progress, className }: FileUploadProps) {
+  const { t } = useTranslation();
   const ref = useRef<HTMLInputElement>(null);
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
 
@@ -53,7 +55,7 @@ export function FileUpload({ accept, multiple, label, file, files, preview, onFi
           ) : (
             <>
               <Upload className="mx-auto h-8 w-8 text-gray-300 dark:text-gray-500" />
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{label || "Tap untuk upload"}</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{label || t("common.tap_to_upload")}</p>
             </>
           )}
           {uploading && (
@@ -73,7 +75,7 @@ export function FileUpload({ accept, multiple, label, file, files, preview, onFi
             onClick={() => ref.current?.click()}
             className="inline-flex items-center gap-1 px-3 py-2 rounded-xl border border-primary-200 dark:border-primary-900/40 bg-white dark:bg-navy-800 text-sm hover:bg-primary-50 dark:hover:bg-navy-800 transition-colors"
           >
-            {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />} {label || "Upload File"}
+            {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />} {label || t("common.upload_file")}
           </button>
           {previewUrls.length > 0 && (
             <div className="flex gap-2 mt-2 flex-wrap">

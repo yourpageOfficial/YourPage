@@ -6,6 +6,7 @@ import { useParams } from "next/navigation";
 import { toast } from "@/lib/toast";
 import api from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { useTranslation } from "@/lib/use-translation";
 import { Navbar } from "@/components/navbar";
 import { PostCard } from "@/components/post-card";
 import { Button } from "@/components/ui/button";
@@ -24,6 +25,7 @@ import { ReportButton } from "@/components/report-button";
 import type { CreatorPage, Post, Product, MembershipTier, Membership, PaginatedResponse, ApiResponse } from "@/lib/types";
 
 export default function CreatorPageView() {
+  const { t } = useTranslation();
   const { slug } = useParams<{ slug: string }>();
   const { user } = useAuth();
   const qc = useQueryClient();
@@ -83,7 +85,7 @@ export default function CreatorPageView() {
   });
 
   if (isLoading) return <><Navbar /><div className="p-8"><ListSkeleton count={3} /></div></>;
-  if (!creator) return <><Navbar /><div className="p-8 text-center text-gray-500 dark:text-gray-400">Kreator tidak ditemukan</div></>;
+  if (!creator) return <><Navbar /><div className="p-8 text-center text-gray-500 dark:text-gray-400">{t("creator_page.not_found")}</div></>;
 
   const isOwn = user?.id === creator.user_id;
   const donatePresets = [5, 10, 25, 50, 100];
@@ -100,8 +102,8 @@ export default function CreatorPageView() {
       setDonateSuccess(true); setDonateAmount(""); setDonateMsg("");
       qc.invalidateQueries({ queryKey: ["creator", slug] });
     } catch (err: any) {
-      const msg = err.response?.data?.error || "Gagal";
-      setDonateError(msg.includes("Credit") || msg.includes("insufficient") ? "Credit tidak cukup. Top-up dulu." : msg);
+      const msg = err.response?.data?.error || t("common.error");
+      setDonateError(msg.includes("Credit") || msg.includes("insufficient") ? t("creator_page.insufficient_credit") : msg);
     } finally { setDonating(false); }
   };
 
@@ -158,11 +160,11 @@ export default function CreatorPageView() {
                 <div className="flex items-center gap-3 shrink-0">
                   <div className="text-center">
                     <p className="text-lg font-black" style={{ color: accentColor }}>{creator.follower_count}</p>
-                    <p className="text-[10px] text-gray-400 uppercase tracking-wider">Followers</p>
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wider">{t("creator_page.followers")}</p>
                   </div>
                   <div className="text-center">
                     <p className="text-lg font-black">{posts?.length || 0}</p>
-                    <p className="text-[10px] text-gray-400 uppercase tracking-wider">Posts</p>
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wider">{t("creator_page.posts")}</p>
                   </div>
                 </div>
               </div>
@@ -188,31 +190,31 @@ export default function CreatorPageView() {
               <div className="mt-5 flex items-center justify-center sm:justify-start gap-2 flex-wrap">
                 {isOwn ? (
                   <>
-                    <Link href="/dashboard/profile"><Button size="sm" variant="outline" className="rounded-2xl">Edit Profil</Button></Link>
+                    <Link href="/dashboard/profile"><Button size="sm" variant="outline" className="rounded-2xl">{t("creator_page.edit_profile")}</Button></Link>
                     <Button size="sm" variant="ghost" className="rounded-2xl" onClick={() => {
                       const url = window.location.href + "?ref=" + creator.username;
-                      navigator.share ? navigator.share({ title: creator.display_name, url }) : navigator.clipboard.writeText(url).then(() => toast.success("Link disalin!"));
-                    }}><Share2 className="h-4 w-4 mr-1" /> Bagikan</Button>
+                      navigator.share ? navigator.share({ title: creator.display_name, url }) : navigator.clipboard.writeText(url).then(() => toast.success(t("post_card.link_copied")));
+                    }}><Share2 className="h-4 w-4 mr-1" /> {t("creator_page.share")}</Button>
                   </>
                 ) : user ? (
                   <>
                     <Button size="sm" onClick={() => toggleFollow.mutate()} className="rounded-2xl"
                       style={!followStatus ? { backgroundColor: accentColor, borderColor: accentColor, color: 'white' } : undefined}
                       variant={followStatus ? "outline" : "default"}>
-                      {followStatus ? "Unfollow" : "Follow"}
+                      {followStatus ? t("creator_page.unfollow") : t("creator_page.follow")}
                     </Button>
                     <Button size="sm" variant="secondary" className="rounded-2xl" onClick={() => setShowDonate(true)}>
-                      <Heart className="h-4 w-4 mr-1" /> Donasi
+                      <Heart className="h-4 w-4 mr-1" /> {t("creator_page.donate")}
                     </Button>
                     <Link href={`/chat?creator=${creator.user_id}&price=${creator.chat_price_idr || 0}`}>
                       <Button size="sm" variant="outline" className="rounded-2xl">
-                        <MessageCircle className="h-4 w-4 mr-1" /> Chat {(creator.chat_price_idr ?? 0) > 0 ? `(${(creator.chat_price_idr ?? 0) / 1000}C)` : ""}
+                        <MessageCircle className="h-4 w-4 mr-1" /> {t("creator_page.chat")} {(creator.chat_price_idr ?? 0) > 0 ? `(${(creator.chat_price_idr ?? 0) / 1000}C)` : ""}
                       </Button>
                     </Link>
                     <ReportButton targetType="user" targetId={creator.user_id} />
                   </>
                 ) : (
-                  <Link href="/login"><Button size="sm" className="rounded-2xl" style={{ backgroundColor: accentColor, color: 'white' }}>Follow</Button></Link>
+                  <Link href="/login"><Button size="sm" className="rounded-2xl" style={{ backgroundColor: accentColor, color: 'white' }}>{t("creator_page.follow")}</Button></Link>
                 )}
               </div>
             </CardContent>
@@ -249,7 +251,7 @@ export default function CreatorPageView() {
               <CardContent className="p-4">
                 <div className="flex items-center gap-2 mb-3">
                   <div className="h-8 w-8 rounded-xl bg-accent-50 dark:bg-accent-900/20 flex items-center justify-center"><Trophy className="h-4 w-4 text-accent-600" /></div>
-                  <p className="text-sm font-bold">Top Supporter</p>
+                  <p className="text-sm font-bold">{t("creator_page.top_supporter")}</p>
                 </div>
                 <div className="space-y-2">
                   {topSupporters.slice(0, 5).map((s: any, i: number) => (
@@ -272,23 +274,23 @@ export default function CreatorPageView() {
               <CardContent className="p-4">
                 <div className="flex items-center gap-2 mb-3">
                   <div className="h-8 w-8 rounded-xl bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center"><Star className="h-4 w-4 text-purple-500" /></div>
-                  <p className="text-sm font-bold">Jadi Member</p>
+                  <p className="text-sm font-bold">{t("creator_page.become_member")}</p>
                 </div>
                 <div className="grid sm:grid-cols-2 gap-2">
                   {membershipTiers.map((t: any) => (
                     <div key={t.id} className="flex items-center justify-between p-3 rounded-2xl bg-primary-50/50 dark:bg-navy-800 border border-primary-100 dark:border-primary-900/30">
                       <div>
                         <p className="font-semibold text-sm">{t.name}</p>
-                        <p className="text-[10px] text-gray-400">{t.price_credits} Credit/bulan</p>
+                        <p className="text-[10px] text-gray-400">{t.price_credits} {t("creator_page.per_month")}</p>
                         {t.perks && <p className="text-[10px] text-gray-500 mt-0.5 line-clamp-1">{t.perks}</p>}
                       </div>
                       {user && !isOwn && (
                         subscribedTierID === t.id ? (
-                          <Badge variant="success" className="text-[10px]">✓ Member</Badge>
+                          <Badge variant="success" className="text-[10px]">✓ {t("creator_page.member")}</Badge>
                         ) : (
                           <Button size="sm" variant="outline" className="rounded-xl text-xs" disabled={subscribing === t.id} onClick={async () => {
                             setSubscribing(t.id);
-                            try { await api.post("/memberships/subscribe", { tier_id: t.id }); toast.success("Berhasil subscribe! ⭐"); qc.invalidateQueries({ queryKey: ["my-memberships"] }); } catch (e: any) { toast.error(e.response?.data?.error || "Gagal"); }
+                            try { await api.post("/memberships/subscribe", { tier_id: t.id }); toast.success(t("creator_page.success")); qc.invalidateQueries({ queryKey: ["my-memberships"] }); } catch (e: any) { toast.error(e.response?.data?.error || t("common.error")); }
                             finally { setSubscribing(""); }
                           }}>{subscribing === t.id ? "..." : `${t.price_credits}C`}</Button>
                         )
@@ -305,8 +307,8 @@ export default function CreatorPageView() {
         <div className="mt-6 sm:mt-8 mx-2 sm:mx-0">
           <Tabs defaultValue="posts">
             <TabsList>
-              <TabsTrigger value="posts" count={posts?.length}><FileText className="h-4 w-4 mr-1" /> Post</TabsTrigger>
-              <TabsTrigger value="catalog" count={products?.length}><Package className="h-4 w-4 mr-1" /> Katalog</TabsTrigger>
+              <TabsTrigger value="posts" count={posts?.length}><FileText className="h-4 w-4 mr-1" /> {t("creator_page.posts")}</TabsTrigger>
+              <TabsTrigger value="catalog" count={products?.length}><Package className="h-4 w-4 mr-1" /> {t("creator_page.catalog")}</TabsTrigger>
             </TabsList>
 
             <TabsContent value="posts" className="mt-5">
@@ -315,8 +317,8 @@ export default function CreatorPageView() {
                 {posts?.length === 0 && (
                   <div className="text-center py-16">
                     <div className="h-14 w-14 rounded-2xl bg-primary-50 dark:bg-primary-900/20 flex items-center justify-center mx-auto mb-3"><FileText className="h-7 w-7 text-primary" /></div>
-                    <p className="font-semibold">Belum ada post</p>
-                    <p className="text-xs text-gray-400 mt-1">Follow untuk update terbaru</p>
+                    <p className="font-semibold">{t("creator_page.no_posts")}</p>
+                    <p className="text-xs text-gray-400 mt-1">{t("creator_page.no_posts_subtitle")}</p>
                   </div>
                 )}
               </div>
@@ -340,7 +342,7 @@ export default function CreatorPageView() {
                           <span className="text-sm font-black" style={{ color: accentColor }}>{formatCredit(p.price_idr)}</span>
                           <Badge variant="outline" className="text-[10px]">{p.type}</Badge>
                         </div>
-                        <p className="text-[10px] text-gray-400 mt-1">{p.sales_count} terjual</p>
+                        <p className="text-[10px] text-gray-400 mt-1">{p.sales_count} {t("creator_page.sold")}</p>
                       </CardContent>
                     </Card>
                   </Link>
@@ -348,7 +350,7 @@ export default function CreatorPageView() {
                 {products?.length === 0 && (
                   <div className="text-center py-16 col-span-full">
                     <div className="h-14 w-14 rounded-2xl bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center mx-auto mb-3"><Package className="h-7 w-7 text-purple-500" /></div>
-                    <p className="font-semibold">Belum ada produk</p>
+                    <p className="font-semibold">{t("creator_page.no_products")}</p>
                   </div>
                 )}
               </div>
@@ -365,7 +367,7 @@ export default function CreatorPageView() {
             onClick={() => setShowDonate(!showDonate)}
             className="fixed bottom-20 sm:bottom-6 right-3 sm:right-6 z-50 h-14 w-14 rounded-2xl text-white shadow-lg shadow-primary/30 flex items-center justify-center text-xl hover:scale-105 active:scale-95 transition-all"
             style={{ backgroundColor: accentColor }}
-            title="Kirim Donasi"
+            title={t("creator_page.donate")}
           >
             <Heart className="h-6 w-6" />
           </button>
@@ -381,7 +383,7 @@ export default function CreatorPageView() {
                         <div className="h-8 w-8 rounded-xl flex items-center justify-center" style={{ backgroundColor: `${accentColor}15` }}>
                           <Heart className="h-4 w-4" style={{ color: accentColor }} />
                         </div>
-                        <p className="font-bold">Dukung {creator.display_name}</p>
+                        <p className="font-bold">{t("creator_page.support", creator.display_name)}</p>
                       </div>
                       <button onClick={() => setShowDonate(false)} className="h-8 w-8 rounded-xl bg-primary-50 dark:bg-navy-800 flex items-center justify-center text-gray-400 hover:text-gray-600">✕</button>
                     </div>
@@ -389,9 +391,9 @@ export default function CreatorPageView() {
                     {donateSuccess ? (
                       <div className="text-center py-4">
                         <div className="text-4xl mb-2">🎉</div>
-                        <p className="font-bold text-green-600">Donasi terkirim!</p>
-                        <p className="text-xs text-gray-400 mt-1">Terima kasih atas dukunganmu</p>
-                        <Button size="sm" className="mt-4 rounded-xl" onClick={() => setDonateSuccess(false)}>Donasi Lagi</Button>
+                        <p className="font-bold text-green-600">{t("creator_page.donation_sent")}</p>
+                        <p className="text-xs text-gray-400 mt-1">{t("creator_page.thanks")}</p>
+                        <Button size="sm" className="mt-4 rounded-xl" onClick={() => setDonateSuccess(false)}>{t("creator_page.donate_again")}</Button>
                       </div>
                     ) : (
                       <>
@@ -404,16 +406,16 @@ export default function CreatorPageView() {
                             </button>
                           ))}
                         </div>
-                        <Input type="number" placeholder="Nominal lain (min 1)" value={donateAmount} onChange={(e) => setDonateAmount(e.target.value)} />
-                        <Input placeholder="Pesan (opsional)" value={donateMsg} onChange={(e) => setDonateMsg(e.target.value)} maxLength={500} />
+                        <Input type="number" placeholder={t("creator_page.other_amount")} value={donateAmount} onChange={(e) => setDonateAmount(e.target.value)} />
+                        <Input placeholder={t("creator_page.message_optional")} value={donateMsg} onChange={(e) => setDonateMsg(e.target.value)} maxLength={500} />
                         {donateError && <p className="text-xs text-red-500">{donateError}</p>}
                         {donateError.includes("Top-up") && <Link href="/wallet/topup" className="text-xs text-primary hover:underline">Top-up Credit →</Link>}
                         <Button className="w-full h-12 rounded-2xl font-bold" onClick={handleDonate}
                           disabled={donating || !donateAmount || parseInt(donateAmount) < 1}
                           style={{ backgroundColor: accentColor }}>
-                          {donating ? "Mengirim..." : `Kirim ${donateAmount ? donateAmount + " Credit" : ""}`}
+                          {donating ? t("creator_page.sending") : t("creator_page.send_credit", donateAmount ? donateAmount + " Credit" : "")}
                         </Button>
-                        <p className="text-[10px] text-gray-400 text-center">Dibayar dengan Credit dari wallet kamu</p>
+                        <p className="text-[10px] text-gray-400 text-center">{t("creator_page.paid_with_credit")}</p>
                       </>
                     )}
                   </CardContent>
