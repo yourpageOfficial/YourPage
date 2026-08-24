@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useRef } from "react";
+import { useRouter } from "next/navigation";
 import api from "@/lib/api";
 import { toast } from "@/lib/toast";
 import { useAuth } from "@/lib/auth";
@@ -19,6 +20,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { staggerChildren, staggerItem } from "@/lib/motion-variants";
 
 export default function DashboardProducts() {
+  const router = useRouter();
   const { user } = useAuth();
   const qc = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -168,7 +170,7 @@ export default function DashboardProducts() {
       <motion.div variants={staggerChildren} initial="hidden" animate="visible" className="grid sm:grid-cols-2 gap-3">
         {products?.map((p) => (
           <motion.div key={p.id} variants={staggerItem}>
-            <Card clickable onClick={() => window.location.href = `/dashboard/products/${p.id}`} className="h-full">
+            <Card clickable onClick={() => router.push(`/dashboard/products/${p.id}`)} className="h-full">
               <CardContent className="p-4">
                 <div className="flex gap-3">
                   {p.thumbnail_url ? (

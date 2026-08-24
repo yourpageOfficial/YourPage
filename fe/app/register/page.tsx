@@ -114,25 +114,25 @@ function RegisterContent() {
               </div>
 
               <div>
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">Email</label>
-                <Input type="email" placeholder="nama@email.com" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" error={email && !emailRegex.test(email) ? "Format email tidak valid" : undefined} />
+                <label htmlFor="reg-email" className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">Email</label>
+                <Input id="reg-email" type="email" placeholder="nama@email.com" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" error={email && !emailRegex.test(email) ? "Format email tidak valid" : undefined} />
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">Username</label>
-                <Input placeholder="huruf & angka saja" value={username} onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9]/g, ""))} required maxLength={30} />
+                <label htmlFor="reg-username" className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">Username</label>
+                <Input id="reg-username" placeholder="huruf & angka saja" value={username} onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9]/g, ""))} required maxLength={30} />
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">Password</label>
-                <Input type={showPw ? "text" : "password"} placeholder="Min 8 karakter" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} autoComplete="new-password" iconRight={pwToggle} />
+                <label htmlFor="reg-password" className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">Password</label>
+                <Input id="reg-password" type={showPw ? "text" : "password"} placeholder="Min 8 karakter" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} autoComplete="new-password" iconRight={pwToggle} />
                 <PasswordStrength password={password} />
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">Ulangi Password</label>
-                <Input type={showPw ? "text" : "password"} placeholder="Ketik ulang password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required error={confirmPassword && password !== confirmPassword ? "Password tidak cocok" : undefined} />
+                <label htmlFor="reg-confirm-pw" className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">Ulangi Password</label>
+                <Input id="reg-confirm-pw" type={showPw ? "text" : "password"} placeholder="Ketik ulang password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required error={confirmPassword && password !== confirmPassword ? "Password tidak cocok" : undefined} />
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">Kode Referral <span className="text-gray-400 font-normal">(opsional)</span></label>
-                <Input placeholder="Masukkan kode" value={referralCode} onChange={(e) => setReferralCode(e.target.value.trim())} />
+                <label htmlFor="reg-referral" className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">Kode Referral <span className="text-gray-400 font-normal">(opsional)</span></label>
+                <Input id="reg-referral" placeholder="Masukkan kode" value={referralCode} onChange={(e) => setReferralCode(e.target.value.trim())} />
                 {referralCode && <p className="text-xs text-green-600 mt-1.5">🎁 Kamu dan teman yang mengajak akan dapat 10 Credit gratis!</p>}
               </div>
               <Button type="submit" className="w-full h-12" loading={loading}>Daftar Sekarang</Button>
@@ -142,7 +142,7 @@ function RegisterContent() {
               Sudah punya akun? <Link href="/login" className="text-primary font-semibold hover:underline">Masuk</Link>
             </p>
             <p className="text-center text-[11px] text-gray-400 dark:text-gray-500 mt-3">
-              Dengan mendaftar, kamu setuju dengan <a href="/terms" className="underline">Syarat & Ketentuan</a> dan <a href="/privacy" className="underline">Kebijakan Privasi</a>.
+              Dengan mendaftar, kamu setuju dengan <Link href="/terms" className="underline">Syarat & Ketentuan</Link> dan <Link href="/privacy" className="underline">Kebijakan Privasi</Link>.
             </p>
           </div>
         </PageTransition>

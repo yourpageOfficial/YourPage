@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { toast } from "@/lib/toast";
 import api from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -25,6 +25,7 @@ import type { CreatorPage, Post, Product, MembershipTier, Membership, PaginatedR
 
 export default function CreatorPageView() {
   const { slug } = useParams<{ slug: string }>();
+  const router = useRouter();
   const { user } = useAuth();
   const qc = useQueryClient();
   const [showDonate, setShowDonate] = useState(false);
@@ -90,7 +91,7 @@ export default function CreatorPageView() {
   const accentColor = creator.page_color || "#2563EB";
 
   const handleDonate = async () => {
-    if (!user) { window.location.href = "/login"; return; }
+    if (!user) { router.push("/login"); return; }
     setDonating(true); setDonateError("");
     try {
       await api.post("/checkout/donation", {

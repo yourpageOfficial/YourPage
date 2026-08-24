@@ -359,6 +359,8 @@ func handleServiceError(c *gin.Context, err error) {
 		response.UnprocessableEntity(c, "Verifikasi KYC diperlukan untuk penarikan pertama. Silakan upload KTP di menu KYC.")
 	case errors.Is(err, entity.ErrPaymentFailed):
 		response.UnprocessableEntity(c, "Pembayaran gagal. Silakan coba lagi.")
+	case errors.Is(err, entity.ErrPasswordRecentlyUsed):
+		response.BadRequest(c, "Kata sandi telah digunakan sebelumnya")
 	default:
 		// 12.1: Only pass through errors wrapped with ErrUserFacing prefix
 		msg := err.Error()

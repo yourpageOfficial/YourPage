@@ -48,7 +48,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="antialiased">
         <Providers>
           <ErrorBoundary>
-            <a href="#main" className="skip-to-main" style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}>Skip to main content</a>
+            <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-primary focus:text-white focus:rounded-lg focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2">Skip to main content</a>
             <OfflineIndicator />
             <div className="pb-16 sm:pb-0">
               <main id="main">{children}</main>

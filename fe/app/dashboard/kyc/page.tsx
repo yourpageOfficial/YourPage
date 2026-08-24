@@ -41,7 +41,7 @@ export default function DashboardKYC() {
       // 1. Upload KTP image
       const fd = new FormData();
       fd.append("file", ktpFile!);
-      const { data: uploadRes } = await api.post("/upload", fd, { headers: { "Content-Type": "multipart/form-data" } });
+      const { data: uploadRes } = await api.post("/upload?type=kyc", fd, { headers: { "Content-Type": "multipart/form-data" } });
       const ktpUrl = uploadRes.data.url;
 
       // 2. Submit KYC

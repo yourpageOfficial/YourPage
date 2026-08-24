@@ -48,19 +48,26 @@ func (s *minioStorage) UploadFile(ctx context.Context, bucket, objectName string
 }
 
 func (s *minioStorage) GetPresignedURL(ctx context.Context, bucket, objectName string, expiry time.Duration) (string, error) {
+	// Strip leading /storage/{bucket}/ or /{bucket}/ if present
+	prefix := fmt.Sprintf("/storage/%s/", bucket)
+	if strings.HasPrefix(objectName, prefix) {
+		objectName = strings.TrimPrefix(objectName, prefix)
+	} else if strings.HasPrefix(objectName, fmt.Sprintf("/%s/", bucket)) {
+		objectName = strings.TrimPrefix(objectName, fmt.Sprintf("/%s/", bucket))
+	} else if strings.HasPrefix(objectName, "/storage/") {
+		parts := strings.SplitN(objectName, "/", 4)
+		if len(parts) >= 4 {
+			objectName = parts[3]
+		}
+	}
+
 	u, err := s.client.PresignedGetObject(ctx, bucket, objectName, expiry, url.Values{})
 	if err != nil {
 		return "", fmt.Errorf("minio: presign: %w", err)
 	}
-	// Rewrite internal minio URL to relative /storage/ path for browser access
-	result := u.String()
-	// Replace http://minio:9000/ with /storage/
-	if strings.Contains(result, s.endpoint) {
-		result = "/storage/" + strings.SplitN(result, "/"+bucket+"/", 2)[1]
-		// Append query params (signature etc)
-		if u.RawQuery != "" {
-			result = "/storage/" + bucket + "/" + objectName + "?" + u.RawQuery
-		}
+	result := fmt.Sprintf("/storage/%s/%s", bucket, objectName)
+	if u.RawQuery != "" {
+		result += "?" + u.RawQuery
 	}
 	return result, nil
 }

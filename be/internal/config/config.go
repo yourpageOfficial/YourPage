@@ -20,10 +20,11 @@ type Config struct {
 }
 
 type AppConfig struct {
-	Env         string
-	Port        string
-	FrontendURL string
-	AdminEmail  string
+	Env           string
+	Port          string
+	FrontendURL   string
+	AdminEmail    string
+	EnableSwagger bool
 }
 
 type DBConfig struct {
@@ -97,12 +98,20 @@ func Load() (*Config, error) {
 		adminEmail = "nandolimwork+admin@gmail.com"
 	}
 
+	enableSwagger := true
+	if viper.IsSet("ENABLE_SWAGGER") {
+		enableSwagger = viper.GetBool("ENABLE_SWAGGER")
+	} else if viper.GetString("APP_ENV") == "production" {
+		enableSwagger = false
+	}
+
 	return &Config{
 		App: AppConfig{
-			Env:         viper.GetString("APP_ENV"),
-			Port:        viper.GetString("APP_PORT"),
-			FrontendURL: viper.GetString("FRONTEND_URL"),
-			AdminEmail:  adminEmail,
+			Env:           viper.GetString("APP_ENV"),
+			Port:          viper.GetString("APP_PORT"),
+			FrontendURL:   viper.GetString("FRONTEND_URL"),
+			AdminEmail:    adminEmail,
+			EnableSwagger: enableSwagger,
 		},
 		DB: DBConfig{
 			URL: viper.GetString("DATABASE_URL"),

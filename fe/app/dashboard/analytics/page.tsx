@@ -50,6 +50,7 @@ export default function AnalyticsPage() {
               const res = await api.get("/creator/sales/export", { responseType: "blob" });
               const url = URL.createObjectURL(res.data);
               const a = document.createElement("a"); a.href = url; a.download = "sales.csv"; a.click();
+              URL.revokeObjectURL(url);
             } catch { toast.error("Gagal export."); }
           }}><Download className="mr-1.5 h-4 w-4" /> Export CSV</Button>
         )}

@@ -15,12 +15,14 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar } from "@/components/ui/avatar";
 import { formatDate } from "@/lib/utils";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 const roleBadge: Record<string, string> = { admin: "bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400", creator: "bg-primary-100 dark:bg-primary-900/30 text-blue-700 dark:text-blue-400", supporter: "bg-primary-50 dark:bg-navy-800 text-gray-700 dark:text-gray-400" };
 const filters = [{ label: "Creator", value: "creator" }, { label: "Supporter", value: "supporter" }, { label: "Admin", value: "admin" }];
 const sorts = [{ label: "Username", key: "username" }, { label: "Display Name", key: "display_name" }, { label: "Role", key: "role" }, { label: "Created", key: "created_at" }];
 
 export default function AdminUsers() {
+  const router = useRouter();
   const qc = useQueryClient();
   const list = useAdminList("admin-users", "/admin/users", { filterParam: "role" });
   const verify = useMutation({ mutationFn: (id: string) => api.post(`/admin/users/${id}/verify`), onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin-users"] }); toast.success("Verification toggled"); } });
@@ -64,7 +66,7 @@ export default function AdminUsers() {
       >
         <div className="space-y-2">
           {list.items.map((u: any) => (
-            <Card key={u.id} className="cursor-pointer hover:border-primary transition-colors" onClick={() => window.location.href = `/admin/users/${u.id}`}>
+            <Card key={u.id} className="cursor-pointer hover:border-primary transition-colors" onClick={() => router.push(`/admin/users/${u.id}`)}>
               <CardContent className="p-4 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <Avatar src={u.avatar_url} name={u.display_name} size="md" />

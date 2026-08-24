@@ -88,17 +88,26 @@ func (h *KYCHandler) UploadFile(c *gin.Context) {
 
 	// Sanitize filename
 	safeName := uuid.NewString() + filepath.Ext(header.Filename)
-	objectName := fmt.Sprintf("uploads/%s/%s", getUserID(c), safeName)
-	url, err := h.storage.UploadFile(c.Request.Context(), h.cfg.MinIO.PublicBucket, objectName, file, header.Size, detectedType)
+	uploadType := c.Query("type")
+	bucket := h.cfg.MinIO.PublicBucket
+	prefixPath := "uploads"
+	if uploadType == "kyc" {
+		bucket = h.cfg.MinIO.PrivateBucket
+		prefixPath = "kyc"
+	}
+	objectName := fmt.Sprintf("%s/%s/%s", prefixPath, getUserID(c), safeName)
+	url, err := h.storage.UploadFile(c.Request.Context(), bucket, objectName, file, header.Size, detectedType)
 	if err != nil {
 		response.InternalError(c)
 		return
 	}
 
 	// Track storage for creators
-	uid := getUserID(c)
-	if profile, err := h.userRepo.FindCreatorByUserID(c.Request.Context(), uid); err == nil && profile != nil {
-		_ = h.userRepo.IncrementCreatorStorage(c.Request.Context(), profile.ID, header.Size)
+	if uploadType != "kyc" {
+		uid := getUserID(c)
+		if profile, err := h.userRepo.FindCreatorByUserID(c.Request.Context(), uid); err == nil && profile != nil {
+			_ = h.userRepo.IncrementCreatorStorage(c.Request.Context(), profile.ID, header.Size)
+		}
 	}
 
 	response.OK(c, gin.H{"url": url})

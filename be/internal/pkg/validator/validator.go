@@ -2,6 +2,8 @@ package validator
 
 import (
 	"errors"
+	"reflect"
+	"strings"
 
 	"github.com/go-playground/validator/v10"
 )
@@ -13,7 +15,18 @@ type Validator struct {
 
 // New creates a ready-to-use Validator instance.
 func New() *Validator {
-	return &Validator{v: validator.New()}
+	v := validator.New()
+	v.RegisterTagNameFunc(func(fld reflect.StructField) string {
+		name := strings.SplitN(fld.Tag.Get("json"), ",", 2)[0]
+		if name == "-" {
+			return ""
+		}
+		if name == "" {
+			return fld.Name
+		}
+		return name
+	})
+	return &Validator{v: v}
 }
 
 // Validate checks s against its struct tags.

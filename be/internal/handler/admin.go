@@ -7,6 +7,11 @@ import (
 	"github.com/google/uuid"
 	"github.com/yourpage/be/internal/entity"
 	"github.com/yourpage/be/internal/pkg/response"
+	"strings"
+	"time"
+
+	"github.com/yourpage/be/internal/config"
+	"github.com/yourpage/be/internal/pkg/storage"
 	"github.com/yourpage/be/internal/pkg/validator"
 	"github.com/yourpage/be/internal/service"
 )
@@ -14,10 +19,12 @@ import (
 type AdminHandler struct {
 	svc      service.AdminService
 	validate *validator.Validator
+	storage  storage.StorageService
+	cfg      *config.Config
 }
 
-func NewAdminHandler(svc service.AdminService) *AdminHandler {
-	return &AdminHandler{svc: svc, validate: validator.New()}
+func NewAdminHandler(svc service.AdminService, storageSvc storage.StorageService, cfg *config.Config) *AdminHandler {
+	return &AdminHandler{svc: svc, validate: validator.New(), storage: storageSvc, cfg: cfg}
 }
 
 // ---- middleware ----
@@ -160,6 +167,14 @@ func (h *AdminHandler) ListKYC(c *gin.Context) {
 	if err != nil {
 		handleServiceError(c, err)
 		return
+	}
+	// Sign any private KYC images for admin viewing
+	for i := range items {
+		if strings.Contains(items[i].KTPImageURL, "private-media") || strings.HasPrefix(items[i].KTPImageURL, "/storage/private-media/") || strings.HasPrefix(items[i].KTPImageURL, "kyc/") {
+			if signed, err := h.storage.GetPresignedURL(c.Request.Context(), h.cfg.MinIO.PrivateBucket, items[i].KTPImageURL, 30*time.Minute); err == nil {
+				items[i].KTPImageURL = signed
+			}
+		}
 	}
 	response.Paginated(c, items, uuidToString(next))
 }

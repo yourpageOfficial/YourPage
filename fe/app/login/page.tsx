@@ -72,12 +72,13 @@ export default function LoginPage() {
             <form onSubmit={handleSubmit} className="space-y-4">
               {error && <Alert variant="error">{error}</Alert>}
               <div>
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">Email</label>
-                <Input ref={emailRef} type="email" placeholder="nama@email.com" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" />
+                <label htmlFor="login-email" className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">Email</label>
+                <Input id="login-email" ref={emailRef} type="email" placeholder="nama@email.com" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" />
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">Password</label>
+                <label htmlFor="login-password" className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">Password</label>
                 <Input
+                  id="login-password"
                   type={showPw ? "text" : "password"}
                   placeholder="Masukkan password"
                   value={password}

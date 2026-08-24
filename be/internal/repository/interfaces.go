@@ -38,6 +38,10 @@ type UserRepository interface {
 	CreateReferralCode(ctx context.Context, r *entity.ReferralCode) error
 	IncrementReferralUsed(ctx context.Context, id uuid.UUID) error
 
+	// Password History
+	AddPasswordHistory(ctx context.Context, userID uuid.UUID, passwordHash string) error
+	GetPasswordHistories(ctx context.Context, userID uuid.UUID, limit int) ([]entity.PasswordHistory, error)
+
 	// Analytics
 	CountCreatorPosts(ctx context.Context, userID uuid.UUID) (int64, error)
 	CountCreatorProducts(ctx context.Context, userID uuid.UUID) (int64, error)

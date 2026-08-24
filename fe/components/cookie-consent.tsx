@@ -1,15 +1,19 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 
 export function CookieConsent() {
+  const pathname = usePathname();
   const [show, setShow] = useState(false);
 
   useEffect(() => {
     if (!localStorage.getItem("cookie-consent")) setShow(true);
   }, []);
+
+  if (pathname.startsWith("/overlay")) return null;
 
   const accept = () => {
     localStorage.setItem("cookie-consent", JSON.stringify({ essential: true, analytics: true }));

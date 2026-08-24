@@ -77,7 +77,7 @@ export function PostCard({ post }: { post: Post }) {
       navigator.share({ title: post.title, url });
     } else {
       navigator.clipboard.writeText(url);
-      alert("Link disalin!");
+      toast.success("Link disalin!");
     }
   };
 
