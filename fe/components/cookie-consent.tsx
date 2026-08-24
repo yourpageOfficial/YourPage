@@ -11,6 +11,14 @@ export function CookieConsent() {
     if (!localStorage.getItem("cookie-consent")) setShow(true);
   }, []);
 
+  // Fixed CTAs (e.g. the donate button) sit lower on the screen than this
+  // banner. Flag its presence so they can shift up rather than end up
+  // unclickable behind it.
+  useEffect(() => {
+    document.body.dataset.cookieBanner = show ? "1" : "";
+    return () => { document.body.dataset.cookieBanner = ""; };
+  }, [show]);
+
   const accept = () => {
     localStorage.setItem("cookie-consent", JSON.stringify({ essential: true, analytics: true }));
     setShow(false);

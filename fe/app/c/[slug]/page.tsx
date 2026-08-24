@@ -383,7 +383,7 @@ export default function CreatorPageView() {
         <>
           <button
             onClick={() => setShowDonate(!showDonate)}
-            className="fixed bottom-20 sm:bottom-6 right-3 sm:right-6 z-50 h-14 w-14 rounded-2xl text-white shadow-lg shadow-primary/30 flex items-center justify-center text-xl hover:scale-105 active:scale-95 transition-all"
+            className="yp-fixed-cta fixed bottom-20 sm:bottom-6 right-3 sm:right-6 z-50 h-14 w-14 rounded-2xl text-white shadow-lg shadow-primary/30 flex items-center justify-center text-xl transition-all hover:scale-105 active:scale-95"
             style={{ backgroundColor: accentColor }}
             title="Kirim Donasi"
           >

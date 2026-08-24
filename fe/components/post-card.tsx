@@ -141,7 +141,20 @@ export function PostCard({ post }: { post: Post }) {
               <div className="mt-3 space-y-2">
                 {post.media.map((m) => {
                   if (!m.url && !m.thumb_url) return null;
-                  if (m.media_type === "video") return <video key={m.id} src={m.url} controls playsInline preload="metadata" className="w-full max-h-80 rounded-2xl object-contain bg-black" />;
+                  if (m.media_type === "video") return (
+                    // preload="none" in a feed: nothing is fetched until the
+                    // viewer presses play. A single 1080p clip is tens of MB,
+                    // and a feed can hold several.
+                    <video
+                      key={m.id}
+                      src={m.url}
+                      poster={m.thumb_url || undefined}
+                      controls
+                      playsInline
+                      preload="none"
+                      className="w-full max-h-80 rounded-2xl object-contain bg-black"
+                    />
+                  );
                   if (m.media_type === "audio") return <audio key={m.id} src={m.url} controls className="w-full" />;
                   return <img key={m.id} src={m.thumb_url || m.url} alt="" loading="lazy" className="w-full max-h-96 rounded-2xl object-cover" />;
                 })}

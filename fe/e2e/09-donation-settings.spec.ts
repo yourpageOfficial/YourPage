@@ -1,4 +1,5 @@
 import { test, expect, type APIRequestContext } from "@playwright/test";
+import { dismissCookieBanner } from "./helpers";
 
 const API = "http://localhost:8080/api/v1";
 
@@ -34,6 +35,7 @@ test.describe("Creator donation settings", () => {
 
     // The form works in Credits, so Rp15.000 must appear as 15.
     await page.goto(`/c/${creator.slug}`, { waitUntil: "domcontentloaded" });
+    await dismissCookieBanner(page);
     await page.getByRole("button", { name: /Donasi/ }).first().click();
     await expect(page.getByRole("button", { name: "15", exact: true })).toBeVisible({ timeout: 15000 });
     await expect(page.getByRole("button", { name: "30", exact: true })).toBeVisible();

@@ -145,7 +145,10 @@ export default function DashboardPostDetail() {
             {post.media?.map((m) => (
               <div key={m.id} className="relative group rounded border overflow-hidden">
                 {m.media_type === "image" && m.url && <img loading="lazy" src={m.url} alt="" className="h-32 w-full object-cover" />}
-                {m.media_type === "video" && m.url && <video src={m.url} className="h-32 w-full object-cover" />}
+                {m.media_type === "video" && m.url && (
+                  // Thumbnail grid: never download the clip just to show a tile.
+                  <video src={m.url} poster={m.thumb_url || undefined} preload="none" className="h-32 w-full object-cover" />
+                )}
                 {m.media_type === "audio" && <div className="h-32 flex items-center justify-center bg-primary-50/50 dark:bg-navy-800 text-2xl">🎵</div>}
                 {m.media_type === "document" && <div className="h-32 flex items-center justify-center bg-primary-50/50 dark:bg-navy-800 text-2xl">📄</div>}
                 <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
