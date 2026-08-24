@@ -31,6 +31,22 @@ func (r *withdrawalRepo) FindByID(ctx context.Context, id uuid.UUID) (*entity.Wi
 	return &withdrawal, err
 }
 
+func (r *withdrawalRepo) UpdateStatusIfCurrent(ctx context.Context, id uuid.UUID, from, to entity.WithdrawalStatus, adminNote *string) (bool, error) {
+	updates := map[string]interface{}{
+		"status":     to,
+		"admin_note": adminNote,
+	}
+	if to == entity.WithdrawalStatusProcessed || to == entity.WithdrawalStatusApproved {
+		now := time.Now()
+		updates["processed_at"] = &now
+	}
+	res := r.db.WithContext(ctx).
+		Model(&entity.Withdrawal{}).
+		Where("id = ? AND status = ?", id, from).
+		Updates(updates)
+	return res.RowsAffected > 0, res.Error
+}
+
 func (r *withdrawalRepo) UpdateStatus(ctx context.Context, id uuid.UUID, status entity.WithdrawalStatus, adminNote *string) error {
 	updates := map[string]interface{}{
 		"status":     status,

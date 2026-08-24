@@ -4,7 +4,7 @@ import { Navbar } from "@/components/navbar";
 import { AuthGuard } from "@/components/auth-guard";
 import { MobileSidebar } from "@/components/mobile-sidebar";
 import { SidebarNav } from "@/components/sidebar-nav";
-import { BarChart3, Users, FileText, Package, CreditCard, Banknote, ShieldCheck, Flag, Settings, Heart, UserCog, TrendingUp, Target } from "lucide-react";
+import { BarChart3, Users, FileText, Package, CreditCard, Banknote, ShieldCheck, Flag, Settings, Heart, UserCog, TrendingUp, Target, ScrollText } from "lucide-react";
 
 const sections = [
   {
@@ -36,6 +36,7 @@ const sections = [
       { href: "/admin/donations", label: "Donasi", icon: Heart },
       { href: "/admin/withdrawals", label: "Penarikan", icon: Banknote },
       { href: "/admin/profit", label: "Profit", icon: TrendingUp },
+      { href: "/admin/payment-audit", label: "Audit Trail", icon: ScrollText },
     ],
   },
   {

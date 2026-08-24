@@ -86,7 +86,14 @@ export default function CreatorPageView() {
   if (!creator) return <><Navbar /><div className="p-8 text-center text-gray-500 dark:text-gray-400">Kreator tidak ditemukan</div></>;
 
   const isOwn = user?.id === creator.user_id;
-  const donatePresets = [5, 10, 25, 50, 100];
+  // Presets and the minimum come from the creator's own donation settings;
+  // they are stored in IDR while this form works in Credits (1 Credit = Rp1.000).
+  const donatePresets = (creator.donation_preset_amounts?.length
+    ? creator.donation_preset_amounts
+    : [5000, 10000, 25000, 50000, 100000]
+  ).map((idr) => Math.max(1, Math.round(idr / 1000)));
+  const minDonateCredits = Math.max(1, Math.round((creator.donation_min_amount ?? 1000) / 1000));
+  const donationsOpen = creator.donation_enabled !== false;
   const accentColor = creator.page_color || "#2563EB";
 
   const handleDonate = async () => {
@@ -168,6 +175,15 @@ export default function CreatorPageView() {
               </div>
 
               {/* Bio */}
+              {creator.tags && creator.tags.length > 0 && (
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  {creator.tags.map((t: string) => (
+                    <span key={t} className="rounded-full bg-primary-50 px-2.5 py-1 text-xs font-medium text-primary-700 dark:bg-primary-900/25 dark:text-primary-300">
+                      {t}
+                    </span>
+                  ))}
+                </div>
+              )}
               {creator.bio && (
                 <p className="mt-4 text-sm text-gray-600 dark:text-gray-300 leading-relaxed max-w-xl">{creator.bio}</p>
               )}
@@ -201,9 +217,13 @@ export default function CreatorPageView() {
                       variant={followStatus ? "outline" : "default"}>
                       {followStatus ? "Unfollow" : "Follow"}
                     </Button>
-                    <Button size="sm" variant="secondary" className="rounded-2xl" onClick={() => setShowDonate(true)}>
-                      <Heart className="h-4 w-4 mr-1" /> Donasi
-                    </Button>
+                    {/* A creator who turned donations off must not be shown a
+                        donate button that would only fail on submit. */}
+                    {donationsOpen && (
+                      <Button size="sm" variant="secondary" className="rounded-2xl" onClick={() => setShowDonate(true)}>
+                        <Heart className="h-4 w-4 mr-1" /> Donasi
+                      </Button>
+                    )}
                     <Link href={`/chat?creator=${creator.user_id}&price=${creator.chat_price_idr || 0}`}>
                       <Button size="sm" variant="outline" className="rounded-2xl">
                         <MessageCircle className="h-4 w-4 mr-1" /> Chat {(creator.chat_price_idr ?? 0) > 0 ? `(${(creator.chat_price_idr ?? 0) / 1000}C)` : ""}
@@ -370,7 +390,7 @@ export default function CreatorPageView() {
             <Heart className="h-6 w-6" />
           </button>
 
-          {showDonate && (
+          {showDonate && donationsOpen && (
             <>
               <div className="fixed inset-0 z-40 bg-black/20 backdrop-blur-sm sm:hidden" onClick={() => setShowDonate(false)} />
               <div className="fixed bottom-0 sm:bottom-24 right-0 sm:right-6 z-50 w-full sm:w-96 sm:rounded-2xl overflow-hidden">
@@ -404,12 +424,12 @@ export default function CreatorPageView() {
                             </button>
                           ))}
                         </div>
-                        <Input type="number" placeholder="Nominal lain (min 1)" value={donateAmount} onChange={(e) => setDonateAmount(e.target.value)} />
+                        <Input type="number" min={minDonateCredits} placeholder={`Nominal lain (min ${minDonateCredits})`} value={donateAmount} onChange={(e) => setDonateAmount(e.target.value)} />
                         <Input placeholder="Pesan (opsional)" value={donateMsg} onChange={(e) => setDonateMsg(e.target.value)} maxLength={500} />
                         {donateError && <p className="text-xs text-red-500">{donateError}</p>}
                         {donateError.includes("Top-up") && <Link href="/wallet/topup" className="text-xs text-primary hover:underline">Top-up Credit →</Link>}
                         <Button className="w-full h-12 rounded-2xl font-bold" onClick={handleDonate}
-                          disabled={donating || !donateAmount || parseInt(donateAmount) < 1}
+                          disabled={donating || !donateAmount || parseInt(donateAmount) < minDonateCredits}
                           style={{ backgroundColor: accentColor }}>
                           {donating ? "Mengirim..." : `Kirim ${donateAmount ? donateAmount + " Credit" : ""}`}
                         </Button>

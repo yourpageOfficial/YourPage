@@ -23,6 +23,11 @@ type FollowService interface {
 	MarkAllRead(ctx context.Context, userID uuid.UUID) error
 	DeleteNotification(ctx context.Context, notifID, userID uuid.UUID) error
 	DeleteReadNotifications(ctx context.Context, userID uuid.UUID) error
+
+	// Block
+	BlockUser(ctx context.Context, blockerID, blockedID uuid.UUID) error
+	UnblockUser(ctx context.Context, blockerID, blockedID uuid.UUID) error
+	ListBlocked(ctx context.Context, blockerID uuid.UUID) ([]entity.UserBlock, error)
 }
 
 // ---------------------------------------------------------------------------
@@ -118,4 +123,33 @@ func (s *followService) DeleteNotification(ctx context.Context, notifID, userID 
 
 func (s *followService) DeleteReadNotifications(ctx context.Context, userID uuid.UUID) error {
 	return s.followRepo.DeleteReadNotifications(ctx, userID)
+}
+
+// ---------------------------------------------------------------------------
+// Block
+// ---------------------------------------------------------------------------
+
+func (s *followService) BlockUser(ctx context.Context, blockerID, blockedID uuid.UUID) error {
+	if blockerID == blockedID {
+		return entity.ErrForbidden
+	}
+	// Auto-unfollow both sides
+	_ = s.followRepo.Unfollow(ctx, blockerID, blockedID)
+	_ = s.followRepo.Unfollow(ctx, blockedID, blockerID)
+	// Decrement follower counts (best effort)
+	if cp, err := s.userRepo.FindCreatorByUserID(ctx, blockedID); err == nil {
+		_ = s.userRepo.IncrementFollowerCount(ctx, cp.ID, -1)
+	}
+	if cp, err := s.userRepo.FindCreatorByUserID(ctx, blockerID); err == nil {
+		_ = s.userRepo.IncrementFollowerCount(ctx, cp.ID, -1)
+	}
+	return s.followRepo.BlockUser(ctx, blockerID, blockedID)
+}
+
+func (s *followService) UnblockUser(ctx context.Context, blockerID, blockedID uuid.UUID) error {
+	return s.followRepo.UnblockUser(ctx, blockerID, blockedID)
+}
+
+func (s *followService) ListBlocked(ctx context.Context, blockerID uuid.UUID) ([]entity.UserBlock, error) {
+	return s.followRepo.ListBlocked(ctx, blockerID)
 }

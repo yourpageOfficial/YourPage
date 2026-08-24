@@ -51,8 +51,10 @@ type RegisterResponse struct {
 }
 
 type LoginResponse struct {
-	AccessToken  string `json:"access_token"`
-	RefreshToken string `json:"refresh_token"`
+	AccessToken    string `json:"access_token,omitempty"`
+	RefreshToken   string `json:"refresh_token,omitempty"`
+	Requires2FA    bool   `json:"requires_2fa,omitempty"`
+	ChallengeToken string `json:"challenge_token,omitempty"`
 }
 
 // UserProfileResponse intentionally omits email (PII).
@@ -97,6 +99,28 @@ type AuthService interface {
 	RequestDeleteAccount(ctx context.Context, userID uuid.UUID, password string) error
 	CancelDeleteAccount(ctx context.Context, userID uuid.UUID) error
 	ExportData(ctx context.Context, userID uuid.UUID) (map[string]interface{}, error)
+
+	// 2FA
+	EnableTwoFA(ctx context.Context, userID uuid.UUID) error
+	VerifyTwoFA(ctx context.Context, userID uuid.UUID, otp string) error
+	DisableTwoFA(ctx context.Context, userID uuid.UUID, password string) error
+	LoginWithTwoFA(ctx context.Context, challengeToken, otp string) (*LoginResponse, error)
+
+	// QR Login
+	GenerateQRLogin(ctx context.Context) (string, error)
+	ConfirmQRLogin(ctx context.Context, qrToken string, userID uuid.UUID, role string) error
+	PollQRLogin(ctx context.Context, qrToken string) (*LoginResponse, error)
+
+	// Referral
+	GetMyReferralCode(ctx context.Context, userID uuid.UUID) (*entity.ReferralCode, error)
+	ListMyReferrals(ctx context.Context, userID uuid.UUID, cursor *uuid.UUID, limit int) ([]entity.ReferralUse, *uuid.UUID, error)
+	GetReferralStats(ctx context.Context, userID uuid.UUID) (map[string]interface{}, error)
+
+	// Donation settings
+	UpdateDonationSettings(ctx context.Context, userID uuid.UUID, enabled *bool, minAmount *int, presets []int64) error
+
+	// Tags
+	UpdateTags(ctx context.Context, userID uuid.UUID, tags []string) error
 }
 
 // ------------------------------------------------------------------ Redis key helpers
@@ -243,6 +267,31 @@ func (s *authService) Login(ctx context.Context, req LoginRequest) (*LoginRespon
 
 	// Reset fail counter on success
 	s.rdb.Del(ctx, lockKey)
+
+	// 2FA check: if enabled, send OTP and return challenge token
+	if user.TwoFAEnabled {
+		challengeToken, err := randomHex(16)
+		if err != nil {
+			return nil, fmt.Errorf("login: generate 2fa challenge: %w", err)
+		}
+		val := user.ID.String() + ":" + string(user.Role)
+		if err := s.rdb.Set(ctx, twoFAChallengePrefix+challengeToken, val, twoFAChallengeTTL).Err(); err != nil {
+			return nil, fmt.Errorf("login: store 2fa challenge: %w", err)
+		}
+		// Generate and send OTP
+		otp, err := generateOTP()
+		if err != nil {
+			return nil, fmt.Errorf("login: generate otp: %w", err)
+		}
+		s.rdb.Set(ctx, twoFAOTPPrefix+user.ID.String(), otp, twoFAOTPTTL)
+		go s.mailer.SendTwoFAOTP(context.Background(), user.Email, otp)
+		// Return special response — no token yet
+		return &LoginResponse{
+			Requires2FA:    true,
+			ChallengeToken: challengeToken,
+		}, nil
+	}
+
 	return s.issueTokenPair(ctx, user.ID, string(user.Role))
 }
 
@@ -447,7 +496,7 @@ func (s *authService) UpdateProfile(ctx context.Context, userID uuid.UUID, displ
 	}
 	// Save page_color to creator profile
 	// Save creator-specific fields
-	if user.Role == entity.RoleCreator && (pageColor != nil || headerImage != nil || chatPrice != nil || chatAllowFrom != nil || autoReply != nil || socialLinks != nil || goalTitle != nil || goalAmount != nil || welcomeMsg != nil || overlayStyle != nil || overlayText != nil) {
+	if user.Role == entity.RoleCreator && (pageColor != nil || headerImage != nil || chatPrice != nil || chatAllowFrom != nil || autoReply != nil || socialLinks != nil || goalTitle != nil || goalAmount != nil || welcomeMsg != nil || overlayStyle != nil || overlayText != nil || category != nil) {
 		cp, err := s.userRepo.FindCreatorByUserID(ctx, userID)
 		if err == nil {
 			if pageColor != nil { cp.PageColor = pageColor }
@@ -466,6 +515,8 @@ func (s *authService) UpdateProfile(ctx context.Context, userID uuid.UUID, displ
 			if welcomeMsg != nil { cp.WelcomeMessage = welcomeMsg }
 			if overlayStyle != nil { cp.OverlayStyle = *overlayStyle }
 			if overlayText != nil { cp.OverlayTextTemplate = *overlayText }
+			// category was accepted by the handler but never persisted.
+			if category != nil { cp.Category = category }
 			cp.Tier = nil
 			return s.userRepo.UpdateCreatorProfile(ctx, cp)
 		}
@@ -651,4 +702,252 @@ func (s *authService) ExportData(ctx context.Context, userID uuid.UUID) (map[str
 		}
 	}
 	return data, nil
+}
+
+// ---------------------------------------------------------------------------
+// 2FA
+// ---------------------------------------------------------------------------
+
+const (
+	twoFAChallengePrefix = "2fa_challenge:"
+	twoFAOTPPrefix       = "2fa_otp:"
+	twoFAChallengeTTL    = 10 * time.Minute
+	twoFAOTPTTL          = 5 * time.Minute
+)
+
+func (s *authService) EnableTwoFA(ctx context.Context, userID uuid.UUID) error {
+	user, err := s.userRepo.FindByID(ctx, userID)
+	if err != nil {
+		return err
+	}
+	otp, err := generateOTP()
+	if err != nil {
+		return fmt.Errorf("enable_2fa: generate otp: %w", err)
+	}
+	if err := s.rdb.Set(ctx, twoFAOTPPrefix+userID.String(), otp, twoFAOTPTTL).Err(); err != nil {
+		return fmt.Errorf("enable_2fa: store otp: %w", err)
+	}
+	go s.mailer.SendTwoFAOTP(context.Background(), user.Email, otp)
+	return nil
+}
+
+func (s *authService) VerifyTwoFA(ctx context.Context, userID uuid.UUID, otp string) error {
+	stored, err := s.rdb.Get(ctx, twoFAOTPPrefix+userID.String()).Result()
+	if err != nil {
+		return entity.ErrInvalidToken
+	}
+	if stored != otp {
+		return entity.ErrUnauthorized
+	}
+	s.rdb.Del(ctx, twoFAOTPPrefix+userID.String())
+	user, err := s.userRepo.FindByID(ctx, userID)
+	if err != nil {
+		return err
+	}
+	user.TwoFAEnabled = true
+	return s.userRepo.Update(ctx, user)
+}
+
+func (s *authService) DisableTwoFA(ctx context.Context, userID uuid.UUID, password string) error {
+	user, err := s.userRepo.FindByID(ctx, userID)
+	if err != nil {
+		return err
+	}
+	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password)); err != nil {
+		return entity.ErrUnauthorized
+	}
+	user.TwoFAEnabled = false
+	return s.userRepo.Update(ctx, user)
+}
+
+func (s *authService) LoginWithTwoFA(ctx context.Context, challengeToken, otp string) (*LoginResponse, error) {
+	key := twoFAChallengePrefix + challengeToken
+	val, err := s.rdb.Get(ctx, key).Result()
+	if err != nil {
+		return nil, entity.ErrInvalidToken
+	}
+	// val format: "userID:role"
+	parts := splitTwo(val, ":")
+	if len(parts) != 2 {
+		return nil, entity.ErrInvalidToken
+	}
+	userID, err := uuid.Parse(parts[0])
+	if err != nil {
+		return nil, entity.ErrInvalidToken
+	}
+	role := parts[1]
+	// Verify OTP
+	stored, err := s.rdb.Get(ctx, twoFAOTPPrefix+userID.String()).Result()
+	if err != nil || stored != otp {
+		return nil, entity.ErrUnauthorized
+	}
+	s.rdb.Del(ctx, key)
+	s.rdb.Del(ctx, twoFAOTPPrefix+userID.String())
+	return s.issueTokenPair(ctx, userID, role)
+}
+
+// generateOTP creates a 6-digit numeric OTP.
+func generateOTP() (string, error) {
+	b := make([]byte, 3)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	n := (int(b[0])<<16 | int(b[1])<<8 | int(b[2])) % 1_000_000
+	return fmt.Sprintf("%06d", n), nil
+}
+
+func splitTwo(s, sep string) []string {
+	idx := len(s)
+	for i := len(s) - 1; i >= 0; i-- {
+		if s[i] == sep[0] {
+			idx = i
+			break
+		}
+	}
+	if idx == len(s) {
+		return []string{s}
+	}
+	return []string{s[:idx], s[idx+1:]}
+}
+
+// ---------------------------------------------------------------------------
+// QR Login
+// ---------------------------------------------------------------------------
+
+const (
+	qrLoginPrefix = "qr_login:"
+	qrLoginTTL    = 5 * time.Minute
+)
+
+func (s *authService) GenerateQRLogin(ctx context.Context) (string, error) {
+	token, err := randomHex(16)
+	if err != nil {
+		return "", fmt.Errorf("qr_login: generate token: %w", err)
+	}
+	if err := s.rdb.Set(ctx, qrLoginPrefix+token, "pending", qrLoginTTL).Err(); err != nil {
+		return "", fmt.Errorf("qr_login: store token: %w", err)
+	}
+	return token, nil
+}
+
+func (s *authService) ConfirmQRLogin(ctx context.Context, qrToken string, userID uuid.UUID, role string) error {
+	key := qrLoginPrefix + qrToken
+	existing, err := s.rdb.Get(ctx, key).Result()
+	if err != nil || existing != "pending" {
+		return entity.ErrInvalidToken
+	}
+	val := userID.String() + ":" + role
+	return s.rdb.Set(ctx, key, val, qrLoginTTL).Err()
+}
+
+func (s *authService) PollQRLogin(ctx context.Context, qrToken string) (*LoginResponse, error) {
+	key := qrLoginPrefix + qrToken
+	val, err := s.rdb.Get(ctx, key).Result()
+	if err != nil {
+		return nil, entity.ErrNotFound
+	}
+	if val == "pending" {
+		return nil, entity.ErrNotFound // still waiting
+	}
+	parts := splitTwo(val, ":")
+	if len(parts) != 2 {
+		return nil, entity.ErrInvalidToken
+	}
+	userID, err := uuid.Parse(parts[0])
+	if err != nil {
+		return nil, entity.ErrInvalidToken
+	}
+	s.rdb.Del(ctx, key)
+	return s.issueTokenPair(ctx, userID, parts[1])
+}
+
+// ---------------------------------------------------------------------------
+// Referral
+// ---------------------------------------------------------------------------
+
+func (s *authService) GetMyReferralCode(ctx context.Context, userID uuid.UUID) (*entity.ReferralCode, error) {
+	return s.userRepo.GetOrCreateReferralCode(ctx, userID)
+}
+
+func (s *authService) ListMyReferrals(ctx context.Context, userID uuid.UUID, cursor *uuid.UUID, limit int) ([]entity.ReferralUse, *uuid.UUID, error) {
+	ref, err := s.userRepo.GetOrCreateReferralCode(ctx, userID)
+	if err != nil {
+		return nil, nil, err
+	}
+	uses, err := s.userRepo.ListReferralUses(ctx, ref.ID, cursor, limit+1)
+	if err != nil {
+		return nil, nil, err
+	}
+	var next *uuid.UUID
+	if len(uses) > limit {
+		next = &uses[limit].ID
+		uses = uses[:limit]
+	}
+	return uses, next, nil
+}
+
+func (s *authService) GetReferralStats(ctx context.Context, userID uuid.UUID) (map[string]interface{}, error) {
+	ref, err := s.userRepo.GetOrCreateReferralCode(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	totalEarned, err := s.userRepo.CountReferralEarnings(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]interface{}{
+		"code":                 ref.Code,
+		"total_referred":       ref.UsedCount,
+		"total_credits_earned": totalEarned,
+		"reward_per_referral":  ref.RewardCredits,
+	}, nil
+}
+
+// ---------------------------------------------------------------------------
+// Donation Settings
+// ---------------------------------------------------------------------------
+
+func (s *authService) UpdateDonationSettings(ctx context.Context, userID uuid.UUID, enabled *bool, minAmount *int, presets []int64) error {
+	cp, err := s.userRepo.FindCreatorByUserID(ctx, userID)
+	if err != nil {
+		return entity.ErrNotFound
+	}
+	if enabled != nil {
+		cp.DonationEnabled = *enabled
+	}
+	if minAmount != nil && *minAmount >= 0 {
+		cp.DonationMinAmount = *minAmount
+	}
+	if len(presets) > 0 {
+		// Stored as a plain JSON array, matching the column's default shape.
+		cp.DonationPresetAmounts = entity.Int64Array(presets)
+	}
+	cp.Tier = nil
+	return s.userRepo.UpdateCreatorProfile(ctx, cp)
+}
+
+// ---------------------------------------------------------------------------
+// Tags
+// ---------------------------------------------------------------------------
+
+func (s *authService) UpdateTags(ctx context.Context, userID uuid.UUID, tags []string) error {
+	cp, err := s.userRepo.FindCreatorByUserID(ctx, userID)
+	if err != nil {
+		return entity.ErrNotFound
+	}
+	// Sanitize tags: max 5, max 20 chars each
+	sanitized := make([]string, 0, 5)
+	for _, t := range tags {
+		t = validator.SanitizeString(t)
+		if t == "" || len(t) > 20 {
+			continue
+		}
+		sanitized = append(sanitized, t)
+		if len(sanitized) == 5 {
+			break
+		}
+	}
+	cp.Tags = sanitized
+	cp.Tier = nil
+	return s.userRepo.UpdateCreatorProfile(ctx, cp)
 }

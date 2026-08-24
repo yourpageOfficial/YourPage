@@ -312,7 +312,27 @@ func (s *postService) Delete(ctx context.Context, postID, creatorID uuid.UUID) e
 	if post.CreatorID != creatorID {
 		return entity.ErrForbidden
 	}
-	return s.postRepo.SoftDelete(ctx, postID)
+
+	// Sum the post's media before deletion so the quota can be released.
+	var freedBytes int64
+	if media, merr := s.postRepo.ListMedia(ctx, postID); merr == nil {
+		for _, m := range media {
+			freedBytes += m.FileSizeBytes
+		}
+	}
+
+	if err := s.postRepo.SoftDelete(ctx, postID); err != nil {
+		return err
+	}
+
+	if freedBytes > 0 {
+		if profile, perr := s.userRepo.FindCreatorByUserID(ctx, creatorID); perr == nil {
+			if serr := s.userRepo.IncrementCreatorStorage(ctx, profile.ID, -freedBytes); serr != nil {
+				fmt.Printf("post: release storage after post delete: %v\n", serr)
+			}
+		}
+	}
+	return nil
 }
 
 // ---------------------------------------------------------------------------
@@ -411,6 +431,7 @@ func (s *postService) AddMedia(ctx context.Context, postID, creatorID uuid.UUID,
 		ThumbURL:  req.ThumbURL,
 		MediaType: req.MediaType,
 		SortOrder: req.SortOrder,
+		FileSizeBytes: req.FileSize,
 	}
 
 	if err := s.postRepo.AddMedia(ctx, media); err != nil {
@@ -439,8 +460,20 @@ func (s *postService) DeleteMedia(ctx context.Context, mediaID, postID, creatorI
 		return entity.ErrForbidden
 	}
 
-	_, err = s.postRepo.DeleteMedia(ctx, mediaID)
-	return err
+	media, err := s.postRepo.DeleteMedia(ctx, mediaID)
+	if err != nil {
+		return err
+	}
+
+	// Release the freed bytes back to the creator's quota.
+	if media != nil && media.FileSizeBytes > 0 {
+		if profile, perr := s.userRepo.FindCreatorByUserID(ctx, creatorID); perr == nil {
+			if serr := s.userRepo.IncrementCreatorStorage(ctx, profile.ID, -media.FileSizeBytes); serr != nil {
+				fmt.Printf("post: release storage after media delete: %v\n", serr)
+			}
+		}
+	}
+	return nil
 }
 
 // ---------------------------------------------------------------------------

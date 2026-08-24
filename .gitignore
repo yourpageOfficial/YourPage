@@ -39,3 +39,11 @@ superpowers/
 
 # Kiro agent configs (personal, not project files)
 .kiro/
+
+# Real production env must never be committed (template is .env.production.example)
+.env.production
+
+# Test + build artifacts
+test-results/
+playwright-report/
+*.tsbuildinfo

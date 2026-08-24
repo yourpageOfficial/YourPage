@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/rs/zerolog/log"
 	"github.com/google/uuid"
 	"github.com/yourpage/be/internal/entity"
 	"github.com/yourpage/be/internal/pkg/response"
@@ -25,7 +26,14 @@ func (h *PublicHandler) GetCreatorPage(c *gin.Context) {
 	slug := c.Param("slug")
 	profile, err := h.userRepo.FindCreatorBySlug(c.Request.Context(), slug)
 	if err != nil {
-		response.NotFound(c, "creator not found")
+		if err == entity.ErrNotFound {
+			response.NotFound(c, "creator not found")
+			return
+		}
+		// Reporting a database or scan failure as "not found" hid a real bug:
+		// every creator whose tags column was non-NULL looked nonexistent.
+		log.Error().Err(err).Str("slug", slug).Msg("public: failed to load creator page")
+		response.InternalError(c)
 		return
 	}
 
@@ -56,6 +64,10 @@ func (h *PublicHandler) GetCreatorPage(c *gin.Context) {
 		"page_slug":      profile.PageSlug,
 		"header_image":   profile.HeaderImageURL,
 		"social_links":   profile.SocialLinks,
+		// Tags were stored but never returned, so they could not be shown or
+		// browsed from the creator's public page.
+		"tags":           []string(profile.Tags),
+		"category":       profile.Category,
 		"follower_count": profile.FollowerCount,
 		"is_verified":    profile.IsVerified,
 		"tier_badge":     tierBadge,
@@ -66,6 +78,11 @@ func (h *PublicHandler) GetCreatorPage(c *gin.Context) {
 		"donation_goal_title":   profile.DonationGoalTitle,
 		"donation_goal_amount":  profile.DonationGoalAmount,
 		"donation_goal_current": profile.DonationGoalCurrent,
+		// A creator's donation settings only matter if supporters actually see
+		// them; these were stored but never returned by the public page.
+		"donation_preset_amounts": []int64(profile.DonationPresetAmounts),
+		"donation_min_amount":     profile.DonationMinAmount,
+		"donation_enabled":        profile.DonationEnabled,
 		"overlay_style":        profile.OverlayStyle,
 		"is_following":         isFollowing,
 		"welcome_message":     profile.WelcomeMessage,
@@ -224,6 +241,11 @@ func (h *PublicHandler) SearchCreators(c *gin.Context) {
 		PageSlug      string    `json:"page_slug"`
 		FollowerCount int64     `json:"follower_count"`
 		IsVerified    bool      `json:"is_verified"`
+		// The explore grid shows a category badge and lets users filter by
+		// category; without this field the badge never rendered.
+		Category *string  `json:"category"`
+		Bio      *string  `json:"bio"`
+		Tags     []string `json:"tags"`
 	}
 
 	var items []creatorItem
@@ -237,6 +259,9 @@ func (h *PublicHandler) SearchCreators(c *gin.Context) {
 			PageSlug:      p.PageSlug,
 			FollowerCount: p.FollowerCount,
 			IsVerified:    p.IsVerified,
+			Category:      p.Category,
+			Bio:           p.User.Bio,
+			Tags:          []string(p.Tags),
 		})
 	}
 

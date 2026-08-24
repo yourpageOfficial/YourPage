@@ -7,7 +7,9 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/yourpage/be/internal/entity"
+	"github.com/yourpage/be/internal/pkg/audit"
 	"github.com/yourpage/be/internal/pkg/mailer"
+	"github.com/yourpage/be/internal/pkg/realtime"
 	"github.com/yourpage/be/internal/pkg/validator"
 	"github.com/yourpage/be/internal/repository"
 )
@@ -72,6 +74,8 @@ type paymentService struct {
 	followRepo   repository.FollowRepository
 	platformRepo repository.PlatformRepository
 	mailer       mailer.Mailer
+	audit        audit.Logger
+	broker       realtime.Broker
 }
 
 func NewPaymentService(
@@ -84,6 +88,8 @@ func NewPaymentService(
 	followRepo repository.FollowRepository,
 	platformRepo repository.PlatformRepository,
 	m mailer.Mailer,
+	auditLog audit.Logger,
+	broker realtime.Broker,
 ) PaymentService {
 	return &paymentService{
 		paymentRepo:  paymentRepo,
@@ -95,6 +101,8 @@ func NewPaymentService(
 		followRepo:   followRepo,
 		platformRepo: platformRepo,
 		mailer:       m,
+		audit:        auditLog,
+		broker:       broker,
 	}
 }
 
@@ -225,7 +233,8 @@ func (s *paymentService) CheckoutDonation(ctx context.Context, buyerID uuid.UUID
 	netIDR := req.AmountIDR - feeIDR
 
 	if req.Provider == "credits" {
-		return s.payWithCredits(ctx, buyerID, req.CreatorID, req.AmountIDR, feeIDR, netIDR, entity.PaymentUsecaseDonation, uuid.Nil, func(paymentID uuid.UUID) error {
+		var donationID uuid.UUID
+		resp, err := s.payWithCredits(ctx, buyerID, req.CreatorID, req.AmountIDR, feeIDR, netIDR, entity.PaymentUsecaseDonation, uuid.Nil, func(paymentID uuid.UUID) error {
 			donation := &entity.Donation{
 				ID:           uuid.New(),
 				CreatorID:    req.CreatorID,
@@ -239,8 +248,36 @@ func (s *paymentService) CheckoutDonation(ctx context.Context, buyerID uuid.UUID
 				MediaURL:     req.MediaURL,
 				Status:       entity.PaymentStatusPaid,
 			}
+			donationID = donation.ID
 			return s.donationRepo.Create(ctx, donation)
 		})
+		if err != nil {
+			return nil, err
+		}
+
+		// Push the alert to the creator's OBS overlay. Best effort: a failed
+		// alert must never fail a paid donation.
+		displayName := req.DonorName
+		if req.IsAnonymous {
+			displayName = "Anonim"
+		}
+		alert := realtime.Alert{
+			Type:      realtime.EventDonation,
+			ID:        donationID.String(),
+			DonorName: displayName,
+			Credits:   req.AmountIDR / 1000,
+			AmountIDR: req.AmountIDR,
+		}
+		if req.Message != nil {
+			alert.Message = *req.Message
+		}
+		if req.MediaURL != nil {
+			alert.MediaURL = *req.MediaURL
+		}
+		if perr := s.broker.Publish(ctx, req.CreatorID, alert); perr != nil {
+			fmt.Printf("payment: publish overlay alert: %v\n", perr)
+		}
+		return resp, nil
 	}
 
 	return nil, entity.ErrPaymentFailed
@@ -364,6 +401,19 @@ func (s *paymentService) payWithCredits(
 			go s.mailer.SendPurchaseReceipt(ctx, buyer.Email, string(usecase), creditsNeeded)
 		}
 	}
+
+	eventByUsecase := map[entity.PaymentUsecase]string{
+		entity.PaymentUsecasePostPurchase:    audit.EventCheckoutPost,
+		entity.PaymentUsecaseProductPurchase: audit.EventCheckoutProduct,
+		entity.PaymentUsecaseDonation:        audit.EventCheckoutDonation,
+		entity.PaymentUsecaseChat:            audit.EventCheckoutChat,
+	}
+	s.audit.Log(ctx, audit.Entry{
+		ActorID: &buyerID, ActorRole: "user", Event: eventByUsecase[usecase],
+		ReferenceType: "payment", ReferenceID: &paymentID,
+		AmountIDR: amountIDR, Credits: creditsNeeded, Method: string(entity.PaymentProviderCredits),
+		Detail: entity.JSONMap{"creator_id": creatorID.String(), "fee_idr": feeIDR, "net_idr": netIDR},
+	})
 
 	return &CheckoutResponse{
 		PaymentID:       paymentID,

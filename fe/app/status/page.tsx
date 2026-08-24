@@ -13,7 +13,17 @@ export default function StatusPage() {
         { name: "API", url: "/api/v1/health", ok: false },
         { name: "Database", url: "/api/v1/tiers", ok: false },
       ];
-      for (const s of checks) { try { const r = await fetch(s.url); s.ok = r.ok; } catch { s.ok = false; } }
+      // HEAD + no-store: we only need the status code. A plain GET pulls the
+      // full landing page every 30s, and leaving its streamed body unread
+      // holds the connection open indefinitely.
+      for (const s of checks) {
+        try {
+          const r = await fetch(s.url, { method: "HEAD", cache: "no-store" });
+          s.ok = r.ok;
+        } catch {
+          s.ok = false;
+        }
+      }
       return checks;
     },
     refetchInterval: 30000,

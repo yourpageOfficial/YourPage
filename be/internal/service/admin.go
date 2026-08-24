@@ -2,7 +2,9 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -10,7 +12,9 @@ import (
 	"github.com/rs/zerolog/log"
 	"golang.org/x/crypto/bcrypt"
 	"github.com/yourpage/be/internal/entity"
+	"github.com/yourpage/be/internal/pkg/audit"
 	"github.com/yourpage/be/internal/pkg/mailer"
+	"github.com/yourpage/be/internal/pkg/storage"
 	"github.com/yourpage/be/internal/repository"
 )
 
@@ -42,6 +46,11 @@ type UpdatePlatformSettingsRequest struct {
 	MinWithdrawalIDR *int64  `json:"min_withdrawal_idr"`
 	CreditRateIDR    *int64  `json:"credit_rate_idr"`
 	PlatformQRISURL  *string `json:"platform_qris_url"`
+	QRISEnabled          *bool   `json:"qris_enabled"`
+	StripeEnabled        *bool   `json:"stripe_enabled"`
+	StripePublishableKey *string `json:"stripe_publishable_key"`
+	StripeSecretKey      *string `json:"stripe_secret_key"`
+	StripeWebhookSecret  *string `json:"stripe_webhook_secret"`
 }
 
 // ---------------------------------------------------------------------------
@@ -98,6 +107,20 @@ type AdminService interface {
 
 	// Analytics
 	GetAnalytics(ctx context.Context) (map[string]interface{}, error)
+
+	// Announcements
+	CreateAnnouncement(ctx context.Context, adminID uuid.UUID, title, body, targetRole string, expiresAt *time.Time) error
+	ListAllAnnouncements(ctx context.Context) ([]entity.PlatformAnnouncement, error)
+	DeleteAnnouncement(ctx context.Context, id uuid.UUID) error
+
+	// Bulk actions
+	BulkBanUsers(ctx context.Context, userIDs []uuid.UUID) (int, int)
+	BulkUnbanUsers(ctx context.Context, userIDs []uuid.UUID) (int, int)
+	BulkApproveWithdrawals(ctx context.Context, ids []uuid.UUID) (int, int)
+	BulkRejectWithdrawals(ctx context.Context, ids []uuid.UUID, note string) (int, int)
+
+	// Realtime stats (cached)
+	GetRealtimeStats(ctx context.Context) (map[string]interface{}, error)
 }
 
 // ---------------------------------------------------------------------------
@@ -117,6 +140,9 @@ type adminService struct {
 	platformRepo   repository.PlatformRepository
 	mailer         mailer.Mailer
 	rdb            *redis.Client
+	audit          audit.Logger
+	storage        storage.StorageService
+	privateBucket  string
 }
 
 func NewAdminService(
@@ -132,6 +158,9 @@ func NewAdminService(
 	platformRepo repository.PlatformRepository,
 	m mailer.Mailer,
 	rdb *redis.Client,
+	auditLog audit.Logger,
+	storageSvc storage.StorageService,
+	privateBucket string,
 ) AdminService {
 	return &adminService{
 		userRepo:       userRepo,
@@ -146,6 +175,9 @@ func NewAdminService(
 		platformRepo:   platformRepo,
 		mailer:         m,
 		rdb:            rdb,
+		audit:          auditLog,
+		storage:        storageSvc,
+		privateBucket:  privateBucket,
 	}
 }
 
@@ -276,7 +308,23 @@ func (s *adminService) UpdateWithdrawalStatus(ctx context.Context, id uuid.UUID,
 			creditRate = 1000 // default fallback
 		}
 		creditsToDeduct := w.AmountIDR / creditRate
+
+		// Claim the transition before touching the wallet: two concurrent
+		// "processed" calls would otherwise both pass the state-machine check
+		// above and deduct the creator's credits twice.
+		won, err := s.withdrawalRepo.UpdateStatusIfCurrent(ctx, id, w.Status, req.Status, req.AdminNote)
+		if err != nil {
+			return err
+		}
+		if !won {
+			return entity.ErrConflict
+		}
+
 		if err := s.walletRepo.DeductCredits(ctx, w.CreatorID, creditsToDeduct); err != nil {
+			// Put the withdrawal back so it can be retried; the money never moved.
+			if _, rerr := s.withdrawalRepo.UpdateStatusIfCurrent(ctx, id, req.Status, w.Status, w.AdminNote); rerr != nil {
+				log.Error().Err(rerr).Str("withdrawal_id", id.String()).Msg("admin: failed to revert withdrawal status after deduct failure")
+			}
 			return fmt.Errorf("admin: deduct credits failed, withdrawal status not changed: %w", err)
 		}
 		// Record withdrawal transaction so it appears in creator's wallet history
@@ -288,10 +336,15 @@ func (s *adminService) UpdateWithdrawalStatus(ctx context.Context, id uuid.UUID,
 		}); err != nil {
 			fmt.Printf("admin: create withdrawal credit transaction: %v\n", err)
 		}
-	}
-
-	if err := s.withdrawalRepo.UpdateStatus(ctx, id, req.Status, req.AdminNote); err != nil {
-		return err
+	} else {
+		// Non-money transitions (approved/rejected) still must not race.
+		won, err := s.withdrawalRepo.UpdateStatusIfCurrent(ctx, id, w.Status, req.Status, req.AdminNote)
+		if err != nil {
+			return err
+		}
+		if !won {
+			return entity.ErrConflict
+		}
 	}
 
 	// Notify creator on any status change
@@ -331,6 +384,11 @@ func (s *adminService) UpdateWithdrawalStatus(ctx context.Context, id uuid.UUID,
 		}
 	}
 
+	s.audit.Log(ctx, audit.Entry{
+		Event: audit.EventWithdrawUpdated, ReferenceType: "withdrawal", ReferenceID: &id,
+		AmountIDR: w.AmountIDR, Method: "bank",
+		Detail: entity.JSONMap{"creator_id": w.CreatorID.String(), "new_status": string(req.Status)},
+	})
 	return nil
 }
 
@@ -420,6 +478,19 @@ func (s *adminService) ListTopupRequests(ctx context.Context, status string, cur
 		next = &items[limit].ID
 		items = items[:limit]
 	}
+	// Proof images live in the private bucket, so hand the reviewer a
+	// short-lived signed URL rather than a path that would 403.
+	for i := range items {
+		if items[i].ProofImageURL == nil || *items[i].ProofImageURL == "" {
+			continue
+		}
+		signed, err := s.storage.GetPresignedURL(ctx, s.privateBucket, *items[i].ProofImageURL, 15*time.Minute)
+		if err != nil {
+			log.Warn().Err(err).Str("topup_id", items[i].ID.String()).Msg("admin: sign topup proof")
+			continue
+		}
+		items[i].ProofImageURL = &signed
+	}
 	return items, next, nil
 }
 
@@ -428,13 +499,17 @@ func (s *adminService) ApproveTopup(ctx context.Context, id uuid.UUID, req Appro
 	if err != nil {
 		return err
 	}
-	if topup.Status != entity.PaymentStatusPending {
-		return entity.ErrConflict
-	}
 
-	status := entity.PaymentStatusPaid
-	if err := s.walletRepo.UpdateTopupRequest(ctx, id, status, req.AdminNote); err != nil {
+	// Flip pending→paid atomically and credit only if this call won the
+	// transition. A plain read-check-update would let two concurrent approvals
+	// (an admin double-click is enough) both pass the check and credit twice
+	// for a single real transfer.
+	won, err := s.walletRepo.MarkTopupStatusIfPending(ctx, id, entity.PaymentStatusPaid, req.AdminNote)
+	if err != nil {
 		return err
+	}
+	if !won {
+		return entity.ErrConflict
 	}
 
 	// Add credits to user wallet (1 Credit = Rp 1.000)
@@ -473,14 +548,24 @@ func (s *adminService) ApproveTopup(ctx context.Context, id uuid.UUID, req Appro
 		go s.mailer.SendTopupApproved(ctx, user.Email, topup.Credits)
 	}
 
+	note := ""
+	if req.AdminNote != nil { note = *req.AdminNote }
+	s.audit.Log(ctx, audit.Entry{
+		Event: audit.EventTopupApproved, ReferenceType: "topup", ReferenceID: &id,
+		AmountIDR: topup.AmountIDR, Credits: topup.Credits, Method: string(topup.Method),
+		Detail: entity.JSONMap{"user_id": topup.UserID.String(), "admin_note": note},
+	})
 	return nil
 }
 
 func (s *adminService) RejectTopup(ctx context.Context, id uuid.UUID, adminNote *string) error {
 	topup, err := s.walletRepo.FindTopupRequest(ctx, id)
 	if err != nil { return err }
-	status := entity.PaymentStatusFailed
-	if err := s.walletRepo.UpdateTopupRequest(ctx, id, status, adminNote); err != nil { return err }
+	// Same atomic guard as approval: a rejected topup must never be
+	// re-processed, and reject must not race an in-flight approve.
+	won, err := s.walletRepo.MarkTopupStatusIfPending(ctx, id, entity.PaymentStatusFailed, adminNote)
+	if err != nil { return err }
+	if !won { return entity.ErrConflict }
 	if user, err := s.userRepo.FindByID(ctx, topup.UserID); err == nil {
 		reason := "Tidak memenuhi syarat"
 		if adminNote != nil { reason = *adminNote }
@@ -490,6 +575,13 @@ func (s *adminService) RejectTopup(ctx context.Context, id uuid.UUID, adminNote 
 	s.followRepo.CreateNotification(ctx, &entity.Notification{
 		ID: uuid.New(), UserID: topup.UserID, Type: entity.NotificationCreditTopupDone,
 		Title: "Top-up Ditolak", Body: "Top-up kamu ditolak. Cek email untuk detail.",
+	})
+	note := ""
+	if adminNote != nil { note = *adminNote }
+	s.audit.Log(ctx, audit.Entry{
+		Event: audit.EventTopupRejected, ReferenceType: "topup", ReferenceID: &id,
+		AmountIDR: topup.AmountIDR, Credits: topup.Credits, Method: string(topup.Method),
+		Detail: entity.JSONMap{"user_id": topup.UserID.String(), "admin_note": note},
 	})
 	return nil
 }
@@ -558,13 +650,14 @@ func (s *adminService) RefundPayment(ctx context.Context, id uuid.UUID, adminNot
 	if err != nil {
 		return err
 	}
-	if payment.Status != entity.PaymentStatusPaid {
-		return entity.ErrConflict
-	}
-
-	// Update payment status to refunded
-	if err := s.paymentRepo.UpdateStatus(ctx, id, entity.PaymentStatusRefunded, nil); err != nil {
+	// Claim paid→refunded atomically: two concurrent refunds would otherwise
+	// both pass this check and credit the buyer twice.
+	won, err := s.paymentRepo.UpdateStatusIfCurrent(ctx, id, entity.PaymentStatusPaid, entity.PaymentStatusRefunded, nil)
+	if err != nil {
 		return err
+	}
+	if !won {
+		return entity.ErrConflict
 	}
 
 	// Refund credits to buyer if paid via credits
@@ -624,6 +717,11 @@ func (s *adminService) RefundPayment(ctx context.Context, id uuid.UUID, adminNot
 		}
 	}
 
+	s.audit.Log(ctx, audit.Entry{
+		Event: audit.EventPaymentRefunded, ReferenceType: "payment", ReferenceID: &id,
+		AmountIDR: payment.AmountIDR, Method: string(payment.Provider),
+		Detail: entity.JSONMap{"usecase": string(payment.Usecase), "admin_note": adminNote},
+	})
 	return nil
 }
 
@@ -664,6 +762,22 @@ func (s *adminService) UpdateSettings(ctx context.Context, req UpdatePlatformSet
 	if req.PlatformQRISURL != nil {
 		settings.PlatformQRISURL = req.PlatformQRISURL
 	}
+	if req.QRISEnabled != nil {
+		settings.QRISEnabled = *req.QRISEnabled
+	}
+	if req.StripeEnabled != nil {
+		settings.StripeEnabled = *req.StripeEnabled
+	}
+	// Masked values (containing "•") are display placeholders — never persist them.
+	if req.StripePublishableKey != nil && !strings.Contains(*req.StripePublishableKey, "•") {
+		settings.StripePublishableKey = strings.TrimSpace(*req.StripePublishableKey)
+	}
+	if req.StripeSecretKey != nil && !strings.Contains(*req.StripeSecretKey, "•") {
+		settings.StripeSecretKey = strings.TrimSpace(*req.StripeSecretKey)
+	}
+	if req.StripeWebhookSecret != nil && !strings.Contains(*req.StripeWebhookSecret, "•") {
+		settings.StripeWebhookSecret = strings.TrimSpace(*req.StripeWebhookSecret)
+	}
 	if err := s.platformRepo.UpdateSettings(ctx, settings); err != nil {
 		return nil, err
 	}
@@ -680,5 +794,127 @@ func (s *adminService) GetAnalytics(ctx context.Context) (map[string]interface{}
 	if err != nil { return nil, err }
 	result := make(map[string]interface{})
 	for k, v := range counts { result[k] = v }
+	return result, nil
+}
+
+// ---------------------------------------------------------------------------
+// Announcements
+// ---------------------------------------------------------------------------
+
+func (s *adminService) CreateAnnouncement(ctx context.Context, adminID uuid.UUID, title, body, targetRole string, expiresAt *time.Time) error {
+	if targetRole == "" {
+		targetRole = "all"
+	}
+	a := &entity.PlatformAnnouncement{
+		ID:         uuid.New(),
+		AdminID:    adminID,
+		Title:      title,
+		Body:       body,
+		TargetRole: targetRole,
+		IsActive:   true,
+		ExpiresAt:  expiresAt,
+	}
+	return s.platformRepo.CreateAnnouncement(ctx, a)
+}
+
+func (s *adminService) ListAllAnnouncements(ctx context.Context) ([]entity.PlatformAnnouncement, error) {
+	return s.platformRepo.ListAllAnnouncements(ctx)
+}
+
+func (s *adminService) DeleteAnnouncement(ctx context.Context, id uuid.UUID) error {
+	return s.platformRepo.DeleteAnnouncement(ctx, id)
+}
+
+// ---------------------------------------------------------------------------
+// Bulk Actions — each action applied individually; errors collected not aborted
+// ---------------------------------------------------------------------------
+
+func (s *adminService) BulkBanUsers(ctx context.Context, userIDs []uuid.UUID) (int, int) {
+	success, failed := 0, 0
+	for _, id := range userIDs {
+		if err := s.BanUser(ctx, id); err != nil {
+			failed++
+		} else {
+			success++
+		}
+	}
+	return success, failed
+}
+
+func (s *adminService) BulkUnbanUsers(ctx context.Context, userIDs []uuid.UUID) (int, int) {
+	success, failed := 0, 0
+	for _, id := range userIDs {
+		if err := s.UnbanUser(ctx, id); err != nil {
+			failed++
+		} else {
+			success++
+		}
+	}
+	return success, failed
+}
+
+func (s *adminService) BulkApproveWithdrawals(ctx context.Context, ids []uuid.UUID) (int, int) {
+	success, failed := 0, 0
+	for _, id := range ids {
+		req := UpdateWithdrawalStatusRequest{Status: entity.WithdrawalStatusApproved}
+		if err := s.UpdateWithdrawalStatus(ctx, id, req); err != nil {
+			failed++
+		} else {
+			success++
+		}
+	}
+	return success, failed
+}
+
+func (s *adminService) BulkRejectWithdrawals(ctx context.Context, ids []uuid.UUID, note string) (int, int) {
+	success, failed := 0, 0
+	for _, id := range ids {
+		req := UpdateWithdrawalStatusRequest{Status: entity.WithdrawalStatusRejected, AdminNote: &note}
+		if err := s.UpdateWithdrawalStatus(ctx, id, req); err != nil {
+			failed++
+		} else {
+			success++
+		}
+	}
+	return success, failed
+}
+
+// ---------------------------------------------------------------------------
+// Realtime Stats — cached in Redis 60s
+// ---------------------------------------------------------------------------
+
+const realtimeStatsCacheKey = "admin:realtime_stats"
+
+func (s *adminService) GetRealtimeStats(ctx context.Context) (map[string]interface{}, error) {
+	// Try cache first
+	if s.rdb != nil {
+		if cached, err := s.rdb.Get(ctx, realtimeStatsCacheKey).Result(); err == nil {
+			var result map[string]interface{}
+			if jsonErr := json.Unmarshal([]byte(cached), &result); jsonErr == nil {
+				return result, nil
+			}
+		}
+	}
+
+	pendingTopups, _ := s.walletRepo.CountPendingTopups(ctx)
+	pendingWithdrawals, _ := s.withdrawalRepo.CountPending(ctx)
+	pendingKYC, _ := s.kycRepo.CountPending(ctx)
+
+	counts, _ := s.userRepo.GetAnalyticsCounts(ctx)
+	pendingReports := counts["reports_pending"]
+
+	result := map[string]interface{}{
+		"pending_topups":      pendingTopups,
+		"pending_withdrawals": pendingWithdrawals,
+		"pending_kyc":         pendingKYC,
+		"pending_reports":     pendingReports,
+	}
+
+	// Cache 60s
+	if s.rdb != nil {
+		if b, err := json.Marshal(result); err == nil {
+			s.rdb.Set(ctx, realtimeStatsCacheKey, string(b), 60*time.Second)
+		}
+	}
 	return result, nil
 }

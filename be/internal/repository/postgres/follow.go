@@ -111,3 +111,62 @@ func (r *followRepo) DeleteNotification(ctx context.Context, notifID, userID uui
 func (r *followRepo) DeleteReadNotifications(ctx context.Context, userID uuid.UUID) error {
 	return r.db.WithContext(ctx).Where("user_id = ? AND is_read = true", userID).Delete(&entity.Notification{}).Error
 }
+
+// ---------------------------------------------------------------------------
+// Block
+// ---------------------------------------------------------------------------
+
+func (r *followRepo) BlockUser(ctx context.Context, blockerID, blockedID uuid.UUID) error {
+	block := entity.UserBlock{BlockerID: blockerID, BlockedID: blockedID}
+	return r.db.WithContext(ctx).
+		Where(entity.UserBlock{BlockerID: blockerID, BlockedID: blockedID}).
+		FirstOrCreate(&block).Error
+}
+
+func (r *followRepo) UnblockUser(ctx context.Context, blockerID, blockedID uuid.UUID) error {
+	return r.db.WithContext(ctx).
+		Where("blocker_id = ? AND blocked_id = ?", blockerID, blockedID).
+		Delete(&entity.UserBlock{}).Error
+}
+
+func (r *followRepo) IsBlocked(ctx context.Context, blockerID, blockedID uuid.UUID) (bool, error) {
+	var count int64
+	err := r.db.WithContext(ctx).
+		Model(&entity.UserBlock{}).
+		Where("(blocker_id = ? AND blocked_id = ?) OR (blocker_id = ? AND blocked_id = ?)",
+			blockerID, blockedID, blockedID, blockerID).
+		Count(&count).Error
+	return count > 0, err
+}
+
+func (r *followRepo) ListBlocked(ctx context.Context, blockerID uuid.UUID) ([]entity.UserBlock, error) {
+	var blocks []entity.UserBlock
+	err := r.db.WithContext(ctx).
+		Where("blocker_id = ?", blockerID).
+		Order("created_at DESC").
+		Find(&blocks).Error
+	return blocks, err
+}
+
+// ---------------------------------------------------------------------------
+// Push Subscriptions
+// ---------------------------------------------------------------------------
+
+func (r *followRepo) SavePushSubscription(ctx context.Context, sub *entity.PushSubscription) error {
+	return r.db.WithContext(ctx).
+		Where(entity.PushSubscription{UserID: sub.UserID, Endpoint: sub.Endpoint}).
+		Assign(entity.PushSubscription{P256DH: sub.P256DH, AuthKey: sub.AuthKey, UserAgent: sub.UserAgent}).
+		FirstOrCreate(sub).Error
+}
+
+func (r *followRepo) DeletePushSubscription(ctx context.Context, userID uuid.UUID, endpoint string) error {
+	return r.db.WithContext(ctx).
+		Where("user_id = ? AND endpoint = ?", userID, endpoint).
+		Delete(&entity.PushSubscription{}).Error
+}
+
+func (r *followRepo) ListPushSubscriptionsByUser(ctx context.Context, userID uuid.UUID) ([]entity.PushSubscription, error) {
+	var subs []entity.PushSubscription
+	err := r.db.WithContext(ctx).Where("user_id = ?", userID).Find(&subs).Error
+	return subs, err
+}

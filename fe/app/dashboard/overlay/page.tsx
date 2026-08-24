@@ -8,50 +8,124 @@ import { useAuth } from "@/lib/auth";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "@/lib/toast";
-import { Upload, Trash2, Plus, Monitor, Sparkles, Copy, Play } from "lucide-react";
+import { Upload, Trash2 } from "lucide-react";
+
+const ANIMATIONS = [
+  { id: "bounce", label: "Bounce", hint: "Memantul dari bawah" },
+  { id: "slide", label: "Slide", hint: "Masuk dari samping" },
+  { id: "fade", label: "Fade", hint: "Muncul perlahan" },
+  { id: "spin", label: "Spin", hint: "Berputar masuk" },
+  { id: "drop", label: "Drop", hint: "Jatuh dari atas" },
+  { id: "pop", label: "Pop", hint: "Meletup di tempat" },
+];
+
+const POSITIONS = [
+  { id: "top-left", label: "Kiri atas" },
+  { id: "top", label: "Atas" },
+  { id: "top-right", label: "Kanan atas" },
+  { id: "center", label: "Tengah" },
+  { id: "bottom-left", label: "Kiri bawah" },
+  { id: "bottom", label: "Bawah" },
+  { id: "bottom-right", label: "Kanan bawah" },
+];
+
+const FONTS = ["Outfit", "Rubik", "Inter", "Poppins", "Montserrat", "Bebas Neue", "Fredoka"];
+
+/** Section heading — plain type, no decorative icon. */
+function Section({ title, description }: { title: string; description?: string }) {
+  return (
+    <div className="mb-4">
+      <h2 className="text-base font-semibold tracking-tight">{title}</h2>
+      {description && <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">{description}</p>}
+    </div>
+  );
+}
+
+function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">{label}</label>
+      {children}
+      {hint && <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{hint}</p>}
+    </div>
+  );
+}
 
 export default function OverlaySettingsPage() {
   const { user } = useAuth();
   const qc = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
+  const soundRef = useRef<HTMLInputElement>(null);
+
   const [minCredits, setMinCredits] = useState("1");
   const [label, setLabel] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState("");
+  const [soundFile, setSoundFile] = useState<File | null>(null);
 
   const { data: tiers } = useQuery({
-    queryKey: ["overlay-tiers"],
+    queryKey: ["overlay-tiers", user?.id],
     queryFn: async () => { const { data } = await api.get(`/overlay-tiers/${user?.id}`); return (data.data || []) as OverlayTier[]; },
     enabled: !!user,
   });
 
-  const { data: earnings } = useQuery({
-    queryKey: ["creator-earnings"],
-    queryFn: async () => { try { const { data } = await api.get("/creator/earnings"); return data.data; } catch { return {}; } },
+  const { data: config } = useQuery({
+    queryKey: ["overlay-config", user?.id],
+    queryFn: async () => { const { data } = await api.get(`/overlay/${user?.id}/config`); return data.data; },
+    enabled: !!user,
   });
 
+  const [style, setStyle] = useState("bounce");
   const [textTemplate, setTextTemplate] = useState("{donor} donated {amount} Credit!");
-  const [overlayStyle, setOverlayStyle] = useState("bounce");
+  const [accent, setAccent] = useState("#EC4899");
+  const [textColor, setTextColor] = useState("#0F0D1A");
+  const [font, setFont] = useState("Outfit");
+  const [duration, setDuration] = useState(8);
+  const [position, setPosition] = useState("center");
+  const [volume, setVolume] = useState(80);
+  const [ttsEnabled, setTtsEnabled] = useState(true);
+  const [ttsMin, setTtsMin] = useState(1);
 
   useEffect(() => {
-    if (earnings?.overlay_style) setOverlayStyle(earnings.overlay_style);
-    if (earnings?.overlay_text_template) setTextTemplate(earnings.overlay_text_template);
-  }, [earnings]);
+    if (!config) return;
+    setStyle(config.overlay_style ?? "bounce");
+    setTextTemplate(config.overlay_text_template ?? "{donor} donated {amount} Credit!");
+    setAccent(config.overlay_accent_color ?? "#EC4899");
+    setTextColor(config.overlay_text_color ?? "#0F0D1A");
+    setFont(config.overlay_font ?? "Outfit");
+    setDuration(Math.round((config.overlay_duration_ms ?? 8000) / 1000));
+    setPosition(config.overlay_position ?? "center");
+    setVolume(config.overlay_sound_volume ?? 80);
+    setTtsEnabled(config.overlay_tts_enabled ?? true);
+    setTtsMin(config.overlay_tts_min_credits ?? 1);
+  }, [config]);
+
+  const uploadFile = async (file: File) => {
+    const fd = new FormData();
+    fd.append("file", file);
+    const { data } = await api.post("/upload", fd, { headers: { "Content-Type": "multipart/form-data" } });
+    return data.data.url as string;
+  };
 
   const addTier = useMutation({
     mutationFn: async () => {
-      let imageUrl = "";
-      if (imageFile) {
-        const fd = new FormData(); fd.append("file", imageFile);
-        const { data } = await api.post("/upload", fd, { headers: { "Content-Type": "multipart/form-data" } });
-        imageUrl = data.data.url;
-      }
-      await api.post("/overlay-tiers", { min_credits: parseInt(minCredits), image_url: imageUrl, label: label || null });
+      const imageUrl = imageFile ? await uploadFile(imageFile) : "";
+      const soundUrl = soundFile ? await uploadFile(soundFile) : null;
+      await api.post("/overlay-tiers", {
+        min_credits: parseInt(minCredits),
+        image_url: imageUrl,
+        sound_url: soundUrl,
+        label: label || null,
+      });
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["overlay-tiers"] }); setMinCredits("1"); setLabel(""); setImageFile(null); setImagePreview(""); toast.success("Tier ditambahkan!"); },
-    onError: (e: any) => toast.error(e.response?.data?.error || "Gagal"),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["overlay-tiers"] });
+      setMinCredits("1"); setLabel(""); setImageFile(null); setImagePreview(""); setSoundFile(null);
+      toast.success("Tier ditambahkan");
+    },
+    onError: (e: any) => toast.error(e.response?.data?.error || "Gagal menambah tier"),
   });
 
   const deleteTier = useMutation({
@@ -60,125 +134,269 @@ export default function OverlaySettingsPage() {
   });
 
   const saveSettings = useMutation({
-    mutationFn: () => api.put("/auth/me", { overlay_style: overlayStyle, overlay_text_template: textTemplate }),
-    onSuccess: () => { toast.success("Pengaturan disimpan!"); qc.invalidateQueries({ queryKey: ["creator-earnings"] }); },
+    mutationFn: () => api.put("/overlay/settings", {
+      overlay_style: style,
+      overlay_text_template: textTemplate,
+      overlay_accent_color: accent,
+      overlay_text_color: textColor,
+      overlay_font: font,
+      overlay_duration_ms: duration * 1000,
+      overlay_position: position,
+      overlay_sound_volume: volume,
+      overlay_tts_enabled: ttsEnabled,
+      overlay_tts_min_credits: ttsMin,
+    }),
+    onSuccess: () => { toast.success("Pengaturan disimpan"); qc.invalidateQueries({ queryKey: ["overlay-config"] }); },
+    onError: (e: any) => toast.error(e.response?.data?.error || "Gagal menyimpan"),
   });
 
-  const overlayUrl = typeof window !== "undefined" ? `${window.location.origin}/overlay?id=${user?.id}&style=${overlayStyle}` : "";
+  const testAlert = useMutation({
+    mutationFn: () => api.post("/overlay/test", { credits: 250, message: "Ini contoh pesan donasi." }),
+    onSuccess: () => toast.success("Alert uji dikirim ke overlay"),
+    onError: () => toast.error("Gagal mengirim alert uji"),
+  });
 
-  const animations = [
-    { id: "bounce", label: "Bounce", icon: "⬆️" },
-    { id: "slide", label: "Slide", icon: "➡️" },
-    { id: "fade", label: "Fade", icon: "✨" },
-    { id: "spin", label: "Spin", icon: "🔄" },
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  const urls = [
+    { name: "Alert donasi", url: `${origin}/overlay?id=${user?.id}`, size: "800 × 400" },
+    { name: "Target donasi", url: `${origin}/overlay/goal?id=${user?.id}`, size: "500 × 140" },
   ];
 
-  return (
-    <div>
-      <h1 className="text-2xl font-display font-black tracking-tight mb-6">Overlay OBS</h1>
+  const copy = (url: string) => { navigator.clipboard.writeText(url); toast.success("URL disalin"); };
+  const preview = textTemplate.replace("{donor}", "SuperFan").replace("{amount}", "250");
 
-      {/* OBS URL — prominent at top */}
-      <Card className="mb-6 bg-gradient-to-r from-primary-50 to-secondary-50 dark:from-primary-900/10 dark:to-secondary-900/10 border-primary/10">
+  return (
+    <div className="max-w-5xl">
+      <div className="mb-8">
+        <h1 className="text-2xl font-display font-black tracking-tight">Overlay OBS</h1>
+        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+          Tambahkan URL di bawah sebagai Browser Source di OBS. Alert muncul otomatis begitu ada donasi masuk.
+        </p>
+      </div>
+
+      {/* Browser source URLs */}
+      <Card className="mb-6">
         <CardContent className="p-5">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
-              <Monitor className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <p className="font-bold text-sm">URL Overlay</p>
-              <p className="text-[11px] text-gray-500 dark:text-gray-400">OBS → Browser Source → 800×300px</p>
-            </div>
+          <Section title="URL Browser Source" description="Satu URL untuk tiap widget. Centang 'Refresh browser when scene becomes active' di OBS." />
+          <div className="space-y-3">
+            {urls.map((u) => (
+              <div key={u.name} className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <div className="w-full sm:w-40 shrink-0">
+                  <p className="text-sm font-medium">{u.name}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">{u.size} px</p>
+                </div>
+                <Input readOnly value={u.url} className="font-mono text-xs" />
+                <Button variant="outline" size="sm" className="shrink-0" onClick={() => copy(u.url)}>Salin</Button>
+              </div>
+            ))}
           </div>
-          <div className="flex gap-2">
-            <Input readOnly value={overlayUrl} className="text-xs font-mono bg-white dark:bg-navy-800" />
-            <Button size="sm" variant="outline" className="shrink-0" onClick={() => { navigator.clipboard.writeText(overlayUrl); toast.success("Disalin!"); }}>
-              <Copy className="h-4 w-4" />
+          <div className="mt-4 border-t border-gray-100 dark:border-navy-800 pt-4">
+            <Button variant="outline" onClick={() => testAlert.mutate()} disabled={testAlert.isPending}>
+              {testAlert.isPending ? "Mengirim..." : "Kirim alert uji"}
             </Button>
+            <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
+              Buka overlay di OBS atau tab lain, lalu klik ini untuk melihat hasilnya tanpa menunggu donasi asli.
+            </p>
           </div>
         </CardContent>
       </Card>
 
-      <div className="grid lg:grid-cols-2 gap-4">
-        {/* Left: Animation & Text */}
-        <div className="space-y-4">
-          <Card>
-            <CardContent className="p-5 space-y-4">
-              <p className="font-bold text-sm flex items-center gap-2"><Play className="h-4 w-4 text-primary" /> Animasi</p>
-              <div className="grid grid-cols-2 gap-2">
-                {animations.map(a => (
-                  <button key={a.id} onClick={() => setOverlayStyle(a.id)}
-                    className={`p-3 rounded-xl border-2 text-center transition-all cursor-pointer ${overlayStyle === a.id ? "border-primary bg-primary/5" : "border-primary-100 dark:border-primary-900/30 hover:border-primary/30"}`}>
-                    <span className="text-xl">{a.icon}</span>
-                    <p className="text-xs font-bold mt-1">{a.label}</p>
-                  </button>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-5 space-y-3">
-              <p className="font-bold text-sm flex items-center gap-2"><Sparkles className="h-4 w-4 text-accent" /> Template Teks</p>
-              <Input value={textTemplate} onChange={e => setTextTemplate(e.target.value)} placeholder="{donor} donated {amount} Credit!" />
-              <div className="bg-primary-50/50 dark:bg-navy-800 rounded-xl px-3 py-2">
-                <p className="text-xs text-gray-500">Preview: <span className="font-medium text-gray-700 dark:text-gray-300">{textTemplate.replace("{donor}", "SuperFan").replace("{amount}", "50")}</span></p>
-              </div>
-              <Button size="sm" onClick={() => saveSettings.mutate()} disabled={saveSettings.isPending}>Simpan</Button>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Right: Tier GIFs */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* Appearance */}
         <Card>
-          <CardContent className="p-5 space-y-4">
-            <p className="font-bold text-sm">🖼️ Gambar/GIF per Tier</p>
-            <p className="text-xs text-gray-500 dark:text-gray-400">Upload gambar berbeda berdasarkan jumlah donasi.</p>
-
-            {/* Existing tiers */}
-            <div className="space-y-2">
-              {tiers?.map((t: any) => (
-                <div key={t.id} className="flex items-center gap-3 p-2.5 rounded-xl bg-primary-50/50 dark:bg-navy-800">
-                  {t.image_url ? (
-                    <img loading="lazy" src={t.image_url} alt="" className="h-12 w-12 rounded-lg object-cover" />
-                  ) : (
-                    <div className="h-12 w-12 rounded-lg bg-primary-100 dark:bg-navy-800 flex items-center justify-center text-gray-400 text-xs">—</div>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold">≥ {t.min_credits} Credit</p>
-                    {t.label && <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{t.label}</p>}
-                  </div>
-                  <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => deleteTier.mutate(t.id)}><Trash2 className="h-3.5 w-3.5 text-red-400" /></Button>
+          <CardContent className="p-5">
+            <Section title="Tampilan" description="Berlaku untuk semua alert donasi." />
+            <div className="space-y-5">
+              <Field label="Animasi masuk">
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                  {ANIMATIONS.map((a) => (
+                    <button
+                      key={a.id}
+                      onClick={() => setStyle(a.id)}
+                      aria-pressed={style === a.id}
+                      title={a.hint}
+                      className={`cursor-pointer rounded-xl border-2 px-3 py-2.5 text-left transition-colors ${
+                        style === a.id
+                          ? "border-primary bg-primary-50/60 dark:bg-primary-900/20"
+                          : "border-gray-200 hover:border-primary-200 dark:border-navy-800"
+                      }`}
+                    >
+                      <span className="block text-sm font-semibold">{a.label}</span>
+                    </button>
+                  ))}
                 </div>
-              ))}
-              {(!tiers || tiers.length === 0) && <p className="text-xs text-gray-400 text-center py-4">Belum ada tier</p>}
-            </div>
+              </Field>
 
-            {/* Add new */}
-            <div className="border-t border-primary-100 dark:border-primary-900/30 pt-4 space-y-3">
-              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1"><Plus className="h-3 w-3" /> Tambah Tier</p>
-              <div className="grid grid-cols-2 gap-2">
-                <div><label className="text-[11px] font-medium mb-1 block">Min Credit</label><Input type="number" value={minCredits} onChange={e => setMinCredits(e.target.value)} /></div>
-                <div><label className="text-[11px] font-medium mb-1 block">Label</label><Input value={label} onChange={e => setLabel(e.target.value)} placeholder="Super Donatur" /></div>
-              </div>
-              <div>
-                <input ref={fileRef} type="file" accept="image/*,.gif" className="hidden" onChange={e => {
-                  const f = e.target.files?.[0]; if (f) { setImageFile(f); setImagePreview(URL.createObjectURL(f)); }
-                }} />
-                {imagePreview ? (
-                  <div className="flex items-center gap-3">
-                    <img loading="lazy" src={imagePreview} alt="" className="h-14 w-14 rounded-lg object-cover" />
-                    <Button size="sm" variant="outline" onClick={() => fileRef.current?.click()} className="rounded-xl">Ganti</Button>
+              <Field label="Posisi di layar">
+                <div className="grid grid-cols-3 gap-2">
+                  {POSITIONS.map((p) => (
+                    <button
+                      key={p.id}
+                      onClick={() => setPosition(p.id)}
+                      aria-pressed={position === p.id}
+                      className={`cursor-pointer rounded-lg border-2 px-2 py-2 text-xs font-medium transition-colors ${
+                        position === p.id
+                          ? "border-primary bg-primary-50/60 dark:bg-primary-900/20"
+                          : "border-gray-200 hover:border-primary-200 dark:border-navy-800"
+                      }`}
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+              </Field>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="Warna aksen">
+                  <div className="flex items-center gap-2">
+                    <input type="color" value={accent} onChange={(e) => setAccent(e.target.value)} className="h-10 w-12 cursor-pointer rounded-lg border border-gray-200 bg-transparent dark:border-navy-800" aria-label="Warna aksen" />
+                    <Input value={accent} onChange={(e) => setAccent(e.target.value)} className="font-mono text-xs" />
                   </div>
-                ) : (
-                  <Button size="sm" variant="outline" onClick={() => fileRef.current?.click()} className="rounded-xl"><Upload className="mr-1 h-4 w-4" /> Upload GIF</Button>
-                )}
+                </Field>
+                <Field label="Warna teks">
+                  <div className="flex items-center gap-2">
+                    <input type="color" value={textColor} onChange={(e) => setTextColor(e.target.value)} className="h-10 w-12 cursor-pointer rounded-lg border border-gray-200 bg-transparent dark:border-navy-800" aria-label="Warna teks" />
+                    <Input value={textColor} onChange={(e) => setTextColor(e.target.value)} className="font-mono text-xs" />
+                  </div>
+                </Field>
               </div>
-              <Button size="sm" onClick={() => addTier.mutate()} disabled={!minCredits || addTier.isPending} className="w-full">
-                {addTier.isPending ? "Uploading..." : "Tambah Tier"}
-              </Button>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="Font">
+                  <select
+                    value={font}
+                    onChange={(e) => setFont(e.target.value)}
+                    className="h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm dark:border-navy-800 dark:bg-navy-900"
+                  >
+                    {FONTS.map((f) => <option key={f} value={f}>{f}</option>)}
+                  </select>
+                </Field>
+                <Field label={`Durasi tampil: ${duration} detik`}>
+                  <input
+                    type="range" min={2} max={30} value={duration}
+                    onChange={(e) => setDuration(parseInt(e.target.value))}
+                    className="mt-3 w-full accent-primary"
+                    aria-label="Durasi tampil alert"
+                  />
+                </Field>
+              </div>
+
+              <Field label="Teks alert" hint="Gunakan {donor} untuk nama pendukung dan {amount} untuk jumlah credit.">
+                <Input value={textTemplate} onChange={(e) => setTextTemplate(e.target.value)} maxLength={120} />
+              </Field>
+
+              <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-navy-800 dark:bg-navy-900/60">
+                <p className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-400">Pratinjau</p>
+                <p className="text-sm font-semibold" style={{ color: accent, fontFamily: `${font}, sans-serif` }}>{preview}</p>
+                <p className="text-2xl font-black tabular-nums" style={{ color: textColor, fontFamily: `${font}, sans-serif` }}>250 Credit</p>
+              </div>
             </div>
           </CardContent>
         </Card>
+
+        {/* Sound + tiers */}
+        <div className="space-y-6">
+          <Card>
+            <CardContent className="p-5">
+              <Section title="Suara" description="Suara diambil dari tier yang cocok dengan nominal donasi." />
+              <div className="space-y-5">
+                <Field label={`Volume: ${volume}%`}>
+                  <input
+                    type="range" min={0} max={100} value={volume}
+                    onChange={(e) => setVolume(parseInt(e.target.value))}
+                    className="mt-3 w-full accent-primary"
+                    aria-label="Volume suara alert"
+                  />
+                </Field>
+
+                <div className="flex items-start justify-between gap-4 rounded-xl border border-gray-200 p-4 dark:border-navy-800">
+                  <div>
+                    <p className="text-sm font-medium">Bacakan pesan donasi</p>
+                    <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                      Pesan pendukung dibacakan otomatis lewat text-to-speech.
+                    </p>
+                  </div>
+                  <Switch checked={ttsEnabled} onCheckedChange={setTtsEnabled} aria-label="Aktifkan text-to-speech" />
+                </div>
+
+                {ttsEnabled && (
+                  <Field label="Minimal credit untuk dibacakan" hint="Donasi di bawah nilai ini tetap tampil, tapi tidak dibacakan.">
+                    <Input type="number" min={1} value={ttsMin} onChange={(e) => setTtsMin(Math.max(1, parseInt(e.target.value) || 1))} />
+                  </Field>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-5">
+              <Section title="Tier alert" description="Gambar dan suara berbeda sesuai besar donasi. Tier tertinggi yang cocok akan dipakai." />
+
+              <div className="space-y-2">
+                {tiers?.map((t: any) => (
+                  <div key={t.id} className="flex items-center gap-3 rounded-xl border border-gray-200 p-3 dark:border-navy-800">
+                    {t.image_url ? (
+                      <img loading="lazy" src={t.image_url} alt="" className="h-12 w-12 rounded-lg object-cover" />
+                    ) : (
+                      <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-gray-100 text-xs text-gray-400 dark:bg-navy-800">—</div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold tabular-nums">≥ {t.min_credits} Credit</p>
+                      <p className="truncate text-xs text-gray-500 dark:text-gray-400">
+                        {t.label || "Tanpa label"}{t.sound_url ? " · ada suara" : " · tanpa suara"}
+                      </p>
+                    </div>
+                    <Button size="icon" variant="ghost" className="h-8 w-8" aria-label={`Hapus tier ${t.min_credits} credit`} onClick={() => deleteTier.mutate(t.id)}>
+                      <Trash2 className="h-4 w-4 text-red-500" />
+                    </Button>
+                  </div>
+                ))}
+                {(!tiers || tiers.length === 0) && (
+                  <p className="rounded-xl border border-dashed border-gray-200 py-8 text-center text-sm text-gray-500 dark:border-navy-800 dark:text-gray-400">
+                    Belum ada tier. Tambahkan di bawah.
+                  </p>
+                )}
+              </div>
+
+              <div className="mt-5 space-y-4 border-t border-gray-100 pt-5 dark:border-navy-800">
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="Minimal credit">
+                    <Input type="number" min={1} value={minCredits} onChange={(e) => setMinCredits(e.target.value)} />
+                  </Field>
+                  <Field label="Label">
+                    <Input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Super Donatur" />
+                  </Field>
+                </div>
+
+                <input ref={fileRef} type="file" accept="image/*,.gif" className="hidden" onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) { setImageFile(f); setImagePreview(URL.createObjectURL(f)); }
+                }} />
+                <input ref={soundRef} type="file" accept="audio/*" className="hidden" onChange={(e) => setSoundFile(e.target.files?.[0] || null)} />
+
+                <div className="flex flex-wrap items-center gap-3">
+                  {imagePreview && <img loading="lazy" src={imagePreview} alt="" className="h-14 w-14 rounded-lg object-cover" />}
+                  <Button size="sm" variant="outline" onClick={() => fileRef.current?.click()}>
+                    <Upload className="mr-1.5 h-4 w-4" />{imageFile ? "Ganti gambar" : "Pilih gambar / GIF"}
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => soundRef.current?.click()}>
+                    {soundFile ? `Suara: ${soundFile.name.slice(0, 18)}` : "Pilih suara"}
+                  </Button>
+                </div>
+
+                <Button className="w-full" onClick={() => addTier.mutate()} disabled={!minCredits || addTier.isPending}>
+                  {addTier.isPending ? "Mengunggah..." : "Tambah tier"}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      <div className="sticky bottom-4 mt-6 flex justify-end">
+        <Button size="lg" onClick={() => saveSettings.mutate()} disabled={saveSettings.isPending} className="shadow-elevated">
+          {saveSettings.isPending ? "Menyimpan..." : "Simpan pengaturan"}
+        </Button>
       </div>
     </div>
   );

@@ -86,9 +86,13 @@ export default function AdminTopups() {
                 {t.status === "pending" && <>
                   <Input placeholder="Catatan (opsional)" value={notes[t.id] || ""} onChange={(e) => setNotes({ ...notes, [t.id]: e.target.value })} />
                   <div className="flex gap-2">
-                    <Button size="sm" onClick={() => approve.mutate(t.id)}>Setujui</Button>
+                    {/* Disabled while in flight: approving credits real money,
+                        so a double-click must not send two requests. */}
+                    <Button size="sm" onClick={() => approve.mutate(t.id)} disabled={approve.isPending || reject.isPending}>
+                      {approve.isPending ? "Memproses..." : "Setujui"}
+                    </Button>
                     <ConfirmDialog title="Tolak Top-up?" message={`Yakin ingin menolak top-up ${formatIDR(t.amount_idr)}?`} confirmLabel="Tolak" variant="destructive" onConfirm={() => reject.mutate(t.id)}>
-                      {(open) => <Button size="sm" variant="destructive" onClick={open}>Tolak</Button>}
+                      {(open) => <Button size="sm" variant="destructive" onClick={open} disabled={approve.isPending || reject.isPending}>Tolak</Button>}
                     </ConfirmDialog>
                   </div>
                 </>}

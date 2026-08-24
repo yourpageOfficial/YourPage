@@ -5,9 +5,11 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/redis/go-redis/v9"
 	"github.com/yourpage/be/internal/config"
+	"github.com/yourpage/be/internal/entity"
 	"github.com/yourpage/be/internal/handler/middleware"
 	"github.com/yourpage/be/internal/pkg/response"
 	"github.com/yourpage/be/internal/repository"
@@ -34,6 +36,8 @@ type Handlers struct {
 	Overlay    *OverlayHandler
 	Broadcast  *BroadcastHandler
 	Referral   *ReferralHandler
+	Leaderboard *LeaderboardHandler
+	MediaShare  *MediaShareHandler
 	PlatformRepo repository.PlatformRepository
 	UserRepo     repository.UserRepository
 	AuditDB      *gorm.DB
@@ -45,8 +49,28 @@ func NewRouter(cfg *config.Config, rdb *redis.Client, h Handlers) *gin.Engine {
 	}
 
 	r := gin.New()
+
+	// Gin trusts every proxy by default, which makes ClientIP() equal to a
+	// client-supplied X-Forwarded-For. That would let anyone bypass the
+	// IP-keyed rate limiter and the /metrics allowlist, and forge the IP
+	// recorded in the payment audit trail. Only the reverse proxy in front of
+	// us may set that header.
+	trustedProxies := []string{"127.0.0.1", "::1", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"}
+	if v := os.Getenv("TRUSTED_PROXIES"); v != "" {
+		trustedProxies = strings.Split(v, ",")
+		for i := range trustedProxies {
+			trustedProxies[i] = strings.TrimSpace(trustedProxies[i])
+		}
+	}
+	if err := r.SetTrustedProxies(trustedProxies); err != nil {
+		panic("router: invalid TRUSTED_PROXIES: " + err.Error())
+	}
+
 	r.Use(gin.Recovery())
-	r.Use(gzip.Gzip(gzip.DefaultCompression))
+	// Server-Sent Events must bypass gzip: the compressor buffers output, so a
+	// browser (which always advertises gzip) would never receive an alert until
+	// the stream closed. curl hides this because it does not request gzip.
+	r.Use(gzip.Gzip(gzip.DefaultCompression, gzip.WithExcludedPathsRegexs([]string{`^/api/v1/overlay/[^/]+/stream$`})))
 	r.Use(middleware.SecurityHeaders())
 	r.Use(middleware.Metrics())
 	r.Use(middleware.AccessLog())
@@ -165,6 +189,17 @@ func NewRouter(cfg *config.Config, rdb *redis.Client, h Handlers) *gin.Engine {
 		c.JSON(200, gin.H{"success": true, "data": gin.H{"platform_qris_url": settings.PlatformQRISURL}})
 	})
 
+	// Payment methods available for topup (public; never exposes secrets)
+	api.GET("/platform/payment-methods", func(c *gin.Context) {
+		settings, err := h.Admin.svc.GetSettings(c.Request.Context())
+		if err != nil { c.JSON(500, gin.H{"error": "internal"}); return }
+		c.JSON(200, gin.H{"success": true, "data": gin.H{
+			"qris_enabled":     settings.QRISEnabled,
+			"stripe_enabled":   settings.StripeEnabled && settings.StripeSecretKey != "",
+			"platform_qris_url": settings.PlatformQRISURL,
+		}})
+	})
+
 	// ---- Posts ----
 	postsG := api.Group("/posts")
 	{
@@ -242,6 +277,7 @@ func NewRouter(cfg *config.Config, rdb *redis.Client, h Handlers) *gin.Engine {
 	{
 		webhooks.POST("/xendit", h.Webhook.XenditCallback)
 		webhooks.POST("/paypal", h.Webhook.PayPalWebhook)
+		webhooks.POST("/stripe", h.Webhook.StripeWebhook)
 	}
 
 	// ---- Wallet ----
@@ -249,8 +285,12 @@ func NewRouter(cfg *config.Config, rdb *redis.Client, h Handlers) *gin.Engine {
 	{
 		walletG.GET("/balance", h.Wallet.GetBalance)
 		walletG.GET("/transactions", h.Wallet.ListTransactions)
-		walletG.POST("/topup", h.Wallet.CreateTopup)
-		walletG.POST("/topup/:id/proof", h.Wallet.UploadTopupProof)
+		// Rate-limited: creating a topup and polling its status both trigger
+		// outbound Stripe API calls, so an unthrottled client could burn the
+		// platform's Stripe rate limit for everyone.
+		walletG.POST("/topup", actionRL.Middleware(), h.Wallet.CreateTopup)
+		walletG.GET("/topup/:id", actionRL.Middleware(), h.Wallet.GetTopupStatus)
+		walletG.POST("/topup/:id/proof", actionRL.Middleware(), h.Wallet.UploadTopupProof)
 	}
 
 	// ---- Library (supporter purchased items) ----
@@ -285,6 +325,12 @@ func NewRouter(cfg *config.Config, rdb *redis.Client, h Handlers) *gin.Engine {
 
 	// ---- Overlay Tiers (public read, auth write) ----
 	api.GET("/overlay-tiers/:creatorId", h.Overlay.ListTiers)
+	// Overlay config + realtime alert stream. Public: an OBS browser source
+	// cannot send credentials, and neither endpoint exposes anything private.
+	api.GET("/overlay/:creatorId/config", h.Overlay.GetConfig)
+	api.GET("/overlay/:creatorId/stream", h.Overlay.Stream)
+	api.POST("/overlay/test", auth, creatorOnly, h.Overlay.TestAlert)
+	api.PUT("/overlay/settings", auth, creatorOnly, h.Overlay.UpdateSettings)
 	api.POST("/overlay-tiers", auth, creatorOnly, h.Overlay.CreateTier)
 	api.DELETE("/overlay-tiers/:id", auth, creatorOnly, h.Overlay.DeleteTier)
 
@@ -367,7 +413,98 @@ func NewRouter(cfg *config.Config, rdb *redis.Client, h Handlers) *gin.Engine {
 			if len(logs) > limit { s := logs[limit].ID.String(); next = &s; logs = logs[:limit] }
 			response.Paginated(c, logs, next)
 		})
+
+		// Payment audit trail — every money/credit movement (topup, checkout, refund, withdrawal)
+		adminG.GET("/payment-audit", func(c *gin.Context) {
+			cursor, limit := parsePagination(c)
+			var logs []entity.PaymentAuditLog
+			q := h.AuditDB.Model(&entity.PaymentAuditLog{}).Preload("Actor")
+			if ev := c.Query("event"); ev != "" { q = q.Where("event = ?", ev) }
+			if ref := c.Query("reference_id"); ref != "" {
+				if refID, err := uuid.Parse(ref); err == nil { q = q.Where("reference_id = ?", refID) }
+			}
+			if actor := c.Query("actor_id"); actor != "" {
+				if actorID, err := uuid.Parse(actor); err == nil { q = q.Where("actor_id = ?", actorID) }
+			}
+			if cursor != nil {
+				var pivot entity.PaymentAuditLog
+				if err := h.AuditDB.Select("created_at").Where("id = ?", *cursor).First(&pivot).Error; err == nil {
+					q = q.Where("created_at < ?", pivot.CreatedAt)
+				}
+			}
+			q.Order("created_at DESC").Limit(limit + 1).Find(&logs)
+			var next *string
+			if len(logs) > limit { s := logs[limit].ID.String(); next = &s; logs = logs[:limit] }
+			response.Paginated(c, logs, next)
+		})
 	}
+
+	// ---- 2FA Routes ----
+	authG.POST("/2fa/enable", auth, h.Auth.Enable2FA)
+	authG.POST("/2fa/verify", auth, h.Auth.Verify2FA)
+	authG.POST("/2fa/disable", auth, h.Auth.Disable2FA)
+	authG.POST("/2fa/login", authRL.Middleware(), h.Auth.Login2FA)
+
+	// ---- QR Login Routes ----
+	authG.GET("/qr-login", h.Auth.GenerateQRLogin)
+	authG.POST("/qr-login/confirm", auth, h.Auth.ConfirmQRLogin)
+	authG.GET("/qr-login/poll/:token", h.Auth.PollQRLogin)
+
+	// ---- Referral Routes (enhanced) ----
+	authG.GET("/referral/code", auth, h.Auth.GetMyReferralCode)
+	authG.GET("/referral/list", auth, h.Auth.ListMyReferrals)
+	authG.GET("/referral/stats", auth, h.Auth.GetReferralStats)
+
+	// ---- Donation Settings ----
+	api.PUT("/creator/donation-settings", auth, creatorOnly, h.Auth.UpdateDonationSettings)
+	api.PUT("/creator/tags", auth, creatorOnly, h.Auth.UpdateTags)
+
+	// ---- Block ----
+	followG.POST("/block/:userId", h.Follow.BlockUser)
+	followG.DELETE("/block/:userId", h.Follow.UnblockUser)
+	followG.GET("/blocked", h.Follow.ListBlocked)
+
+	// ---- Leaderboard ----
+	api.GET("/leaderboard/:creatorId", rl.Middleware(), shortCache, h.Leaderboard.GetPublic)
+	api.GET("/leaderboard/:creatorId/settings", auth, creatorOnly, h.Leaderboard.GetSettings)
+	api.PUT("/leaderboard/:creatorId/settings", auth, creatorOnly, h.Leaderboard.UpsertSettings)
+
+	// ---- Media Share ----
+	mediaShareG := api.Group("/media-share")
+	{
+		mediaShareG.GET("/settings/:creatorId", rl.Middleware(), h.MediaShare.GetSettings)
+		mediaShareG.PUT("/settings", auth, creatorOnly, h.MediaShare.UpsertSettings)
+		mediaShareG.POST("/submit/:creatorId", auth, actionRL.Middleware(), h.MediaShare.Submit)
+		mediaShareG.GET("/queue", auth, creatorOnly, h.MediaShare.ListQueue)
+		mediaShareG.POST("/play-next", auth, creatorOnly, h.MediaShare.PlayNext)
+		mediaShareG.DELETE("/:id", auth, creatorOnly, h.MediaShare.Skip)
+	}
+
+	// ---- Announcements (public) ----
+	api.GET("/announcements", func(c *gin.Context) {
+		role := ""
+		if uid := optionalUserID(c); uid != nil {
+			// Best effort role detection
+			role = c.Query("role")
+		}
+		items, err := h.PlatformRepo.ListAnnouncements(c.Request.Context(), role)
+		if err != nil { c.JSON(500, gin.H{"error": "internal"}); return }
+		c.JSON(200, gin.H{"success": true, "data": items})
+	})
+
+	// ---- Admin Announcements ----
+	adminG.POST("/announcements", h.Admin.CreateAnnouncement)
+	adminG.GET("/announcements", h.Admin.ListAnnouncements)
+	adminG.DELETE("/announcements/:id", h.Admin.DeleteAnnouncement)
+
+	// ---- Admin Bulk Actions ----
+	adminG.POST("/users/bulk-ban", adminOnly, h.Admin.BulkBanUsers)
+	adminG.POST("/users/bulk-unban", adminOnly, h.Admin.BulkUnbanUsers)
+	adminG.POST("/withdrawals/bulk-approve", h.Admin.BulkApproveWithdrawals)
+	adminG.POST("/withdrawals/bulk-reject", h.Admin.BulkRejectWithdrawals)
+
+	// ---- Admin Realtime Stats ----
+	adminG.GET("/stats/realtime", h.Admin.GetRealtimeStats)
 
 	return r
 }

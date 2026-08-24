@@ -2,6 +2,7 @@ package handler
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -419,13 +420,42 @@ func (h *AdminHandler) ExportPayments(c *gin.Context) {
 	}
 }
 
+// maskSecret keeps only the last 4 chars so admins can recognize a stored key
+// without the API ever returning the full secret.
+func maskSecret(s string) string {
+	if s == "" {
+		return ""
+	}
+	if len(s) <= 4 {
+		return "••••"
+	}
+	return "••••••••" + s[len(s)-4:]
+}
+
+// settingsResponse is the only shape in which platform settings leave the API.
+// The secret fields on entity.PlatformSetting are json:"-", so they can only
+// ever be exposed deliberately, in masked form, through this DTO.
+type settingsResponse struct {
+	*entity.PlatformSetting
+	StripeSecretKeyMasked     string `json:"stripe_secret_key"`
+	StripeWebhookSecretMasked string `json:"stripe_webhook_secret"`
+}
+
+func maskedSettings(s *entity.PlatformSetting) settingsResponse {
+	return settingsResponse{
+		PlatformSetting:           s,
+		StripeSecretKeyMasked:     maskSecret(s.StripeSecretKey),
+		StripeWebhookSecretMasked: maskSecret(s.StripeWebhookSecret),
+	}
+}
+
 func (h *AdminHandler) GetSettings(c *gin.Context) {
 	settings, err := h.svc.GetSettings(c.Request.Context())
 	if err != nil {
 		handleServiceError(c, err)
 		return
 	}
-	response.OK(c, settings)
+	response.OK(c, maskedSettings(settings))
 }
 
 func (h *AdminHandler) UpdateSettings(c *gin.Context) {
@@ -439,5 +469,150 @@ func (h *AdminHandler) UpdateSettings(c *gin.Context) {
 		handleServiceError(c, err)
 		return
 	}
-	response.OK(c, settings)
+	response.OK(c, maskedSettings(settings))
+}
+
+// ---------------------------------------------------------------------------
+// Announcements
+// ---------------------------------------------------------------------------
+
+func (h *AdminHandler) CreateAnnouncement(c *gin.Context) {
+	var body struct {
+		Title      string  `json:"title"       validate:"required,max=200"`
+		Body       string  `json:"body"        validate:"required"`
+		TargetRole string  `json:"target_role" validate:"omitempty,oneof=all creator supporter"`
+		ExpiresAt  *string `json:"expires_at"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
+		response.BadRequest(c, "invalid request body")
+		return
+	}
+	if errs := h.validate.Validate(body); errs != nil {
+		response.BadRequest(c, formatValidationErrors(errs))
+		return
+	}
+	var expiresAt *time.Time
+	if body.ExpiresAt != nil && *body.ExpiresAt != "" {
+		t, err := time.Parse(time.RFC3339, *body.ExpiresAt)
+		if err != nil {
+			response.BadRequest(c, "expires_at harus format RFC3339")
+			return
+		}
+		expiresAt = &t
+	}
+	if err := h.svc.CreateAnnouncement(c.Request.Context(), getUserID(c), body.Title, body.Body, body.TargetRole, expiresAt); err != nil {
+		handleServiceError(c, err)
+		return
+	}
+	response.OKMessage(c, "announcement created")
+}
+
+func (h *AdminHandler) ListAnnouncements(c *gin.Context) {
+	items, err := h.svc.ListAllAnnouncements(c.Request.Context())
+	if err != nil {
+		handleServiceError(c, err)
+		return
+	}
+	response.OK(c, items)
+}
+
+func (h *AdminHandler) DeleteAnnouncement(c *gin.Context) {
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		response.BadRequest(c, "invalid id")
+		return
+	}
+	if err := h.svc.DeleteAnnouncement(c.Request.Context(), id); err != nil {
+		handleServiceError(c, err)
+		return
+	}
+	response.OKMessage(c, "announcement deleted")
+}
+
+// ---------------------------------------------------------------------------
+// Bulk Actions
+// ---------------------------------------------------------------------------
+
+func (h *AdminHandler) BulkBanUsers(c *gin.Context) {
+	var body struct {
+		UserIDs []string `json:"user_ids" validate:"required,min=1,max=50"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
+		response.BadRequest(c, "user_ids required")
+		return
+	}
+	ids := parseUUIDs(body.UserIDs)
+	if len(ids) == 0 {
+		response.BadRequest(c, "no valid user_ids")
+		return
+	}
+	success, failed := h.svc.BulkBanUsers(c.Request.Context(), ids)
+	response.OK(c, gin.H{"success": success, "failed": failed})
+}
+
+func (h *AdminHandler) BulkUnbanUsers(c *gin.Context) {
+	var body struct {
+		UserIDs []string `json:"user_ids" validate:"required,min=1,max=50"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
+		response.BadRequest(c, "user_ids required")
+		return
+	}
+	ids := parseUUIDs(body.UserIDs)
+	success, failed := h.svc.BulkUnbanUsers(c.Request.Context(), ids)
+	response.OK(c, gin.H{"success": success, "failed": failed})
+}
+
+func (h *AdminHandler) BulkApproveWithdrawals(c *gin.Context) {
+	var body struct {
+		WithdrawalIDs []string `json:"withdrawal_ids" validate:"required,min=1,max=50"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
+		response.BadRequest(c, "withdrawal_ids required")
+		return
+	}
+	ids := parseUUIDs(body.WithdrawalIDs)
+	success, failed := h.svc.BulkApproveWithdrawals(c.Request.Context(), ids)
+	response.OK(c, gin.H{"success": success, "failed": failed})
+}
+
+func (h *AdminHandler) BulkRejectWithdrawals(c *gin.Context) {
+	var body struct {
+		WithdrawalIDs []string `json:"withdrawal_ids" validate:"required,min=1,max=50"`
+		Note          string   `json:"note"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
+		response.BadRequest(c, "withdrawal_ids required")
+		return
+	}
+	ids := parseUUIDs(body.WithdrawalIDs)
+	success, failed := h.svc.BulkRejectWithdrawals(c.Request.Context(), ids, body.Note)
+	response.OK(c, gin.H{"success": success, "failed": failed})
+}
+
+// ---------------------------------------------------------------------------
+// Realtime Stats
+// ---------------------------------------------------------------------------
+
+func (h *AdminHandler) GetRealtimeStats(c *gin.Context) {
+	stats, err := h.svc.GetRealtimeStats(c.Request.Context())
+	if err != nil {
+		handleServiceError(c, err)
+		return
+	}
+	response.OK(c, stats)
+}
+
+// ---------------------------------------------------------------------------
+// Helper
+// ---------------------------------------------------------------------------
+
+func parseUUIDs(strs []string) []uuid.UUID {
+	ids := make([]uuid.UUID, 0, len(strs))
+	for _, s := range strs {
+		if id, err := uuid.Parse(s); err == nil {
+			ids = append(ids, id)
+		}
+	}
+	return ids
 }
