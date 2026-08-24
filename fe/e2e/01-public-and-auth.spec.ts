@@ -82,7 +82,10 @@ test.describe("Explore", () => {
     const search = page.locator('input').first();
     if (await search.isVisible()) {
       await search.fill("test");
-      await page.waitForTimeout(500);
+      // Debounced search: wait for the request it triggers, not a fixed delay.
+      await page
+        .waitForResponse((r) => /search|creators/.test(r.url()), { timeout: 10000 })
+        .catch(() => {});
       await expect(page.locator("body")).not.toContainText("Application error");
     }
   });
@@ -136,11 +139,16 @@ test.describe("Login Flow", () => {
     await page.goto("/login", { waitUntil: "networkidle" });
     await page.fill('input[type="email"]', "wrong@email.com");
     await page.fill('input[type="password"]', "wrongpassword");
-    await page.click('button[type="submit"]');
-    // Wait for error message — could be various Indonesian/English text
-    await page.waitForTimeout(3000);
-    const body = (await page.textContent("body") || "").toLowerCase();
-    expect(body).toMatch(/gagal|error|salah|invalid|tidak/);
+    const [response] = await Promise.all([
+      page.waitForResponse((r) => r.url().includes("/auth/login") && r.request().method() === "POST"),
+      page.click('button[type="submit"]'),
+    ]);
+    expect(response.ok(), "a wrong password must not authenticate").toBeFalsy();
+
+    // The rejection has to reach the user, not just the network tab.
+    // The page renders an Alert per form state; the visible one carries the message.
+    await expect(page.getByRole("alert").first()).toContainText(/gagal|salah|tidak valid|invalid/i);
+    await expect(page).toHaveURL(/\/login/);
   });
 
   test("admin login → redirects to /admin", async ({ page }) => {
@@ -171,9 +179,10 @@ test.describe("Register Flow", () => {
     const kreatorBtn = page.getByRole("button", { name: /Kreator/ });
     await expect(supporterBtn).toBeVisible();
     await expect(kreatorBtn).toBeVisible();
+    await expect(supporterBtn).toHaveAttribute("aria-pressed", "true");
     await kreatorBtn.click();
-    await page.waitForTimeout(300);
-    await expect(page.locator("body")).not.toContainText("Application error");
+    await expect(kreatorBtn).toHaveAttribute("aria-pressed", "true");
+    await expect(supporterBtn).toHaveAttribute("aria-pressed", "false");
   });
 
   test("password mismatch shows inline error", async ({ page }) => {
@@ -188,10 +197,11 @@ test.describe("Register Flow", () => {
   test("password strength indicator shows", async ({ page }) => {
     await page.goto("/register", { waitUntil: "networkidle" });
     const pwField = page.locator('input[type="password"]').first();
+    const strength = page.locator('[aria-live="polite"]');
+    // Renders nothing until a password is typed.
+    await expect(strength).toHaveCount(0);
     await pwField.fill("Test1234!");
-    await page.waitForTimeout(300);
-    // PasswordStrength component should render
-    await expect(page.locator("body")).not.toContainText("Application error");
+    await expect(strength).toBeVisible();
   });
 
   test("referral code field shows bonus text", async ({ page }) => {

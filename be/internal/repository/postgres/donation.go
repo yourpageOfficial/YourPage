@@ -136,8 +136,46 @@ func (r *donationRepo) GetLeaderboardSettings(ctx context.Context, creatorID uui
 }
 
 func (r *donationRepo) UpsertLeaderboardSettings(ctx context.Context, s *entity.LeaderboardSettings) error {
-	return r.db.WithContext(ctx).
-		Where(entity.LeaderboardSettings{CreatorID: s.CreatorID}).
-		Assign(s).
-		FirstOrCreate(s).Error
+	// Written as an explicit update-then-insert rather than FirstOrCreate/Assign
+	// because both of those drop false: Assign with a struct skips zero values,
+	// and on insert GORM substitutes the column default for a zero value when
+	// the field carries a `default:` tag. Either way a creator could never turn
+	// is_enabled or show_amount off.
+	fields := map[string]interface{}{
+		"is_enabled":  s.IsEnabled,
+		"period":      s.Period,
+		"max_entries": s.MaxEntries,
+		"show_amount": s.ShowAmount,
+		"title":       s.Title,
+	}
+
+	res := r.db.WithContext(ctx).
+		Model(&entity.LeaderboardSettings{}).
+		Where("creator_id = ?", s.CreatorID).
+		Updates(fields)
+	if res.Error != nil {
+		return res.Error
+	}
+	if res.RowsAffected > 0 {
+		return r.db.WithContext(ctx).Where("creator_id = ?", s.CreatorID).First(s).Error
+	}
+
+	if s.ID == uuid.Nil {
+		s.ID = uuid.New()
+	}
+	if err := r.db.WithContext(ctx).Create(s).Error; err != nil {
+		return err
+	}
+	// GORM omits zero-valued columns on insert when they carry a `default:`
+	// tag, so the row lands with show_amount/is_enabled true regardless of what
+	// was asked for. Re-apply the fields explicitly, then reload so the caller
+	// sees what was actually stored.
+	if err := r.db.WithContext(ctx).
+		Model(&entity.LeaderboardSettings{}).
+		Where("creator_id = ?", s.CreatorID).
+		Updates(fields).Error; err != nil {
+		return err
+	}
+	return r.db.WithContext(ctx).Where("creator_id = ?", s.CreatorID).First(s).Error
 }
+

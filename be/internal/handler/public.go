@@ -67,6 +67,7 @@ func (h *PublicHandler) GetCreatorPage(c *gin.Context) {
 		// Tags were stored but never returned, so they could not be shown or
 		// browsed from the creator's public page.
 		"tags":           []string(profile.Tags),
+		"category":       profile.Category,
 		"follower_count": profile.FollowerCount,
 		"is_verified":    profile.IsVerified,
 		"tier_badge":     tierBadge,

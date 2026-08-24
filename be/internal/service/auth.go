@@ -496,7 +496,7 @@ func (s *authService) UpdateProfile(ctx context.Context, userID uuid.UUID, displ
 	}
 	// Save page_color to creator profile
 	// Save creator-specific fields
-	if user.Role == entity.RoleCreator && (pageColor != nil || headerImage != nil || chatPrice != nil || chatAllowFrom != nil || autoReply != nil || socialLinks != nil || goalTitle != nil || goalAmount != nil || welcomeMsg != nil || overlayStyle != nil || overlayText != nil) {
+	if user.Role == entity.RoleCreator && (pageColor != nil || headerImage != nil || chatPrice != nil || chatAllowFrom != nil || autoReply != nil || socialLinks != nil || goalTitle != nil || goalAmount != nil || welcomeMsg != nil || overlayStyle != nil || overlayText != nil || category != nil) {
 		cp, err := s.userRepo.FindCreatorByUserID(ctx, userID)
 		if err == nil {
 			if pageColor != nil { cp.PageColor = pageColor }
@@ -515,6 +515,8 @@ func (s *authService) UpdateProfile(ctx context.Context, userID uuid.UUID, displ
 			if welcomeMsg != nil { cp.WelcomeMessage = welcomeMsg }
 			if overlayStyle != nil { cp.OverlayStyle = *overlayStyle }
 			if overlayText != nil { cp.OverlayTextTemplate = *overlayText }
+			// category was accepted by the handler but never persisted.
+			if category != nil { cp.Category = category }
 			cp.Tier = nil
 			return s.userRepo.UpdateCreatorProfile(ctx, cp)
 		}

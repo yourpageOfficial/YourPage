@@ -175,6 +175,15 @@ export default function CreatorPageView() {
               </div>
 
               {/* Bio */}
+              {creator.tags && creator.tags.length > 0 && (
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  {creator.tags.map((t: string) => (
+                    <span key={t} className="rounded-full bg-primary-50 px-2.5 py-1 text-xs font-medium text-primary-700 dark:bg-primary-900/25 dark:text-primary-300">
+                      {t}
+                    </span>
+                  ))}
+                </div>
+              )}
               {creator.bio && (
                 <p className="mt-4 text-sm text-gray-600 dark:text-gray-300 leading-relaxed max-w-xl">{creator.bio}</p>
               )}
