@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/lib/pq"
 )
 
 type UserRole string
@@ -29,6 +30,7 @@ type User struct {
 	Role          UserRole   `json:"role" gorm:"default:'supporter'"`
 	EmailVerified bool       `json:"email_verified" gorm:"default:false"`
 	ReferredBy    *uuid.UUID `json:"referred_by,omitempty" gorm:"type:uuid"`
+	TwoFAEnabled bool       `json:"two_fa_enabled" gorm:"default:false"`
 	IsBanned     bool       `json:"is_banned" gorm:"default:false"`
 	BanReason    *string    `json:"ban_reason,omitempty"`
 	BanExpiresAt *time.Time `json:"ban_expires_at,omitempty"`
@@ -71,8 +73,23 @@ type CreatorProfile struct {
 	WelcomeMessage     *string    `json:"welcome_message,omitempty"`
 	OverlayStyle       string     `json:"overlay_style" gorm:"default:'bounce'"`
 	OverlayTextTemplate string    `json:"overlay_text_template" gorm:"default:'{donor} donated {amount} Credit!'"`
+	OverlayAccentColor  string `json:"overlay_accent_color" gorm:"default:'#EC4899'"`
+	OverlayTextColor    string `json:"overlay_text_color" gorm:"default:'#0F0D1A'"`
+	OverlayFont         string `json:"overlay_font" gorm:"default:'Outfit'"`
+	OverlayDurationMS   int    `json:"overlay_duration_ms" gorm:"default:8000"`
+	OverlayPosition     string `json:"overlay_position" gorm:"default:'center'"`
+	OverlaySoundVolume  int    `json:"overlay_sound_volume" gorm:"default:80"`
+	OverlayTTSEnabled   bool   `json:"overlay_tts_enabled" gorm:"default:true"`
+	OverlayTTSMinCredits int   `json:"overlay_tts_min_credits" gorm:"default:1"`
 	LastBroadcastAt    *time.Time `json:"last_broadcast_at,omitempty"`
 	Category           *string    `json:"category,omitempty"`
+	// pq.StringArray, not []string: database/sql cannot scan a Postgres
+	// text[] into a plain []string, and the failure surfaces as "creator not
+	// found" for every profile whose tags column is non-NULL.
+	Tags               pq.StringArray `json:"tags" gorm:"type:text[]"`
+	DonationPresetAmounts Int64Array `json:"donation_preset_amounts" gorm:"type:jsonb;default:'[5000,10000,25000,50000,100000]'"`
+	DonationMinAmount  int        `json:"donation_min_amount" gorm:"default:1000"`
+	DonationEnabled    bool       `json:"donation_enabled" gorm:"default:true"`
 	CreatedAt          time.Time  `json:"created_at"`
 	UpdatedAt          time.Time  `json:"updated_at"`
 }
@@ -112,6 +129,30 @@ func (j *JSONMap) Scan(value interface{}) error {
 	return json.Unmarshal(b, j)
 }
 
+// Int64Array is a helper for jsonb columns holding a JSON array of numbers,
+// e.g. donation preset amounts. JSONMap cannot represent these: scanning a
+// JSON array into a map fails at the driver level.
+type Int64Array []int64
+
+func (a Int64Array) Value() (driver.Value, error) {
+	if a == nil {
+		return []byte("[]"), nil
+	}
+	return json.Marshal(a)
+}
+
+func (a *Int64Array) Scan(value interface{}) error {
+	if value == nil {
+		*a = Int64Array{}
+		return nil
+	}
+	b, ok := value.([]byte)
+	if !ok {
+		return fmt.Errorf("Int64Array: expected []byte, got %T", value)
+	}
+	return json.Unmarshal(b, a)
+}
+
 type ReferralCode struct {
 	ID            uuid.UUID `json:"id" gorm:"type:uuid;primaryKey"`
 	UserID        uuid.UUID `json:"user_id" gorm:"type:uuid"`
@@ -119,4 +160,14 @@ type ReferralCode struct {
 	RewardCredits int       `json:"reward_credits" gorm:"default:10"`
 	UsedCount     int       `json:"used_count" gorm:"default:0"`
 	CreatedAt     time.Time `json:"created_at"`
+}
+
+// ReferralUse records when someone registers using a referral code.
+type ReferralUse struct {
+	ID             uuid.UUID `json:"id" gorm:"type:uuid;primaryKey;default:uuid_generate_v4()"`
+	ReferralCodeID uuid.UUID `json:"referral_code_id" gorm:"type:uuid;index"`
+	ReferredUserID uuid.UUID `json:"referred_user_id" gorm:"type:uuid;uniqueIndex"`
+	ReferredUser   *User     `json:"referred_user,omitempty" gorm:"foreignKey:ReferredUserID"`
+	RewardCredits  int       `json:"reward_credits"`
+	CreatedAt      time.Time `json:"created_at"`
 }

@@ -6,11 +6,12 @@ import type { CreatorEarnings, Sale } from "@/lib/types";
 import { useAuth } from "@/lib/auth";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatCredit } from "@/lib/utils";
-import { TrendingUp, Wallet, Users, HardDrive, CheckCircle, Circle, ArrowRight, FileText, Package, Banknote, Eye, Sparkles, Zap, Crown } from "lucide-react";
+import { TrendingUp, Wallet, Users, CheckCircle, Circle, ArrowRight, FileText, Package, Banknote, Eye, Sparkles, Zap, Crown } from "lucide-react";
 import { ListSkeleton } from "@/components/ui/skeleton";
 import { PageTransition } from "@/components/ui/page-transition";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { StorageQuota } from "@/components/storage-quota";
 import Link from "next/link";
 
 export default function DashboardOverview() {
@@ -32,10 +33,6 @@ export default function DashboardOverview() {
   });
 
   if (isLoading) return <ListSkeleton count={4} />;
-
-  const storageGB = data ? (data.storage_used_bytes / (1024 * 1024 * 1024)).toFixed(1) : "0";
-  const quotaGB = data?.storage_quota_bytes ? (data.storage_quota_bytes / (1024 * 1024 * 1024)).toFixed(0) : "1";
-  const storagePct = data?.storage_quota_bytes ? Math.min((data.storage_used_bytes / data.storage_quota_bytes) * 100, 100) : 0;
 
   const checks = [
     { done: !!user?.avatar_url, label: "Upload avatar", href: "/dashboard/profile", emoji: "📸" },
@@ -108,7 +105,7 @@ export default function DashboardOverview() {
       </div>
 
       {/* === Stats row === */}
-      <div className="grid grid-cols-3 gap-3 sm:gap-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4">
         <Card hover className="group">
           <CardContent className="p-4 sm:p-5 text-center">
             <div className="h-11 w-11 rounded-2xl bg-purple-100 dark:bg-purple-900/20 flex items-center justify-center mx-auto group-hover:scale-110 transition-transform">
@@ -129,19 +126,14 @@ export default function DashboardOverview() {
             </CardContent>
           </Card>
         </Link>
-        <Card hover className="group">
-          <CardContent className="p-4 sm:p-5 text-center">
-            <div className="h-11 w-11 rounded-2xl bg-orange-100 dark:bg-orange-900/20 flex items-center justify-center mx-auto group-hover:scale-110 transition-transform">
-              <HardDrive className="h-5 w-5 text-orange-500" />
-            </div>
-            <p className="text-2xl sm:text-3xl font-black mt-2">{storageGB}<span className="text-sm font-normal text-gray-400">GB</span></p>
-            <p className="text-[10px] text-gray-400 uppercase tracking-wider mt-0.5">/ {quotaGB} GB</p>
-            <div className="w-full h-1 bg-primary-100 dark:bg-navy-800 rounded-full mt-2 overflow-hidden">
-              <div className="h-full bg-orange-400 rounded-full" style={{ width: `${storagePct}%` }} />
-            </div>
-          </CardContent>
-        </Card>
       </div>
+
+      {/* === Storage quota === */}
+      <StorageQuota
+        usedBytes={data?.storage_used_bytes ?? 0}
+        quotaBytes={data?.storage_quota_bytes || 1024 * 1024 * 1024}
+        tierName={data?.tier_name}
+      />
 
       {/* === Setup checklist (if not done) === */}
       {!allDone && (

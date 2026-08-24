@@ -53,3 +53,35 @@ func (r *platformRepo) FindTier(ctx context.Context, id uuid.UUID) (*entity.Crea
 	}
 	return &tier, nil
 }
+
+// ---------------------------------------------------------------------------
+// Announcements
+// ---------------------------------------------------------------------------
+
+func (r *platformRepo) CreateAnnouncement(ctx context.Context, a *entity.PlatformAnnouncement) error {
+	return r.db.WithContext(ctx).Create(a).Error
+}
+
+func (r *platformRepo) ListAnnouncements(ctx context.Context, targetRole string) ([]entity.PlatformAnnouncement, error) {
+	var announcements []entity.PlatformAnnouncement
+	q := r.db.WithContext(ctx).Where("is_active = true AND (expires_at IS NULL OR expires_at > NOW())")
+	if targetRole != "" && targetRole != "all" {
+		q = q.Where("target_role = 'all' OR target_role = ?", targetRole)
+	}
+	err := q.Order("created_at DESC").Find(&announcements).Error
+	return announcements, err
+}
+
+func (r *platformRepo) ListAllAnnouncements(ctx context.Context) ([]entity.PlatformAnnouncement, error) {
+	var announcements []entity.PlatformAnnouncement
+	err := r.db.WithContext(ctx).Preload("Admin").Order("created_at DESC").Find(&announcements).Error
+	return announcements, err
+}
+
+func (r *platformRepo) DeleteAnnouncement(ctx context.Context, id uuid.UUID) error {
+	result := r.db.WithContext(ctx).Where("id = ?", id).Delete(&entity.PlatformAnnouncement{})
+	if result.RowsAffected == 0 {
+		return entity.ErrNotFound
+	}
+	return result.Error
+}

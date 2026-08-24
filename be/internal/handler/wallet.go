@@ -7,6 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/yourpage/be/internal/entity"
 	"github.com/yourpage/be/internal/pkg/response"
 	"github.com/yourpage/be/internal/service"
 )
@@ -34,22 +35,34 @@ func (h *WalletHandler) ListTransactions(c *gin.Context) {
 	response.Paginated(c, txs, uuidToString(next))
 }
 
-// Step 1: Create topup → returns unique code + amount
+// Step 1: Create topup → QRIS: unique code + amount; Stripe: checkout URL
 func (h *WalletHandler) CreateTopup(c *gin.Context) {
 	amountStr := c.PostForm("amount_idr")
+	method := c.PostForm("method")
 	if amountStr == "" {
 		var body struct {
 			AmountIDR interface{} `json:"amount_idr"`
+			Method    string      `json:"method"`
 		}
 		if err := c.ShouldBindJSON(&body); err == nil && body.AmountIDR != nil {
 			amountStr = fmt.Sprintf("%v", body.AmountIDR)
+			method = body.Method
 		}
 	}
 	if amountStr == "" { response.BadRequest(c, "amount_idr is required"); return }
 
-	topup, err := h.svc.CreateTopupRequest(c.Request.Context(), getUserID(c), amountStr)
+	topup, err := h.svc.CreateTopupRequest(c.Request.Context(), getUserID(c), amountStr, entity.TopupMethod(method))
 	if err != nil { handleServiceError(c, err); return }
 	response.Created(c, topup)
+}
+
+// GetTopupStatus returns one topup owned by the caller (used after Stripe redirect).
+func (h *WalletHandler) GetTopupStatus(c *gin.Context) {
+	topupID, err := uuid.Parse(c.Param("id"))
+	if err != nil { response.BadRequest(c, "invalid topup id"); return }
+	topup, err := h.svc.GetTopupStatus(c.Request.Context(), getUserID(c), topupID)
+	if err != nil { handleServiceError(c, err); return }
+	response.OK(c, topup)
 }
 
 // Step 2: Upload proof for existing topup

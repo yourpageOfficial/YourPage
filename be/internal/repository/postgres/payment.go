@@ -39,6 +39,16 @@ func (r *paymentRepo) FindByExternalID(ctx context.Context, externalID string) (
 	return &payment, err
 }
 
+// UpdateStatusIfCurrent moves a payment only when it is still in the expected
+// state; returns true when this call won the transition.
+func (r *paymentRepo) UpdateStatusIfCurrent(ctx context.Context, id uuid.UUID, from, to entity.PaymentStatus, paidAt interface{}) (bool, error) {
+	res := r.db.WithContext(ctx).
+		Model(&entity.Payment{}).
+		Where("id = ? AND status = ?", id, from).
+		Updates(map[string]interface{}{"status": to, "paid_at": paidAt})
+	return res.RowsAffected > 0, res.Error
+}
+
 func (r *paymentRepo) UpdateStatus(ctx context.Context, id uuid.UUID, status entity.PaymentStatus, paidAt interface{}) error {
 	updates := map[string]interface{}{
 		"status":  status,

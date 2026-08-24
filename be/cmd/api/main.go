@@ -18,6 +18,8 @@ import (
 	"github.com/yourpage/be/internal/handler"
 	infraredis "github.com/yourpage/be/internal/infrastructure/redis"
 	"github.com/yourpage/be/internal/pkg/logger"
+	"github.com/yourpage/be/internal/pkg/audit"
+	"github.com/yourpage/be/internal/pkg/realtime"
 	"github.com/yourpage/be/internal/pkg/mailer"
 	"github.com/yourpage/be/internal/pkg/payment/xendit"
 	"github.com/yourpage/be/internal/pkg/storage"
@@ -74,18 +76,24 @@ func main() {
 	kycRepo := postgres.NewKYCRepository(db)
 	platformRepo := postgres.NewPlatformRepository(db)
 
+	// ---- Payment audit trail ----
+	auditLog := audit.NewLogger(db)
+
+	// ---- Realtime overlay alerts ----
+	broker := realtime.NewBroker(rdb)
+
 	// ---- Services ----
 	authSvc := service.NewAuthService(userRepo, walletRepo, platformRepo, rdb, cfg.JWT, mailSvc)
 	postSvc := service.NewPostService(postRepo, userRepo, followRepo, storageSvc, cfg)
 	productSvc := service.NewProductService(productRepo, userRepo, storageSvc, cfg)
 	donationSvc := service.NewDonationService(donationRepo, paymentRepo, userRepo, platformRepo)
-	walletSvc := service.NewWalletService(walletRepo, platformRepo, userRepo, storageSvc, cfg, mailSvc, os.Getenv("ADMIN_EMAIL"))
+	walletSvc := service.NewWalletService(walletRepo, platformRepo, userRepo, followRepo, storageSvc, cfg, mailSvc, os.Getenv("ADMIN_EMAIL"), auditLog)
 	followSvc := service.NewFollowService(followRepo, userRepo)
-	withdrawalSvc := service.NewWithdrawalService(withdrawalRepo, userRepo, walletRepo, kycRepo, platformRepo)
+	withdrawalSvc := service.NewWithdrawalService(withdrawalRepo, userRepo, walletRepo, kycRepo, platformRepo, auditLog)
 	kycSvc := service.NewKYCService(kycRepo)
 	adminSvc := service.NewAdminService(
 		userRepo, postRepo, productRepo, paymentRepo, donationRepo,
-		withdrawalRepo, walletRepo, kycRepo, followRepo, platformRepo, mailSvc, rdb,
+		withdrawalRepo, walletRepo, kycRepo, followRepo, platformRepo, mailSvc, rdb, auditLog,
 	)
 	chatRepo := postgres.NewChatRepo(db)
 
@@ -133,7 +141,7 @@ func main() {
 
 	paymentSvc := service.NewPaymentService(
 		paymentRepo, postRepo, productRepo, donationRepo,
-		walletRepo, userRepo, followRepo, platformRepo, mailSvc,
+		walletRepo, userRepo, followRepo, platformRepo, mailSvc, auditLog, broker,
 	)
 
 	// ---- Handlers ----
@@ -149,9 +157,16 @@ func main() {
 		Admin:      handler.NewAdminHandler(adminSvc),
 		Public:     handler.NewPublicHandler(userRepo, followRepo),
 		Payment:    handler.NewPaymentHandler(paymentSvc, userRepo),
-		Webhook:    handler.NewWebhookHandler(paymentRepo, xenditClient),
+		Webhook:    handler.NewWebhookHandler(paymentRepo, platformRepo, walletSvc, xenditClient),
 		Chat:       handler.NewChatHandler(chatSvc),
 		Membership: handler.NewMembershipHandler(db, userRepo),
+		// These three were never constructed, so every request to their routes
+		// hit a nil handler and returned 500.
+		Overlay:     handler.NewOverlayHandler(userRepo, broker),
+		Broadcast:   handler.NewBroadcastHandler(db, userRepo),
+		Referral:    handler.NewReferralHandler(db, userRepo),
+		Leaderboard: handler.NewLeaderboardHandler(donationRepo, userRepo),
+		MediaShare:  handler.NewMediaShareHandler(db, userRepo, walletRepo, paymentRepo, storageSvc, broker),
 		PlatformRepo: platformRepo,
 		UserRepo:     userRepo,
 		AuditDB:      db,

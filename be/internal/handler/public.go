@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/rs/zerolog/log"
 	"github.com/google/uuid"
 	"github.com/yourpage/be/internal/entity"
 	"github.com/yourpage/be/internal/pkg/response"
@@ -25,7 +26,14 @@ func (h *PublicHandler) GetCreatorPage(c *gin.Context) {
 	slug := c.Param("slug")
 	profile, err := h.userRepo.FindCreatorBySlug(c.Request.Context(), slug)
 	if err != nil {
-		response.NotFound(c, "creator not found")
+		if err == entity.ErrNotFound {
+			response.NotFound(c, "creator not found")
+			return
+		}
+		// Reporting a database or scan failure as "not found" hid a real bug:
+		// every creator whose tags column was non-NULL looked nonexistent.
+		log.Error().Err(err).Str("slug", slug).Msg("public: failed to load creator page")
+		response.InternalError(c)
 		return
 	}
 
@@ -56,6 +64,9 @@ func (h *PublicHandler) GetCreatorPage(c *gin.Context) {
 		"page_slug":      profile.PageSlug,
 		"header_image":   profile.HeaderImageURL,
 		"social_links":   profile.SocialLinks,
+		// Tags were stored but never returned, so they could not be shown or
+		// browsed from the creator's public page.
+		"tags":           []string(profile.Tags),
 		"follower_count": profile.FollowerCount,
 		"is_verified":    profile.IsVerified,
 		"tier_badge":     tierBadge,

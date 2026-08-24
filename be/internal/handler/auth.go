@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"net/http"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -33,6 +34,10 @@ func NewAuthHandler(svc service.AuthService, jwtCfg config.JWTConfig, isProd boo
 
 // setAuthCookies sets HttpOnly cookies for access/refresh tokens + signed auth-role cookie.
 func (h *AuthHandler) setAuthCookies(c *gin.Context, accessToken, refreshToken, role string) {
+	// Explicit SameSite rather than relying on the browser's implicit default:
+	// these cookies authorize money-moving admin endpoints, so CSRF protection
+	// must be a stated policy, not an assumption about browser behaviour.
+	c.SetSameSite(http.SameSiteLaxMode)
 	c.SetCookie("access_token", accessToken, int(h.jwtCfg.AccessTTL.Seconds()), "/api", "", h.isSecure, true)
 	c.SetCookie("refresh_token", refreshToken, int(h.jwtCfg.RefreshTTL.Seconds()), "/api/v1/auth", "", h.isSecure, true)
 	// Signed auth-role cookie (readable by FE middleware, not trivially forgeable)
@@ -41,6 +46,7 @@ func (h *AuthHandler) setAuthCookies(c *gin.Context, accessToken, refreshToken, 
 }
 
 func (h *AuthHandler) clearAuthCookies(c *gin.Context) {
+	c.SetSameSite(http.SameSiteLaxMode)
 	c.SetCookie("access_token", "", -1, "/api", "", h.isSecure, true)
 	c.SetCookie("refresh_token", "", -1, "/api/v1/auth", "", h.isSecure, true)
 	c.SetCookie("auth-role", "", -1, "/", "", h.isSecure, false)
@@ -375,4 +381,188 @@ func formatValidationErrors(errs map[string]string) string {
 		return v // return first error
 	}
 	return "validation failed"
+}
+
+// ---------------------------------------------------------------------------
+// 2FA Handlers
+// ---------------------------------------------------------------------------
+
+func (h *AuthHandler) Enable2FA(c *gin.Context) {
+	if err := h.svc.EnableTwoFA(c.Request.Context(), getUserID(c)); err != nil {
+		handleServiceError(c, err)
+		return
+	}
+	response.OKMessage(c, "Kode OTP dikirim ke email kamu. Masukkan kode untuk mengaktifkan 2FA.")
+}
+
+func (h *AuthHandler) Verify2FA(c *gin.Context) {
+	var body struct {
+		OTP string `json:"otp" validate:"required,len=6"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
+		response.BadRequest(c, "otp required")
+		return
+	}
+	if err := h.svc.VerifyTwoFA(c.Request.Context(), getUserID(c), body.OTP); err != nil {
+		handleServiceError(c, err)
+		return
+	}
+	response.OKMessage(c, "2FA berhasil diaktifkan")
+}
+
+func (h *AuthHandler) Disable2FA(c *gin.Context) {
+	var body struct {
+		Password string `json:"password" validate:"required"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
+		response.BadRequest(c, "password required")
+		return
+	}
+	if err := h.svc.DisableTwoFA(c.Request.Context(), getUserID(c), body.Password); err != nil {
+		handleServiceError(c, err)
+		return
+	}
+	response.OKMessage(c, "2FA dinonaktifkan")
+}
+
+func (h *AuthHandler) Login2FA(c *gin.Context) {
+	var body struct {
+		ChallengeToken string `json:"challenge_token" validate:"required"`
+		OTP            string `json:"otp"             validate:"required,len=6"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
+		response.BadRequest(c, "challenge_token dan otp required")
+		return
+	}
+	resp, err := h.svc.LoginWithTwoFA(c.Request.Context(), body.ChallengeToken, body.OTP)
+	if err != nil {
+		handleServiceError(c, err)
+		return
+	}
+	claims, _ := pkgjwt.ParseToken(h.jwtCfg, resp.AccessToken)
+	role := "supporter"
+	if claims != nil { role = claims.Role }
+	h.setAuthCookies(c, resp.AccessToken, resp.RefreshToken, role)
+	response.OK(c, resp)
+}
+
+// ---------------------------------------------------------------------------
+// QR Login Handlers
+// ---------------------------------------------------------------------------
+
+func (h *AuthHandler) GenerateQRLogin(c *gin.Context) {
+	token, err := h.svc.GenerateQRLogin(c.Request.Context())
+	if err != nil {
+		response.InternalError(c)
+		return
+	}
+	response.OK(c, gin.H{"token": token})
+}
+
+func (h *AuthHandler) ConfirmQRLogin(c *gin.Context) {
+	var body struct {
+		QRToken string `json:"qr_token" validate:"required"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
+		response.BadRequest(c, "qr_token required")
+		return
+	}
+	uid := getUserID(c)
+	role := string(getUserRole(c))
+	if err := h.svc.ConfirmQRLogin(c.Request.Context(), body.QRToken, uid, role); err != nil {
+		handleServiceError(c, err)
+		return
+	}
+	response.OKMessage(c, "QR login dikonfirmasi")
+}
+
+func (h *AuthHandler) PollQRLogin(c *gin.Context) {
+	token := c.Param("token")
+	if token == "" {
+		response.BadRequest(c, "token required")
+		return
+	}
+	resp, err := h.svc.PollQRLogin(c.Request.Context(), token)
+	if err != nil {
+		// Not ready yet — return 204 so FE can poll again
+		c.Status(204)
+		return
+	}
+	claims, _ := pkgjwt.ParseToken(h.jwtCfg, resp.AccessToken)
+	role := "supporter"
+	if claims != nil { role = claims.Role }
+	h.setAuthCookies(c, resp.AccessToken, resp.RefreshToken, role)
+	response.OK(c, resp)
+}
+
+// ---------------------------------------------------------------------------
+// Referral Handlers
+// ---------------------------------------------------------------------------
+
+func (h *AuthHandler) GetMyReferralCode(c *gin.Context) {
+	ref, err := h.svc.GetMyReferralCode(c.Request.Context(), getUserID(c))
+	if err != nil {
+		handleServiceError(c, err)
+		return
+	}
+	response.OK(c, ref)
+}
+
+func (h *AuthHandler) ListMyReferrals(c *gin.Context) {
+	cursor, limit := parsePagination(c)
+	uses, next, err := h.svc.ListMyReferrals(c.Request.Context(), getUserID(c), cursor, limit)
+	if err != nil {
+		handleServiceError(c, err)
+		return
+	}
+	response.Paginated(c, uses, uuidToString(next))
+}
+
+func (h *AuthHandler) GetReferralStats(c *gin.Context) {
+	stats, err := h.svc.GetReferralStats(c.Request.Context(), getUserID(c))
+	if err != nil {
+		handleServiceError(c, err)
+		return
+	}
+	response.OK(c, stats)
+}
+
+// ---------------------------------------------------------------------------
+// Donation Settings Handler
+// ---------------------------------------------------------------------------
+
+func (h *AuthHandler) UpdateDonationSettings(c *gin.Context) {
+	var body struct {
+		Enabled   *bool   `json:"donation_enabled"`
+		MinAmount *int    `json:"donation_min_amount"`
+		Presets   []int64 `json:"donation_preset_amounts"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
+		response.BadRequest(c, "invalid request body")
+		return
+	}
+	if err := h.svc.UpdateDonationSettings(c.Request.Context(), getUserID(c), body.Enabled, body.MinAmount, body.Presets); err != nil {
+		handleServiceError(c, err)
+		return
+	}
+	response.OKMessage(c, "donation settings updated")
+}
+
+// ---------------------------------------------------------------------------
+// Tags Handler
+// ---------------------------------------------------------------------------
+
+func (h *AuthHandler) UpdateTags(c *gin.Context) {
+	var body struct {
+		Tags []string `json:"tags"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
+		response.BadRequest(c, "invalid request body")
+		return
+	}
+	if err := h.svc.UpdateTags(c.Request.Context(), getUserID(c), body.Tags); err != nil {
+		handleServiceError(c, err)
+		return
+	}
+	response.OKMessage(c, "tags updated")
 }

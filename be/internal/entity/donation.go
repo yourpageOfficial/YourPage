@@ -30,3 +30,23 @@ type TopSupporter struct {
 	TotalIDR      int64  `json:"total_idr"`
 	DonationCount int    `json:"donation_count"`
 }
+
+// LeaderboardEntry is a ranked entry for the public leaderboard widget.
+type LeaderboardEntry struct {
+	Rank      int    `json:"rank"`
+	DonorName string `json:"donor_name"`
+	TotalIDR  int64  `json:"total_idr"`
+	Count     int    `json:"count"`
+}
+
+// LeaderboardSettings controls how the OBS leaderboard overlay is displayed.
+type LeaderboardSettings struct {
+	ID         uuid.UUID `json:"id" gorm:"type:uuid;primaryKey;default:uuid_generate_v4()"`
+	CreatorID  uuid.UUID `json:"creator_id" gorm:"type:uuid;uniqueIndex"`
+	IsEnabled  bool      `json:"is_enabled" gorm:"default:true"`
+	Period     string    `json:"period" gorm:"default:'all_time'"` // all_time, monthly, weekly
+	MaxEntries int       `json:"max_entries" gorm:"default:10"`
+	ShowAmount bool      `json:"show_amount" gorm:"default:true"`
+	Title      string    `json:"title" gorm:"default:'Top Supporters'"`
+	UpdatedAt  time.Time `json:"updated_at"`
+}

@@ -35,6 +35,13 @@ type CreditTransaction struct {
 	CreatedAt   time.Time             `json:"created_at"`
 }
 
+type TopupMethod string
+
+const (
+	TopupMethodQRIS   TopupMethod = "qris"
+	TopupMethodStripe TopupMethod = "stripe"
+)
+
 type CreditTopupRequest struct {
 	ID             uuid.UUID     `json:"id" gorm:"type:uuid;primaryKey;default:uuid_generate_v4()"`
 	UserID         uuid.UUID     `json:"user_id" gorm:"type:uuid;index;not null"`
@@ -46,6 +53,9 @@ type CreditTopupRequest struct {
 	Status         PaymentStatus `json:"status" gorm:"default:'pending'"`
 	UniqueCode     int           `json:"unique_code" gorm:"default:0"`
 	AdminNote      *string       `json:"admin_note,omitempty"`
+	Method          TopupMethod `json:"method" gorm:"default:'qris'"`
+	StripeSessionID *string     `json:"stripe_session_id,omitempty" gorm:"column:stripe_session_id"`
+	CheckoutURL     string      `json:"checkout_url,omitempty" gorm:"-"`
 	CreatedAt      time.Time     `json:"created_at"`
 	UpdatedAt      time.Time     `json:"updated_at"`
 }

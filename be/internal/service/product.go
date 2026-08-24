@@ -233,7 +233,27 @@ func (s *productService) Delete(ctx context.Context, productID, creatorID uuid.U
 	if product.CreatorID != creatorID {
 		return entity.ErrForbidden
 	}
-	return s.productRepo.SoftDelete(ctx, productID)
+
+	// Sum the product's assets before deletion so the quota can be released.
+	var freedBytes int64
+	if assets, aerr := s.productRepo.ListAssets(ctx, productID); aerr == nil {
+		for _, a := range assets {
+			freedBytes += a.FileSizeKB * 1024
+		}
+	}
+
+	if err := s.productRepo.SoftDelete(ctx, productID); err != nil {
+		return err
+	}
+
+	if freedBytes > 0 {
+		if profile, perr := s.userRepo.FindCreatorByUserID(ctx, creatorID); perr == nil {
+			if serr := s.userRepo.IncrementCreatorStorage(ctx, profile.ID, -freedBytes); serr != nil {
+				fmt.Printf("product: release storage after product delete: %v\n", serr)
+			}
+		}
+	}
+	return nil
 }
 
 // ---------------------------------------------------------------------------
@@ -335,8 +355,20 @@ func (s *productService) DeleteAsset(ctx context.Context, assetID, productID, cr
 		return entity.ErrForbidden
 	}
 
-	_, err = s.productRepo.DeleteAsset(ctx, assetID)
-	return err
+	asset, err := s.productRepo.DeleteAsset(ctx, assetID)
+	if err != nil {
+		return err
+	}
+
+	// Release the freed bytes back to the creator's quota.
+	if asset != nil && asset.FileSizeKB > 0 {
+		if profile, perr := s.userRepo.FindCreatorByUserID(ctx, creatorID); perr == nil {
+			if serr := s.userRepo.IncrementCreatorStorage(ctx, profile.ID, -asset.FileSizeKB*1024); serr != nil {
+				fmt.Printf("product: release storage after asset delete: %v\n", serr)
+			}
+		}
+	}
+	return nil
 }
 
 // ---------------------------------------------------------------------------

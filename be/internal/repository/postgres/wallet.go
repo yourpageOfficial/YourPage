@@ -86,6 +86,34 @@ func (r *walletRepo) FindTopupRequest(ctx context.Context, id uuid.UUID) (*entit
 	return &req, err
 }
 
+func (r *walletRepo) FindTopupByStripeSession(ctx context.Context, sessionID string) (*entity.CreditTopupRequest, error) {
+	var req entity.CreditTopupRequest
+	err := r.db.WithContext(ctx).Where("stripe_session_id = ?", sessionID).First(&req).Error
+	if err == gorm.ErrRecordNotFound {
+		return nil, entity.ErrNotFound
+	}
+	return &req, err
+}
+
+func (r *walletRepo) SetTopupStripeSession(ctx context.Context, id uuid.UUID, sessionID string) error {
+	return r.db.WithContext(ctx).
+		Model(&entity.CreditTopupRequest{}).
+		Where("id = ?", id).
+		Update("stripe_session_id", sessionID).Error
+}
+
+func (r *walletRepo) MarkTopupStatusIfPending(ctx context.Context, id uuid.UUID, status entity.PaymentStatus, adminNote *string) (bool, error) {
+	updates := map[string]interface{}{"status": status}
+	if adminNote != nil {
+		updates["admin_note"] = adminNote
+	}
+	res := r.db.WithContext(ctx).
+		Model(&entity.CreditTopupRequest{}).
+		Where("id = ? AND status = ?", id, entity.PaymentStatusPending).
+		Updates(updates)
+	return res.RowsAffected > 0, res.Error
+}
+
 func (r *walletRepo) UpdateTopupRequest(ctx context.Context, id uuid.UUID, status entity.PaymentStatus, adminNote *string) error {
 	updates := map[string]interface{}{
 		"status":     status,

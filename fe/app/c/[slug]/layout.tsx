@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 
-export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
+// Next 15 delivers route params asynchronously.
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://be:8080/api/v1"}/creators/${params.slug}`, { next: { revalidate: 60 } });
+    const { slug } = await params;
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://be:8080/api/v1"}/creators/${slug}`, { next: { revalidate: 60 } });
     const { data } = await res.json();
     if (!data) return { title: "Creator — YourPage" };
     return {

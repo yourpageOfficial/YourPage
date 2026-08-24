@@ -80,3 +80,64 @@ func (r *donationRepo) GetTopSupporters(ctx context.Context, creatorID uuid.UUID
 		Group("donor_name").Order("total_idr DESC").Limit(limit).Scan(&result).Error
 	return result, err
 }
+
+// ---------------------------------------------------------------------------
+// Leaderboard
+// ---------------------------------------------------------------------------
+
+func (r *donationRepo) GetLeaderboard(ctx context.Context, creatorID uuid.UUID, period string, limit int) ([]entity.LeaderboardEntry, error) {
+	q := r.db.WithContext(ctx).Model(&entity.Donation{}).
+		Select("donor_name, SUM(amount_idr) as total_idr, COUNT(*) as count").
+		Where("creator_id = ? AND is_anonymous = false AND status = 'paid'", creatorID)
+
+	switch period {
+	case "weekly":
+		q = q.Where("created_at >= NOW() - INTERVAL '7 days'")
+	case "monthly":
+		q = q.Where("created_at >= NOW() - INTERVAL '30 days'")
+	}
+
+	var rows []struct {
+		DonorName string `gorm:"column:donor_name"`
+		TotalIDR  int64  `gorm:"column:total_idr"`
+		Count     int    `gorm:"column:count"`
+	}
+	if err := q.Group("donor_name").Order("total_idr DESC").Limit(limit).Scan(&rows).Error; err != nil {
+		return nil, err
+	}
+
+	entries := make([]entity.LeaderboardEntry, len(rows))
+	for i, row := range rows {
+		entries[i] = entity.LeaderboardEntry{
+			Rank:      i + 1,
+			DonorName: row.DonorName,
+			TotalIDR:  row.TotalIDR,
+			Count:     row.Count,
+		}
+	}
+	return entries, nil
+}
+
+func (r *donationRepo) GetLeaderboardSettings(ctx context.Context, creatorID uuid.UUID) (*entity.LeaderboardSettings, error) {
+	var s entity.LeaderboardSettings
+	err := r.db.WithContext(ctx).Where("creator_id = ?", creatorID).First(&s).Error
+	if err == gorm.ErrRecordNotFound {
+		// Return sensible defaults if not yet configured
+		return &entity.LeaderboardSettings{
+			CreatorID:  creatorID,
+			IsEnabled:  true,
+			Period:     "all_time",
+			MaxEntries: 10,
+			ShowAmount: true,
+			Title:      "Top Supporters",
+		}, nil
+	}
+	return &s, err
+}
+
+func (r *donationRepo) UpsertLeaderboardSettings(ctx context.Context, s *entity.LeaderboardSettings) error {
+	return r.db.WithContext(ctx).
+		Where(entity.LeaderboardSettings{CreatorID: s.CreatorID}).
+		Assign(s).
+		FirstOrCreate(s).Error
+}
