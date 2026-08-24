@@ -77,6 +77,11 @@ func (h *PublicHandler) GetCreatorPage(c *gin.Context) {
 		"donation_goal_title":   profile.DonationGoalTitle,
 		"donation_goal_amount":  profile.DonationGoalAmount,
 		"donation_goal_current": profile.DonationGoalCurrent,
+		// A creator's donation settings only matter if supporters actually see
+		// them; these were stored but never returned by the public page.
+		"donation_preset_amounts": []int64(profile.DonationPresetAmounts),
+		"donation_min_amount":     profile.DonationMinAmount,
+		"donation_enabled":        profile.DonationEnabled,
 		"overlay_style":        profile.OverlayStyle,
 		"is_following":         isFollowing,
 		"welcome_message":     profile.WelcomeMessage,

@@ -17,6 +17,7 @@ type minioStorage struct {
 	client         *minio.Client
 	endpoint       string
 	publicEndpoint string
+	publicBaseURL  string
 	useSSL         bool
 }
 
@@ -24,6 +25,7 @@ func NewMinIO(cfg config.MinIOConfig) (StorageService, error) {
 	client, err := minio.New(cfg.Endpoint, &minio.Options{
 		Creds:  credentials.NewStaticV4(cfg.AccessKey, cfg.SecretKey, ""),
 		Secure: cfg.UseSSL,
+		Region: cfg.Region,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("minio: init: %w", err)
@@ -34,7 +36,13 @@ func NewMinIO(cfg config.MinIOConfig) (StorageService, error) {
 		publicEndpoint = cfg.Endpoint
 	}
 
-	return &minioStorage{client: client, endpoint: cfg.Endpoint, publicEndpoint: publicEndpoint, useSSL: cfg.UseSSL}, nil
+	return &minioStorage{
+		client:         client,
+		endpoint:       cfg.Endpoint,
+		publicEndpoint: publicEndpoint,
+		publicBaseURL:  cfg.PublicBaseURL,
+		useSSL:         cfg.UseSSL,
+	}, nil
 }
 
 func (s *minioStorage) UploadFile(ctx context.Context, bucket, objectName string, file io.Reader, size int64, contentType string) (string, error) {
@@ -43,7 +51,13 @@ func (s *minioStorage) UploadFile(ctx context.Context, bucket, objectName string
 		return "", fmt.Errorf("minio: upload: %w", err)
 	}
 
-	// Use relative /storage/ path so it goes through Next.js proxy with caching
+	// When a public base URL is configured (e.g. an R2 custom domain), serve
+	// objects straight from the provider — proxying them through this app
+	// would put every media byte back on our own egress bill.
+	if s.publicBaseURL != "" {
+		return fmt.Sprintf("%s/%s/%s", s.publicBaseURL, bucket, objectName), nil
+	}
+	// Otherwise use a relative /storage/ path via the app proxy, with caching.
 	return fmt.Sprintf("/storage/%s/%s", bucket, objectName), nil
 }
 

@@ -82,3 +82,30 @@ REDIS_HOST_PORT=6380
 Rotating `ADMIN_PASSWORD` after first boot does **not** change the existing
 admin account — the bootstrap only runs when the account is absent. Change that
 password from within the admin UI instead.
+
+## Object storage (MinIO today, R2-ready)
+
+Uploads go through an S3-compatible client, so switching to Cloudflare R2 is a
+configuration change, not a code change:
+
+```
+MINIO_ENDPOINT=<account-id>.r2.cloudflarestorage.com
+MINIO_ACCESS_KEY=<R2 access key id>
+MINIO_SECRET_KEY=<R2 secret access key>
+MINIO_USE_SSL=true
+STORAGE_REGION=auto                        # R2 requires "auto"
+STORAGE_PUBLIC_BASE_URL=https://media.<domain>   # R2 public/custom domain
+```
+
+`STORAGE_PUBLIC_BASE_URL` is what actually makes R2 cheaper. Without it, every
+media byte is proxied through this app and lands on your own egress bill;
+with it, objects are served straight from R2, whose egress is free. Leave it
+unset to keep the current `/storage/` proxy behaviour with MinIO.
+
+Two things to plan before switching in production:
+
+- **Existing files** live in MinIO and are not copied automatically. Mirror the
+  buckets first (`rclone sync minio:public-media r2:public-media`), since
+  stored URLs are relative paths that will resolve against the new base.
+- **Private media** uses presigned URLs. Verify downloads after switching —
+  presigning is generated against the configured endpoint.
