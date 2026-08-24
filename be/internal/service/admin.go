@@ -14,6 +14,7 @@ import (
 	"github.com/yourpage/be/internal/entity"
 	"github.com/yourpage/be/internal/pkg/audit"
 	"github.com/yourpage/be/internal/pkg/mailer"
+	"github.com/yourpage/be/internal/pkg/storage"
 	"github.com/yourpage/be/internal/repository"
 )
 
@@ -140,6 +141,8 @@ type adminService struct {
 	mailer         mailer.Mailer
 	rdb            *redis.Client
 	audit          audit.Logger
+	storage        storage.StorageService
+	privateBucket  string
 }
 
 func NewAdminService(
@@ -156,6 +159,8 @@ func NewAdminService(
 	m mailer.Mailer,
 	rdb *redis.Client,
 	auditLog audit.Logger,
+	storageSvc storage.StorageService,
+	privateBucket string,
 ) AdminService {
 	return &adminService{
 		userRepo:       userRepo,
@@ -171,6 +176,8 @@ func NewAdminService(
 		mailer:         m,
 		rdb:            rdb,
 		audit:          auditLog,
+		storage:        storageSvc,
+		privateBucket:  privateBucket,
 	}
 }
 
@@ -470,6 +477,19 @@ func (s *adminService) ListTopupRequests(ctx context.Context, status string, cur
 	if len(items) > limit {
 		next = &items[limit].ID
 		items = items[:limit]
+	}
+	// Proof images live in the private bucket, so hand the reviewer a
+	// short-lived signed URL rather than a path that would 403.
+	for i := range items {
+		if items[i].ProofImageURL == nil || *items[i].ProofImageURL == "" {
+			continue
+		}
+		signed, err := s.storage.GetPresignedURL(ctx, s.privateBucket, *items[i].ProofImageURL, 15*time.Minute)
+		if err != nil {
+			log.Warn().Err(err).Str("topup_id", items[i].ID.String()).Msg("admin: sign topup proof")
+			continue
+		}
+		items[i].ProofImageURL = &signed
 	}
 	return items, next, nil
 }

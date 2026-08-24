@@ -241,6 +241,11 @@ func (h *PublicHandler) SearchCreators(c *gin.Context) {
 		PageSlug      string    `json:"page_slug"`
 		FollowerCount int64     `json:"follower_count"`
 		IsVerified    bool      `json:"is_verified"`
+		// The explore grid shows a category badge and lets users filter by
+		// category; without this field the badge never rendered.
+		Category *string  `json:"category"`
+		Bio      *string  `json:"bio"`
+		Tags     []string `json:"tags"`
 	}
 
 	var items []creatorItem
@@ -254,6 +259,9 @@ func (h *PublicHandler) SearchCreators(c *gin.Context) {
 			PageSlug:      p.PageSlug,
 			FollowerCount: p.FollowerCount,
 			IsVerified:    p.IsVerified,
+			Category:      p.Category,
+			Bio:           p.User.Bio,
+			Tags:          []string(p.Tags),
 		})
 	}
 

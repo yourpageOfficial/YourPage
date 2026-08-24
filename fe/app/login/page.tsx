@@ -114,7 +114,10 @@ export default function LoginPage() {
   };
 
   const qrUrl = qrToken
-    ? `${window.location.origin}/api/v1/auth/qr-login/confirm?token=${qrToken}`
+    // Point at a page, not the API: scanning performs a GET, while the confirm
+    // endpoint is an authenticated POST — and approving another device must be
+    // an explicit action, never a side effect of opening a link.
+    ? `${window.location.origin}/qr-confirm?token=${qrToken}`
     : "";
 
   return (

@@ -61,7 +61,26 @@ func (s *minioStorage) UploadFile(ctx context.Context, bucket, objectName string
 	return fmt.Sprintf("/storage/%s/%s", bucket, objectName), nil
 }
 
-func (s *minioStorage) GetPresignedURL(ctx context.Context, bucket, objectName string, expiry time.Duration) (string, error) {
+// normalizeObjectName accepts whatever form a caller stored — a bare object
+// name, the "/storage/<bucket>/<object>" path this package returns today, or an
+// absolute "http://host/<bucket>/<object>" URL written by earlier versions —
+// and reduces it to the object name the S3 API expects. Passing the stored
+// value straight through produced doubled paths and unusable signatures.
+func normalizeObjectName(bucket, stored string) string {
+	name := stored
+	if i := strings.Index(name, "://"); i >= 0 {
+		if slash := strings.Index(name[i+3:], "/"); slash >= 0 {
+			name = name[i+3+slash:]
+		}
+	}
+	name = strings.TrimPrefix(name, "/storage/")
+	name = strings.TrimPrefix(name, "/")
+	name = strings.TrimPrefix(name, bucket+"/")
+	return name
+}
+
+func (s *minioStorage) GetPresignedURL(ctx context.Context, bucket, storedName string, expiry time.Duration) (string, error) {
+	objectName := normalizeObjectName(bucket, storedName)
 	u, err := s.client.PresignedGetObject(ctx, bucket, objectName, expiry, url.Values{})
 	if err != nil {
 		return "", fmt.Errorf("minio: presign: %w", err)

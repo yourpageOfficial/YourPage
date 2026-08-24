@@ -302,8 +302,11 @@ func (s *walletService) UploadTopupProof(ctx context.Context, userID, topupID uu
 		return nil, fmt.Errorf("⚠ Topup sudah diproses, tidak bisa upload ulang")
 	}
 
+	// Private bucket: a transfer receipt carries the sender's name, bank
+	// account and amount. The public bucket is anonymously readable, so
+	// anyone holding (or guessing) the URL could read it.
 	objectName := fmt.Sprintf("topups/%s/%s", userID, uuid.NewString())
-	proofURL, err := s.storage.UploadFile(ctx, s.cfg.MinIO.PublicBucket, objectName, file, fileSize, contentType)
+	proofURL, err := s.storage.UploadFile(ctx, s.cfg.MinIO.PrivateBucket, objectName, file, fileSize, contentType)
 	if err != nil {
 		return nil, fmt.Errorf("wallet: upload proof: %w", err)
 	}

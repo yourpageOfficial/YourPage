@@ -18,7 +18,7 @@ func newAdminSvcForTopup(walletRepo *testutil.MockWalletRepo, userRepo *testutil
 	return service.NewAdminService(
 		userRepo, nil, nil, nil, nil,
 		nil, walletRepo, nil, testutil.NewMockFollowRepo(), testutil.NewMockPlatformRepo(),
-		testutil.MockMailer{}, nil, audit.Nop(),
+		testutil.MockMailer{}, nil, audit.Nop(), nil, "private-media",
 	)
 }
 

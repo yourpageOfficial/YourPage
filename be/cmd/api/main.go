@@ -94,6 +94,7 @@ func main() {
 	adminSvc := service.NewAdminService(
 		userRepo, postRepo, productRepo, paymentRepo, donationRepo,
 		withdrawalRepo, walletRepo, kycRepo, followRepo, platformRepo, mailSvc, rdb, auditLog,
+		storageSvc, cfg.MinIO.PrivateBucket,
 	)
 	chatRepo := postgres.NewChatRepo(db)
 
