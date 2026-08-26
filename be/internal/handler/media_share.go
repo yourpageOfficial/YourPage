@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/rs/zerolog/log"
 	"github.com/google/uuid"
 	"github.com/yourpage/be/internal/entity"
 	"github.com/yourpage/be/internal/pkg/realtime"
@@ -85,7 +86,15 @@ func (h *MediaShareHandler) UpsertSettings(c *gin.Context) {
 	userID := getUserID(c)
 	cp, err := h.userRepo.FindCreatorByUserID(c.Request.Context(), userID)
 	if err != nil {
-		response.NotFound(c, "creator not found")
+		// Only a genuine absence is a 404. Reporting a database or scan
+		// failure as "not found" is how a real defect once looked like a
+		// deleted profile instead of an error.
+		if err == entity.ErrNotFound {
+			response.NotFound(c, "creator not found")
+			return
+		}
+		log.Error().Err(err).Msg("failed to load creator profile")
+		response.InternalError(c)
 		return
 	}
 

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/rs/zerolog/log"
 	"github.com/google/uuid"
 	"github.com/yourpage/be/internal/entity"
 	"github.com/yourpage/be/internal/pkg/realtime"
@@ -181,7 +182,15 @@ func (h *OverlayHandler) UpdateSettings(c *gin.Context) {
 
 	p, err := h.userRepo.FindCreatorByUserID(c.Request.Context(), getUserID(c))
 	if err != nil {
-		response.NotFound(c, "Profil creator tidak ditemukan")
+		// Only a genuine absence is a 404. Reporting a database or scan
+		// failure as "not found" is how a real defect once looked like a
+		// deleted profile instead of an error.
+		if err == entity.ErrNotFound {
+			response.NotFound(c, "Profil creator tidak ditemukan")
+			return
+		}
+		log.Error().Err(err).Msg("failed to load creator profile")
+		response.InternalError(c)
 		return
 	}
 

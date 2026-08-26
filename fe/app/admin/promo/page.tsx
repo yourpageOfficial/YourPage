@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { Check } from "lucide-react";
 import api from "@/lib/api";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -93,7 +94,7 @@ export default function AdminPromoPage() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                {c.is_verified && <Badge className="bg-primary text-white text-[10px]">✓</Badge>}
+                {c.is_verified && <Badge className="bg-primary text-white text-[10px]"><Check className="h-3 w-3" aria-label="Terverifikasi" /></Badge>}
                 <Button size="sm" variant="ghost" className="text-xs">🎯 Set Promo</Button>
               </div>
             </CardContent>

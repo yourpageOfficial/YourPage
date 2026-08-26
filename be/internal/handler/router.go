@@ -361,6 +361,8 @@ func NewRouter(cfg *config.Config, rdb *redis.Client, h Handlers) *gin.Engine {
 	api.POST("/kyc", auth, h.KYC.SubmitKYC)
 	api.GET("/kyc", auth, h.KYC.GetMyKYC)
 	api.POST("/upload", auth, actionRL.Middleware(), h.KYC.UploadFile)
+	// Identity documents and anything else that must not be world-readable.
+	api.POST("/upload/private", auth, actionRL.Middleware(), h.KYC.UploadPrivateFile)
 	api.POST("/reports", auth, actionRL.Middleware(), h.KYC.CreateReport)
 
 	// ---- Admin ----

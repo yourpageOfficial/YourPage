@@ -18,7 +18,7 @@ import { PageTransition } from "@/components/ui/page-transition";
 import { ImageFallback } from "@/components/ui/image-fallback";
 import { formatCredit } from "@/lib/utils";
 import { ListSkeleton } from "@/components/ui/skeleton";
-import { CheckCircle, Users, Heart, MessageCircle, Share2, Trophy, Star, Package, FileText, ExternalLink } from "lucide-react";
+import { CheckCircle, ExternalLink, FileText, Heart, MessageCircle, Package, PartyPopper, Share2, Star, Target, Trophy, Users, X } from "lucide-react";
 import Link from "next/link";
 import { ReportButton } from "@/components/report-button";
 import type { CreatorPage, Post, Product, MembershipTier, Membership, PaginatedResponse, ApiResponse } from "@/lib/types";
@@ -247,7 +247,7 @@ export default function CreatorPageView() {
               <CardContent className="p-4">
                 <div className="flex items-center gap-2 mb-3">
                   <div className="h-8 w-8 rounded-xl flex items-center justify-center" style={{ backgroundColor: `${accentColor}15` }}>
-                    <span className="text-sm">🎯</span>
+                    <Target className="h-4 w-4 text-primary" aria-hidden="true" />
                   </div>
                   <p className="text-sm font-bold flex-1 truncate">{creator.donation_goal_title}</p>
                 </div>
@@ -403,12 +403,12 @@ export default function CreatorPageView() {
                         </div>
                         <p className="font-bold">Dukung {creator.display_name}</p>
                       </div>
-                      <button onClick={() => setShowDonate(false)} className="h-8 w-8 rounded-xl bg-primary-50 dark:bg-navy-800 flex items-center justify-center text-gray-400 hover:text-gray-600">✕</button>
+                      <button onClick={() => setShowDonate(false)} className="h-8 w-8 rounded-xl bg-primary-50 dark:bg-navy-800 flex items-center justify-center text-gray-400 hover:text-gray-600" aria-label="Tutup"><X className="h-4 w-4" /></button>
                     </div>
 
                     {donateSuccess ? (
                       <div className="text-center py-4">
-                        <div className="text-4xl mb-2">🎉</div>
+                        <PartyPopper className="mx-auto mb-2 h-10 w-10 text-primary" aria-hidden="true" />
                         <p className="font-bold text-green-600">Donasi terkirim!</p>
                         <p className="text-xs text-gray-400 mt-1">Terima kasih atas dukunganmu</p>
                         <Button size="sm" className="mt-4 rounded-xl" onClick={() => setDonateSuccess(false)}>Donasi Lagi</Button>

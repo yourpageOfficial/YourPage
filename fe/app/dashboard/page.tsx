@@ -6,7 +6,7 @@ import type { CreatorEarnings, Sale } from "@/lib/types";
 import { useAuth } from "@/lib/auth";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatCredit } from "@/lib/utils";
-import { TrendingUp, Wallet, Users, CheckCircle, Circle, ArrowRight, FileText, Package, Banknote, Eye, Sparkles, Zap, Crown } from "lucide-react";
+import { ArrowRight, Banknote, CheckCircle, Circle, Crown, Eye, FileText, Package, Rocket, Sparkles, TrendingUp, Users, Wallet, Zap } from "lucide-react";
 import { ListSkeleton } from "@/components/ui/skeleton";
 import { PageTransition } from "@/components/ui/page-transition";
 import { Button } from "@/components/ui/button";
@@ -142,7 +142,7 @@ export default function DashboardOverview() {
           <CardContent className="p-5">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
-                <span className="text-lg">🚀</span>
+                <Rocket className="h-5 w-5" aria-hidden="true" />
                 <p className="font-black text-sm">Setup Halaman</p>
               </div>
               <Badge variant="secondary" className="text-[10px]">{doneCount}/{checks.length}</Badge>

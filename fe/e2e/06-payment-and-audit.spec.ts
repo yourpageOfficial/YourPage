@@ -1,5 +1,5 @@
 import { test, expect, type APIRequestContext } from "@playwright/test";
-import { loginViaUI } from "./helpers";
+import { loginViaUI, dismissCookieBanner } from "./helpers";
 
 const API = "http://localhost:8080/api/v1";
 const ADMIN = { email: "admin@yourpage.id", password: "admin123" };
@@ -295,6 +295,7 @@ test.describe("Top-up page UI", () => {
     await loginViaUI(page, user.email, user.password);
 
     await page.goto("/wallet/topup", { waitUntil: "domcontentloaded" });
+    await dismissCookieBanner(page);
     await expect(page.getByRole("heading", { name: /Top-up Credit/i })).toBeVisible();
 
     await page.getByRole("button", { name: /QRIS/ }).first().click();
@@ -312,6 +313,7 @@ test.describe("Top-up page UI", () => {
     await loginViaUI(page, user.email, user.password);
 
     await page.goto("/wallet/topup", { waitUntil: "domcontentloaded" });
+    await dismissCookieBanner(page);
     await page.getByRole("button", { name: /Rp\s*50/ }).first().click();
     await page.getByRole("button", { name: /Lanjut/ }).click();
     await expect(page.getByText(/Kode unik/i).first()).toBeVisible();

@@ -41,7 +41,15 @@ func (h *BroadcastHandler) Send(c *gin.Context) {
 	uid := getUserID(c)
 	cp, err := h.userRepo.FindCreatorByUserID(c.Request.Context(), uid)
 	if err != nil {
-		response.NotFound(c, "not found")
+		// Only a genuine absence is a 404. Reporting a database or scan
+		// failure as "not found" is how a real defect once looked like a
+		// deleted profile instead of an error.
+		if err == entity.ErrNotFound {
+			response.NotFound(c, "not found")
+			return
+		}
+		log.Error().Err(err).Msg("failed to load creator profile")
+		response.InternalError(c)
 		return
 	}
 	if cp.Tier == nil || cp.Tier.PriceIDR == 0 {

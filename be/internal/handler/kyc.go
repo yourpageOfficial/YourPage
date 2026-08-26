@@ -54,7 +54,21 @@ func (h *KYCHandler) GetMyKYC(c *gin.Context) {
 	response.OK(c, kyc)
 }
 
+// UploadFile stores a file in the public bucket: avatars, header images,
+// overlay tier art, the platform QRIS. Anything identifying belongs in
+// UploadPrivateFile instead.
 func (h *KYCHandler) UploadFile(c *gin.Context) {
+	h.upload(c, h.cfg.MinIO.PublicBucket)
+}
+
+// UploadPrivateFile stores a file in the private bucket, reachable only via a
+// short-lived signed URL. Identity documents must never sit in the public
+// bucket, which is anonymously readable.
+func (h *KYCHandler) UploadPrivateFile(c *gin.Context) {
+	h.upload(c, h.cfg.MinIO.PrivateBucket)
+}
+
+func (h *KYCHandler) upload(c *gin.Context, bucket string) {
 	file, header, err := c.Request.FormFile("file")
 	if err != nil {
 		response.BadRequest(c, "file is required")
@@ -89,7 +103,7 @@ func (h *KYCHandler) UploadFile(c *gin.Context) {
 	// Sanitize filename
 	safeName := uuid.NewString() + filepath.Ext(header.Filename)
 	objectName := fmt.Sprintf("uploads/%s/%s", getUserID(c), safeName)
-	url, err := h.storage.UploadFile(c.Request.Context(), h.cfg.MinIO.PublicBucket, objectName, file, header.Size, detectedType)
+	url, err := h.storage.UploadFile(c.Request.Context(), bucket, objectName, file, header.Size, detectedType)
 	if err != nil {
 		response.InternalError(c)
 		return

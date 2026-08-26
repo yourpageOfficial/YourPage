@@ -92,7 +92,7 @@ export default function EditProfile() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-display font-black tracking-tight">Profil</h1>
-        <Link href={`/c/${user?.username}`} target="_blank">
+        <Link href={`/c/${user?.username}`} target="_blank" rel="noopener noreferrer">
           <Button size="sm" variant="outline"><ExternalLink className="mr-1 h-3 w-3" /> Lihat Halaman Publik</Button>
         </Link>
       </div>

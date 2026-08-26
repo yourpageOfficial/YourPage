@@ -97,6 +97,19 @@ func (h *LeaderboardHandler) UpsertSettings(c *gin.Context) {
 		return
 	}
 
+	// Ownership check — without it any creator could rewrite another
+	// creator's leaderboard: rename it, hide it, or change what it shows.
+	userID := getUserID(c)
+	cp, err := h.userRepo.FindCreatorByUserID(c.Request.Context(), userID)
+	if err != nil || cp.UserID != userID {
+		response.Forbidden(c)
+		return
+	}
+	if cp.ID != creatorID && cp.UserID != creatorID {
+		response.Forbidden(c)
+		return
+	}
+
 	var req upsertLeaderboardRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.BadRequest(c, "invalid request body")

@@ -94,7 +94,15 @@ func (h *PublicHandler) GetMyEarnings(c *gin.Context) {
 	userID := getUserID(c)
 	profile, err := h.userRepo.FindCreatorByUserID(c.Request.Context(), userID)
 	if err != nil {
-		response.NotFound(c, "creator profile not found")
+		// Only a genuine absence is a 404. Reporting a database or scan
+		// failure as "not found" is how a real defect once looked like a
+		// deleted profile instead of an error.
+		if err == entity.ErrNotFound {
+			response.NotFound(c, "creator profile not found")
+			return
+		}
+		log.Error().Err(err).Msg("failed to load creator profile")
+		response.InternalError(c)
 		return
 	}
 	tierName := "Free"
@@ -139,7 +147,15 @@ func (h *PublicHandler) GetCreatorAnalytics(c *gin.Context) {
 	userID := getUserID(c)
 	profile, err := h.userRepo.FindCreatorByUserID(c.Request.Context(), userID)
 	if err != nil {
-		response.NotFound(c, "creator profile not found")
+		// Only a genuine absence is a 404. Reporting a database or scan
+		// failure as "not found" is how a real defect once looked like a
+		// deleted profile instead of an error.
+		if err == entity.ErrNotFound {
+			response.NotFound(c, "creator profile not found")
+			return
+		}
+		log.Error().Err(err).Msg("failed to load creator profile")
+		response.InternalError(c)
 		return
 	}
 

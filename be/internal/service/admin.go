@@ -404,6 +404,20 @@ func (s *adminService) ListKYC(ctx context.Context, status string, cursor *uuid.
 		next = &items[limit].ID
 		items = items[:limit]
 	}
+	// The document lives in the private bucket and its URL is json:"-", so a
+	// reviewer previously had nothing to look at and approved blind. Hand them
+	// a short-lived signed link instead.
+	for i := range items {
+		if items[i].KTPImageURL == "" {
+			continue
+		}
+		signed, err := s.storage.GetPresignedURL(ctx, s.privateBucket, items[i].KTPImageURL, 15*time.Minute)
+		if err != nil {
+			log.Warn().Err(err).Str("kyc_id", items[i].ID.String()).Msg("admin: sign KYC document")
+			continue
+		}
+		items[i].KTPImageURL = signed
+	}
 	return items, next, nil
 }
 

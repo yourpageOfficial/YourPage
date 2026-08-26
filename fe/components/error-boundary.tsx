@@ -1,6 +1,7 @@
 "use client";
 
 import { Component, type ReactNode } from "react";
+import { AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface Props { children: ReactNode; }
@@ -13,7 +14,7 @@ export class ErrorBoundary extends Component<Props, State> {
     if (this.state.hasError) {
       return (
         <div className="flex flex-col items-center justify-center min-h-[50vh] p-8 text-center">
-          <p className="text-4xl mb-4">😵</p>
+          <AlertTriangle className="mx-auto mb-4 h-12 w-12 text-red-500" aria-hidden="true" />
           <h2 className="text-xl font-bold mb-2">Terjadi Kesalahan</h2>
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Halaman ini mengalami error. Coba refresh.</p>
           <Button onClick={() => { this.setState({ hasError: false }); window.location.reload(); }}>Refresh</Button>

@@ -154,6 +154,13 @@ func (h *AdminHandler) UpdateWithdrawalStatus(c *gin.Context) {
 
 // ---- KYC ----
 
+// kycReviewItem carries the signed document link deliberately. UserKYC keeps
+// KTPImageURL as json:"-" so it can never be serialised by accident elsewhere.
+type kycReviewItem struct {
+	entity.UserKYC
+	KTPImageURL string `json:"ktp_image_url,omitempty"`
+}
+
 func (h *AdminHandler) ListKYC(c *gin.Context) {
 	cursor, limit := parsePagination(c)
 	status := c.Query("status")
@@ -162,7 +169,11 @@ func (h *AdminHandler) ListKYC(c *gin.Context) {
 		handleServiceError(c, err)
 		return
 	}
-	response.Paginated(c, items, uuidToString(next))
+	out := make([]kycReviewItem, 0, len(items))
+	for _, it := range items {
+		out = append(out, kycReviewItem{UserKYC: it, KTPImageURL: it.KTPImageURL})
+	}
+	response.Paginated(c, out, uuidToString(next))
 }
 
 func (h *AdminHandler) UpdateKYCStatus(c *gin.Context) {

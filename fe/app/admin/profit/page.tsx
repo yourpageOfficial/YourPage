@@ -74,7 +74,7 @@ export default function AdminProfit() {
       </div>
 
       {/* Withdraw form */}
-      <CollapsibleCard title="💸 Cairkan Profit">
+      <CollapsibleCard title="Cairkan Profit">
         <div className="space-y-3">
           <Input type="number" placeholder="Nominal (IDR)" value={amount} onChange={(e) => setAmount(e.target.value)} />
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
