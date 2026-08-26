@@ -187,7 +187,17 @@ func (r *userRepo) CreateOverlayTier(ctx context.Context, t *entity.OverlayTier)
 }
 
 func (r *userRepo) DeleteOverlayTier(ctx context.Context, id, creatorID uuid.UUID) error {
-	return r.db.WithContext(ctx).Where("id = ? AND creator_id = ?", id, creatorID).Delete(&entity.OverlayTier{}).Error
+	// The owner predicate keeps the data safe, but GORM reports no error when
+	// it matches nothing — so a delete that hit someone else's tier, or a stale
+	// id, still answered "deleted". Report the miss instead.
+	res := r.db.WithContext(ctx).Where("id = ? AND creator_id = ?", id, creatorID).Delete(&entity.OverlayTier{})
+	if res.Error != nil {
+		return res.Error
+	}
+	if res.RowsAffected == 0 {
+		return entity.ErrNotFound
+	}
+	return nil
 }
 
 func (r *userRepo) ListFollowerIDs(ctx context.Context, creatorID uuid.UUID) ([]uuid.UUID, error) {
