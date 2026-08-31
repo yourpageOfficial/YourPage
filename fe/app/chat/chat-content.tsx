@@ -90,11 +90,12 @@ export default function ChatContent() {
                   <p className="text-xs text-accent-700 dark:text-accent-300">Setiap pesan dikenakan <span className="font-bold">{chatPrice / 1000} Credit</span></p>
                 </div>
               )}
-              <Input value={message} onChange={e => setMessage(e.target.value)} placeholder="Tulis pesan..." className="rounded-2xl"
-                onKeyDown={e => { if (e.key === "Enter" && message.trim()) startChat.mutate(); }} />
-              <Button onClick={() => startChat.mutate()} disabled={!message.trim() || startChat.isPending} loading={startChat.isPending} className="w-full">
-                <Send className="mr-2 h-4 w-4" /> Kirim
-              </Button>
+              <form onSubmit={(e) => { e.preventDefault(); if (message.trim()) startChat.mutate(); }} className="space-y-3">
+                <Input value={message} onChange={e => setMessage(e.target.value)} placeholder="Tulis pesan..." className="rounded-2xl" />
+                <Button type="submit" disabled={!message.trim() || startChat.isPending} loading={startChat.isPending} className="w-full">
+                  <Send className="mr-2 h-4 w-4" /> Kirim
+                </Button>
+              </form>
             </CardContent>
           </Card>
         </div>
@@ -266,13 +267,12 @@ export default function ChatContent() {
 
               {/* Input */}
               <div className="p-3 border-t border-primary-100 dark:border-primary-900/30 shrink-0">
-                <div className="flex gap-2">
-                  <Input value={message} onChange={e => setMessage(e.target.value)} placeholder="Tulis pesan..." className="flex-1 rounded-2xl"
-                    onKeyDown={e => { if (e.key === "Enter" && message.trim()) send.mutate(); }} />
-                  <Button size="icon" onClick={() => send.mutate()} disabled={!message.trim() || send.isPending} className="rounded-2xl shrink-0">
+                <form onSubmit={(e) => { e.preventDefault(); if (message.trim()) send.mutate(); }} className="flex gap-2">
+                  <Input value={message} onChange={e => setMessage(e.target.value)} placeholder="Tulis pesan..." className="flex-1 rounded-2xl" />
+                  <Button type="submit" size="icon" disabled={!message.trim() || send.isPending} className="rounded-2xl shrink-0" aria-label="Kirim pesan">
                     <Send className="h-4 w-4" />
                   </Button>
-                </div>
+                </form>
               </div>
             </>
           )}

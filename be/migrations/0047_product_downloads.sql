@@ -10,3 +10,4 @@ CREATE INDEX IF NOT EXISTS idx_product_downloads_product ON product_downloads(pr
 CREATE INDEX IF NOT EXISTS idx_product_downloads_user ON product_downloads(user_id);
 
 -- +goose Down
+DROP TABLE IF EXISTS product_downloads;

@@ -10,7 +10,7 @@ export function BottomNav() {
   const { user } = useAuth();
   const pathname = usePathname();
 
-  if (!user) return null;
+  if (!user || pathname.startsWith("/overlay")) return null;
 
   const dashboardLink = user.role === "admin" ? "/admin" : user.role === "creator" ? "/dashboard" : "/s";
 

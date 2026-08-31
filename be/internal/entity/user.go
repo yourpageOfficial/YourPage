@@ -120,3 +120,11 @@ type ReferralCode struct {
 	UsedCount     int       `json:"used_count" gorm:"default:0"`
 	CreatedAt     time.Time `json:"created_at"`
 }
+
+type PasswordHistory struct {
+	ID           uuid.UUID `json:"id" gorm:"type:uuid;primaryKey;default:uuid_generate_v4()"`
+	UserID       uuid.UUID `json:"user_id" gorm:"type:uuid;index;not null"`
+	PasswordHash string    `json:"-" gorm:"not null"`
+	CreatedAt    time.Time `json:"created_at" gorm:"not null"`
+}
+

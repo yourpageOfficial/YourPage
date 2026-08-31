@@ -9,8 +9,10 @@ import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { Avatar } from "@/components/ui/avatar";
 import { formatDate, formatIDR } from "@/lib/utils";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 export default function AdminPromoPage() {
+  const router = useRouter();
   const { data: users } = useQuery({
     queryKey: ["admin-users-all"],
     queryFn: async () => { const { data } = await api.get("/admin/users?limit=200"); return data.data as any[]; },
@@ -84,7 +86,7 @@ export default function AdminPromoPage() {
       <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase mb-3">Semua Creator</h2>
       <div className="space-y-2">
         {creators.map((c: any) => (
-          <Card key={c.id} className="cursor-pointer hover:border-primary transition-colors" onClick={() => window.location.href = `/admin/users/${c.id}`}>
+          <Card key={c.id} className="cursor-pointer hover:border-primary transition-colors" onClick={() => router.push(`/admin/users/${c.id}`)}>
             <CardContent className="p-3 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <Avatar src={c.avatar_url} name={c.display_name} size="sm" />

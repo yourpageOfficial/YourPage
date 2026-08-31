@@ -146,7 +146,7 @@ func main() {
 		Follow:     handler.NewFollowHandler(followSvc),
 		Withdrawal: handler.NewWithdrawalHandler(withdrawalSvc),
 		KYC:        handler.NewKYCHandler(kycSvc, storageSvc, cfg, userRepo),
-		Admin:      handler.NewAdminHandler(adminSvc),
+		Admin:      handler.NewAdminHandler(adminSvc, storageSvc, cfg),
 		Public:     handler.NewPublicHandler(userRepo, followRepo),
 		Payment:    handler.NewPaymentHandler(paymentSvc, userRepo),
 		Webhook:    handler.NewWebhookHandler(paymentRepo, xenditClient),

@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useRef } from "react";
+import { useRouter } from "next/navigation";
 import api from "@/lib/api";
 import { toast } from "@/lib/toast";
 import { useAuth } from "@/lib/auth";
@@ -11,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatCredit, formatDate } from "@/lib/utils";
-import { Trash2, Plus, Upload, Image, FileText, Clock, Eye, X, ChevronDown } from "lucide-react";
+import { Trash2, Plus, Upload, Image as ImageIcon, FileText, Clock, Eye, X, ChevronDown } from "lucide-react";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import type { Post, MembershipTier, PaginatedResponse } from "@/lib/types";
@@ -127,7 +128,7 @@ export default function DashboardPosts() {
                     <div className="mt-2 flex flex-wrap gap-2">
                       {files.map((f, i) => (
                         <div key={i} className="flex items-center gap-1.5 rounded-xl bg-primary-50 dark:bg-primary-900/20 px-3 py-1.5 text-xs">
-                          <Image className="h-3 w-3 text-primary" />
+                          <ImageIcon className="h-3 w-3 text-primary" />
                           <span className="max-w-[120px] truncate">{f.name}</span>
                           <button onClick={() => setFiles(files.filter((_, j) => j !== i))} className="text-red-500 ml-1 hover:text-red-700 cursor-pointer">×</button>
                         </div>
@@ -219,8 +220,9 @@ export default function DashboardPosts() {
 }
 
 function PostItem({ post, onDelete }: { post: Post; onDelete: (id: string) => void }) {
+  const router = useRouter();
   return (
-    <Card clickable onClick={() => window.location.href = `/dashboard/posts/${post.id}`}>
+    <Card clickable onClick={() => router.push(`/dashboard/posts/${post.id}`)}>
       <CardContent className="p-4">
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
@@ -233,7 +235,7 @@ function PostItem({ post, onDelete }: { post: Post; onDelete: (id: string) => vo
               <Badge variant={post.access_type === "paid" ? "secondary" : "outline"}>
                 {post.access_type === "paid" ? formatCredit(post.price || 0) : "Gratis"}
               </Badge>
-              {post.media?.length > 0 && <Badge variant="outline" className="text-[10px]"><Image className="h-3 w-3 mr-1" />{post.media.length}</Badge>}
+              {post.media?.length > 0 && <Badge variant="outline" className="text-[10px]"><ImageIcon className="h-3 w-3 mr-1" />{post.media.length}</Badge>}
               <span className="text-[11px] text-gray-400">{formatDate(post.created_at)}</span>
             </div>
           </div>

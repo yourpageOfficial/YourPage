@@ -9,11 +9,13 @@ nginx/ssl/
 # Go
 be/tmp/
 be/bin/
-be/docs/
+be/api
+be/migrate
 
 # Node
 fe/node_modules/
 fe/.next/
+fe/tsconfig.tsbuildinfo
 
 # IDE
 .idea/

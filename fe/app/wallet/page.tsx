@@ -67,7 +67,7 @@ export default function WalletPage() {
                 </div>
                 <div className="text-right">
                   <Badge variant={["topup", "refund", "earning"].includes(tx.type) ? "success" : "destructive"}>
-                    {["topup", "refund", "earning"].includes(tx.type) ? "+" : "-"}{tx.credits} Credit
+                    {["topup", "refund", "earning"].includes(tx.type) ? "+" : "-"}{Math.abs(tx.credits)} Credit
                   </Badge>
                   {tx.type === "withdrawal" && (
                     <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{formatIDR(tx.idr_amount)}</p>

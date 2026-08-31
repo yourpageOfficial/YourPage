@@ -11,6 +11,9 @@ import (
 	"github.com/yourpage/be/internal/handler/middleware"
 	"github.com/yourpage/be/internal/pkg/response"
 	"github.com/yourpage/be/internal/repository"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
+	_ "github.com/yourpage/be/docs"
 	"gorm.io/gorm"
 	"os"
 	"time"
@@ -63,6 +66,14 @@ func NewRouter(cfg *config.Config, rdb *redis.Client, h Handlers) *gin.Engine {
 		}
 		c.AbortWithStatus(403)
 	})
+
+	// Swagger API Documentation UI (enabled via ENABLE_SWAGGER env or dev mode)
+	if cfg.App.EnableSwagger {
+		r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+		r.GET("/docs", func(c *gin.Context) {
+			c.Redirect(302, "/swagger/index.html")
+		})
+	}
 
 	// CORS — restrict in production
 	allowedOrigins := []string{"http://localhost:3000", "http://localhost"}

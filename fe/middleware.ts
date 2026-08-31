@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-const authProtectedPrefixes = ["/dashboard", "/s/", "/library", "/wallet", "/feed", "/notifications", "/chat", "/profile"];
+const authProtectedPrefixes = ["/dashboard", "/s", "/library", "/wallet", "/feed", "/notifications", "/chat", "/profile"];
 const adminPrefixes = ["/admin"];
 const creatorPrefixes = ["/dashboard"];
 

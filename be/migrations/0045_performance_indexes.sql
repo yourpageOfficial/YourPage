@@ -13,5 +13,13 @@ CREATE INDEX IF NOT EXISTS idx_credit_transactions_user ON credit_transactions(u
 CREATE INDEX IF NOT EXISTS idx_memberships_user ON memberships(supporter_id, status);
 CREATE INDEX IF NOT EXISTS idx_memberships_creator ON memberships(creator_id, status);
 CREATE INDEX IF NOT EXISTS idx_memberships_expires ON memberships(status, expires_at);
-
 -- +goose Down
+DROP INDEX IF EXISTS idx_posts_creator_created;
+DROP INDEX IF EXISTS idx_posts_visibility;
+DROP INDEX IF EXISTS idx_payments_user_created;
+DROP INDEX IF EXISTS idx_donations_creator;
+DROP INDEX IF EXISTS idx_follows_follower;
+DROP INDEX IF EXISTS idx_follows_creator;
+DROP INDEX IF EXISTS idx_notifications_user_read;
+DROP INDEX IF EXISTS idx_chat_messages_conv;
+DROP INDEX IF EXISTS idx_memberships_user;
