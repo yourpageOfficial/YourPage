@@ -17,7 +17,18 @@ type Config struct {
 	PayPal   PayPalConfig
 	SMTP     SMTPConfig
 	Platform PlatformConfig
+	OAuth    OAuthConfig
 }
+
+type OAuthConfig struct {
+	GoogleClientID       string
+	GoogleClientSecret   string
+	GoogleRedirectURI    string
+	FacebookClientID     string
+	FacebookClientSecret string
+	FacebookRedirectURI  string
+}
+
 
 type AppConfig struct {
 	Env           string
@@ -164,5 +175,14 @@ func Load() (*Config, error) {
 			CreditRateIDR:    viper.GetInt64("CREDIT_RATE_IDR"),
 			MaxUploadSizeMB:  viper.GetInt64("MAX_UPLOAD_SIZE_MB"),
 		},
+		OAuth: OAuthConfig{
+			GoogleClientID:       viper.GetString("GOOGLE_CLIENT_ID"),
+			GoogleClientSecret:   viper.GetString("GOOGLE_CLIENT_SECRET"),
+			GoogleRedirectURI:    viper.GetString("GOOGLE_REDIRECT_URI"),
+			FacebookClientID:     viper.GetString("FACEBOOK_CLIENT_ID"),
+			FacebookClientSecret: viper.GetString("FACEBOOK_CLIENT_SECRET"),
+			FacebookRedirectURI:  viper.GetString("FACEBOOK_REDIRECT_URI"),
+		},
 	}, nil
 }
+

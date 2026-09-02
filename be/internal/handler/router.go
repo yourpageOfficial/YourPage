@@ -185,6 +185,12 @@ func NewRouter(cfg *config.Config, rdb *redis.Client, h Handlers) *gin.Engine {
 		authG.POST("/verify-email", h.Auth.VerifyEmail)
 		authG.POST("/resend-verification", auth, h.Auth.ResendVerification)
 		authG.POST("/subscribe-tier", auth, creatorOnly, h.Auth.SubscribeTier)
+		authG.GET("/oauth/:provider/url", authRL.Middleware(), h.Auth.GetOAuthURL)
+		authG.POST("/oauth/:provider/callback", authRL.Middleware(), h.Auth.OAuthCallback)
+		authG.GET("/oauth/accounts", auth, h.Auth.ListOAuthAccounts)
+		authG.DELETE("/oauth/:provider", auth, h.Auth.UnlinkOAuthAccount)
+		authG.POST("/magic-link", authRL.Middleware(), h.Auth.SendMagicLink)
+		authG.GET("/magic-link/verify", authRL.Middleware(), h.Auth.VerifyMagicLink)
 	}
 
 	// ---- Public creator page ----

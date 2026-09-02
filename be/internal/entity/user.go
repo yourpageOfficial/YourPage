@@ -178,3 +178,14 @@ type ReferralUse struct {
 	RewardCredits  int       `json:"reward_credits"`
 	CreatedAt      time.Time `json:"created_at"`
 }
+
+type UserOAuthAccount struct {
+	ID             uuid.UUID `json:"id" gorm:"type:uuid;primaryKey;default:uuid_generate_v4()"`
+	UserID         uuid.UUID `json:"user_id" gorm:"type:uuid;index;not null"`
+	Provider       string    `json:"provider" gorm:"size:32;not null"`
+	ProviderUserID string    `json:"provider_user_id" gorm:"size:255;not null"`
+	Email          string    `json:"email" gorm:"size:255;not null"`
+	CreatedAt      time.Time `json:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
+}
+

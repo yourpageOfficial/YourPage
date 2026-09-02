@@ -53,6 +53,12 @@ type UserRepository interface {
 	CountCreatorSales(ctx context.Context, userID uuid.UUID) (int64, int64, error)
 	CountCreatorDonationsRange(ctx context.Context, userID uuid.UUID, from, to time.Time) (int64, int64, error)
 	CountCreatorSalesRange(ctx context.Context, userID uuid.UUID, from, to time.Time) (int64, int64, error)
+
+	// OAuth
+	FindOAuthAccount(ctx context.Context, provider, providerUserID string) (*entity.UserOAuthAccount, error)
+	CreateOAuthAccount(ctx context.Context, acc *entity.UserOAuthAccount) error
+	ListOAuthAccountsByUserID(ctx context.Context, userID uuid.UUID) ([]entity.UserOAuthAccount, error)
+	DeleteOAuthAccount(ctx context.Context, userID uuid.UUID, provider string) error
 }
 
 // PostRepository handles posts and post media

@@ -368,3 +368,34 @@ func (r *userRepo) GetPasswordHistories(ctx context.Context, userID uuid.UUID, l
 	return histories, err
 }
 
+func (r *userRepo) FindOAuthAccount(ctx context.Context, provider, providerUserID string) (*entity.UserOAuthAccount, error) {
+	var acc entity.UserOAuthAccount
+	err := r.db.WithContext(ctx).
+		Where("provider = ? AND provider_user_id = ?", provider, providerUserID).
+		First(&acc).Error
+	if err != nil {
+		return nil, err
+	}
+	return &acc, nil
+}
+
+func (r *userRepo) CreateOAuthAccount(ctx context.Context, acc *entity.UserOAuthAccount) error {
+	return r.db.WithContext(ctx).Create(acc).Error
+}
+
+func (r *userRepo) ListOAuthAccountsByUserID(ctx context.Context, userID uuid.UUID) ([]entity.UserOAuthAccount, error) {
+	var accs []entity.UserOAuthAccount
+	err := r.db.WithContext(ctx).
+		Where("user_id = ?", userID).
+		Order("created_at ASC").
+		Find(&accs).Error
+	return accs, err
+}
+
+func (r *userRepo) DeleteOAuthAccount(ctx context.Context, userID uuid.UUID, provider string) error {
+	return r.db.WithContext(ctx).
+		Where("user_id = ? AND provider = ?", userID, provider).
+		Delete(&entity.UserOAuthAccount{}).Error
+}
+
+

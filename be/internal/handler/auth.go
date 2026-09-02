@@ -96,7 +96,11 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	// Batch 14: Set HttpOnly cookies + signed auth-role
 	claims, _ := pkgjwt.ParseToken(h.jwtCfg, resp.AccessToken)
 	role := "supporter"
-	if claims != nil { role = claims.Role }
+	if claims != nil {
+		role = claims.Role
+		userID, _ := uuid.Parse(claims.Subject)
+		h.svc.CheckSuspiciousLogin(c.Request.Context(), &entity.User{ID: userID, Email: req.Email}, c.ClientIP(), c.Request.UserAgent())
+	}
 	h.setAuthCookies(c, resp.AccessToken, resp.RefreshToken, role)
 	response.OK(c, resp)
 }
@@ -568,3 +572,120 @@ func (h *AuthHandler) UpdateTags(c *gin.Context) {
 	}
 	response.OKMessage(c, "tags updated")
 }
+
+// ---------------------------------------------------------------------------
+// OAuth Handlers
+// ---------------------------------------------------------------------------
+
+func (h *AuthHandler) GetOAuthURL(c *gin.Context) {
+	provider := c.Param("provider")
+	url, err := h.svc.GetOAuthURL(c.Request.Context(), provider)
+	if err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	response.OK(c, gin.H{"url": url})
+}
+
+type OAuthCallbackRequest struct {
+	Code  string `json:"code" binding:"required"`
+	State string `json:"state" binding:"required"`
+}
+
+func (h *AuthHandler) OAuthCallback(c *gin.Context) {
+	provider := c.Param("provider")
+	var req OAuthCallbackRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "Parameter code dan state wajib disertakan")
+		return
+	}
+
+	resp, err := h.svc.HandleOAuthCallback(c.Request.Context(), provider, req.Code, req.State)
+	if err != nil {
+		if errors.Is(err, entity.ErrInvalidToken) {
+			response.BadRequest(c, "Sesi OAuth tidak valid atau telah kedaluwarsa")
+			return
+		}
+		handleServiceError(c, err)
+		return
+	}
+
+	claims, _ := pkgjwt.ParseToken(h.jwtCfg, resp.AccessToken)
+	role := "supporter"
+	if claims != nil { role = claims.Role }
+	h.setAuthCookies(c, resp.AccessToken, resp.RefreshToken, role)
+	response.OK(c, resp)
+}
+
+func (h *AuthHandler) ListOAuthAccounts(c *gin.Context) {
+	userID := getUserID(c)
+	accs, err := h.svc.ListOAuthAccounts(c.Request.Context(), userID)
+	if err != nil {
+		handleServiceError(c, err)
+		return
+	}
+	response.OK(c, accs)
+}
+
+func (h *AuthHandler) UnlinkOAuthAccount(c *gin.Context) {
+	userID := getUserID(c)
+	provider := c.Param("provider")
+	if err := h.svc.UnlinkOAuthAccount(c.Request.Context(), userID, provider); err != nil {
+		handleServiceError(c, err)
+		return
+	}
+	response.OKMessage(c, "Akun OAuth berhasil dilepas")
+}
+
+// ---------------------------------------------------------------------------
+// Magic Link Handlers
+// ---------------------------------------------------------------------------
+
+type MagicLinkRequest struct {
+	Email string `json:"email" binding:"required,email"`
+}
+
+func (h *AuthHandler) SendMagicLink(c *gin.Context) {
+	var req MagicLinkRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "Format email tidak valid")
+		return
+	}
+
+	if err := h.svc.SendMagicLink(c.Request.Context(), req.Email); err != nil {
+		handleServiceError(c, err)
+		return
+	}
+
+	response.OKMessage(c, "Jika email terdaftar, link masuk telah dikirimkan ke email kamu.")
+}
+
+func (h *AuthHandler) VerifyMagicLink(c *gin.Context) {
+	token := c.Query("token")
+	if token == "" {
+		response.BadRequest(c, "Token link masuk tidak ditemukan")
+		return
+	}
+
+	resp, err := h.svc.VerifyMagicLink(c.Request.Context(), token)
+	if err != nil {
+		if errors.Is(err, entity.ErrInvalidToken) {
+			response.BadRequest(c, "Link masuk tidak valid atau sudah kedaluwarsa")
+			return
+		}
+		handleServiceError(c, err)
+		return
+	}
+
+	claims, _ := pkgjwt.ParseToken(h.jwtCfg, resp.AccessToken)
+	role := "supporter"
+	if claims != nil {
+		role = claims.Role
+		userID, _ := uuid.Parse(claims.Subject)
+		h.svc.CheckSuspiciousLogin(c.Request.Context(), &entity.User{ID: userID}, c.ClientIP(), c.Request.UserAgent())
+	}
+	h.setAuthCookies(c, resp.AccessToken, resp.RefreshToken, role)
+	response.OK(c, resp)
+}
+
+

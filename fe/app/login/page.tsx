@@ -9,8 +9,9 @@ import { PageTransition } from "@/components/ui/page-transition";
 import { Eye, EyeOff, Sparkles, QrCode, Mail, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import api from "@/lib/api";
+import { SocialAuthButtons } from "@/components/social-auth-buttons";
 
-type LoginStep = "credentials" | "2fa" | "qr";
+type LoginStep = "credentials" | "2fa" | "qr" | "magic";
 
 export default function LoginPage() {
   const [step, setStep] = useState<LoginStep>("credentials");
@@ -19,6 +20,11 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
+
+  // Magic Link step
+  const [magicEmail, setMagicEmail] = useState("");
+  const [magicSent, setMagicSent] = useState(false);
+  const [magicLoading, setMagicLoading] = useState(false);
 
   // 2FA step
   const [challengeToken, setChallengeToken] = useState("");
@@ -96,6 +102,22 @@ export default function LoginPage() {
       setLoading(false);
     }
   };
+
+  const handleSendMagicLink = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!magicEmail) return;
+    setMagicLoading(true);
+    setError("");
+    try {
+      await api.post("/auth/magic-link", { email: magicEmail });
+      setMagicSent(true);
+    } catch (err: any) {
+      setError(err.response?.data?.error || "Gagal mengirim link masuk.");
+    } finally {
+      setMagicLoading(false);
+    }
+  };
+
 
   const handleTwoFA = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -186,13 +208,26 @@ export default function LoginPage() {
                 </form>
                 <div className="relative my-6">
                   <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200 dark:border-gray-700" /></div>
-                  <div className="relative flex justify-center text-sm"><span className="bg-white dark:bg-navy-900 px-2 text-gray-500">atau</span></div>
+                  <div className="relative flex justify-center text-sm"><span className="bg-white dark:bg-navy-900 px-2 text-gray-500">atau masuk dengan</span></div>
                 </div>
 
-                <Button variant="outline" className="w-full" onClick={handleLoadQR} loading={loading}>
-                  <QrCode className="h-4 w-4 mr-2" />
-                  Login dengan QR Code
-                </Button>
+                <div className="space-y-3">
+                  <SocialAuthButtons />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full flex items-center justify-center gap-2 h-11 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-sm font-medium"
+                    onClick={() => { setError(""); setMagicSent(false); setStep("magic"); }}
+                  >
+                    <Mail className="h-4 w-4 mr-2" />
+                    Login Tanpa Password (Magic Link)
+                  </Button>
+                  <Button variant="outline" className="w-full" onClick={handleLoadQR} loading={loading}>
+                    <QrCode className="h-4 w-4 mr-2" />
+                    Login dengan QR Code
+                  </Button>
+                </div>
+
 
                 <p className="text-center text-sm text-gray-500 dark:text-gray-400 mt-8">
                   Belum punya akun? <Link href="/register" className="text-primary font-semibold hover:underline">Daftar Gratis</Link>
@@ -274,6 +309,57 @@ export default function LoginPage() {
                     Buka YourPage di HP → Profil → Konfirmasi QR Login
                   </p>
                 </div>
+              </>
+            )}
+
+            {/* ── STEP: MAGIC LINK ── */}
+            {step === "magic" && (
+              <>
+                <button onClick={() => setStep("credentials")} className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 mb-6">
+                  <ArrowLeft className="h-4 w-4" /> Kembali
+                </button>
+                <div className="mb-6">
+                  <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center mb-4 text-primary">
+                    <Mail className="h-6 w-6" />
+                  </div>
+                  <h1 className="text-2xl font-display font-black">Login Tanpa Password</h1>
+                  <p className="text-gray-500 dark:text-gray-400 mt-2 text-sm">
+                    Kami akan mengirimkan link sekali pakai ke email kamu untuk langsung masuk tanpa password.
+                  </p>
+                </div>
+
+                {error && <Alert variant="error">{error}</Alert>}
+
+                {magicSent ? (
+                  <div className="p-6 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-2xl text-center space-y-3">
+                    <p className="font-semibold text-green-800 dark:text-green-300">Link Masuk Telah Dikirim! ✉️</p>
+                    <p className="text-xs text-green-700 dark:text-green-400">
+                      Periksa inbox atau folder spam di <strong>{magicEmail}</strong>. Link berlaku selama 15 menit.
+                    </p>
+                    <Button variant="outline" size="sm" onClick={() => setMagicSent(false)}>
+                      Kirim Ulang
+                    </Button>
+                  </div>
+                ) : (
+                  <form onSubmit={handleSendMagicLink} className="space-y-4">
+                    <div>
+                      <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">
+                        Alamat Email
+                      </label>
+                      <Input
+                        type="email"
+                        placeholder="nama@email.com"
+                        value={magicEmail}
+                        onChange={(e) => setMagicEmail(e.target.value)}
+                        required
+                        autoComplete="email"
+                      />
+                    </div>
+                    <Button type="submit" className="w-full h-12" loading={magicLoading}>
+                      Kirim Link Masuk
+                    </Button>
+                  </form>
+                )}
               </>
             )}
           </div>

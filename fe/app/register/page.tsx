@@ -11,6 +11,8 @@ import { PasswordStrength } from "@/components/ui/password-strength";
 import { PageTransition } from "@/components/ui/page-transition";
 import { Eye, EyeOff, Sparkles, Coffee, Palette } from "lucide-react";
 import Link from "next/link";
+import { SocialAuthButtons } from "@/components/social-auth-buttons";
+
 
 const ROLE_OPTIONS = [
   { value: "supporter" as const, label: "Supporter", Icon: Coffee, desc: "Beli konten, kirim donasi, chat dengan kreator" },
@@ -142,7 +144,15 @@ function RegisterContent() {
               <Button type="submit" className="w-full h-12" loading={loading}>Daftar Sekarang</Button>
             </form>
 
+            <div className="relative my-6">
+              <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200 dark:border-gray-700" /></div>
+              <div className="relative flex justify-center text-sm"><span className="bg-white dark:bg-navy-900 px-2 text-gray-500">atau daftar dengan</span></div>
+            </div>
+
+            <SocialAuthButtons />
+
             <p className="text-center text-sm text-gray-500 dark:text-gray-400 mt-6">
+
               Sudah punya akun? <Link href="/login" className="text-primary font-semibold hover:underline">Masuk</Link>
             </p>
             <p className="text-center text-[11px] text-gray-400 dark:text-gray-500 mt-3">
