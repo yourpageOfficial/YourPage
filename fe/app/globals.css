@@ -103,3 +103,15 @@ select {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #D1D5DB; border-radius: 999px; }
 .dark ::-webkit-scrollbar-thumb { background: #374151; }
+
+/* While the cookie banner is on screen it covers the bottom edge, where fixed
+   call-to-action buttons live. Lift them clear so the primary action is never
+   blocked by a consent prompt. */
+body[data-cookie-banner="1"] .yp-fixed-cta {
+  bottom: 8.5rem;
+}
+@media (min-width: 640px) {
+  body[data-cookie-banner="1"] .yp-fixed-cta {
+    bottom: 7rem;
+  }
+}

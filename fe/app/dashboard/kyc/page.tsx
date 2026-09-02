@@ -41,7 +41,9 @@ export default function DashboardKYC() {
       // 1. Upload KTP image
       const fd = new FormData();
       fd.append("file", ktpFile!);
-      const { data: uploadRes } = await api.post("/upload?type=kyc", fd, { headers: { "Content-Type": "multipart/form-data" } });
+      // Private bucket: a KTP is an identity document and must never land in
+      // the anonymously readable public bucket.
+      const { data: uploadRes } = await api.post("/upload/private", fd, { headers: { "Content-Type": "multipart/form-data" } });
       const ktpUrl = uploadRes.data.url;
 
       // 2. Submit KYC

@@ -7,6 +7,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/yourpage/be/internal/entity"
+	"github.com/yourpage/be/internal/pkg/audit"
+	"github.com/yourpage/be/internal/pkg/realtime"
 	"github.com/yourpage/be/internal/service"
 	"github.com/yourpage/be/internal/testutil"
 )
@@ -38,7 +40,7 @@ func newPaymentTestEnv() *paymentTestEnv {
 	e.svc = service.NewPaymentService(
 		e.paymentRepo, e.postRepo, e.productRepo, e.donationRepo,
 		e.walletRepo, e.userRepo, e.followRepo, e.platformRepo,
-		testutil.MockMailer{},
+		testutil.MockMailer{}, audit.Nop(), realtime.Nop(),
 	)
 	return e
 }

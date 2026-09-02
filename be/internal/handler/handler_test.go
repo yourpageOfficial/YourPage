@@ -9,6 +9,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/yourpage/be/internal/entity"
+	"github.com/yourpage/be/internal/pkg/audit"
+	"github.com/yourpage/be/internal/pkg/realtime"
 	"github.com/yourpage/be/internal/handler"
 	"github.com/yourpage/be/internal/handler/middleware"
 	"github.com/yourpage/be/internal/service"
@@ -31,7 +33,7 @@ func setupPaymentRouter() (*gin.Engine, *testutil.MockWalletRepo, *testutil.Mock
 	paymentSvc := service.NewPaymentService(
 		paymentRepo, postRepo, productRepo, donationRepo,
 		walletRepo, userRepo, followRepo, platformRepo,
-		testutil.MockMailer{},
+		testutil.MockMailer{}, audit.Nop(), realtime.Nop(),
 	)
 
 	paymentHandler := handler.NewPaymentHandler(paymentSvc, userRepo)

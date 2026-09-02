@@ -44,6 +44,13 @@ type JWTConfig struct {
 type MinIOConfig struct {
 	Endpoint       string
 	PublicEndpoint string
+	// Region is required by S3-compatible providers that are not MinIO;
+	// Cloudflare R2 expects "auto".
+	Region string
+	// PublicBaseURL serves objects straight from the provider (e.g. an R2
+	// custom domain) instead of proxying them through this app. Empty keeps
+	// the existing /storage/ proxy behaviour.
+	PublicBaseURL string
 	AccessKey      string
 	SecretKey      string
 	UseSSL         bool
@@ -127,6 +134,8 @@ func Load() (*Config, error) {
 		MinIO: MinIOConfig{
 			Endpoint:       viper.GetString("MINIO_ENDPOINT"),
 			PublicEndpoint: viper.GetString("MINIO_PUBLIC_ENDPOINT"),
+			Region:         viper.GetString("STORAGE_REGION"),
+			PublicBaseURL:  strings.TrimSuffix(viper.GetString("STORAGE_PUBLIC_BASE_URL"), "/"),
 			AccessKey:      viper.GetString("MINIO_ACCESS_KEY"),
 			SecretKey:     viper.GetString("MINIO_SECRET_KEY"),
 			UseSSL:        viper.GetBool("MINIO_USE_SSL"),

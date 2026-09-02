@@ -1,0 +1,250 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  # ─── Backend: build, vet, unit tests ─────────────────────────────
+  backend:
+    name: Backend
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: be
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: be/go.mod
+          cache: true
+          cache-dependency-path: be/go.sum
+
+      - name: go build
+        run: go build ./...
+
+      - name: go vet
+        run: go vet ./...
+
+      - name: go test (race + coverage)
+        run: go test ./... -race -coverprofile=coverage.out
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage
+          path: be/coverage.out
+          if-no-files-found: warn
+          retention-days: 14
+
+  # ─── Frontend: typecheck + build ─────────────────────────────────
+  frontend:
+    name: Frontend
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: fe
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: fe/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type-check
+        run: npx tsc --noEmit
+
+      - name: Build
+        run: npm run build
+
+  # ─── E2E: full stack via docker compose + Playwright ─────────────
+  e2e:
+    name: E2E (Playwright)
+    runs-on: ubuntu-latest
+    needs: [backend, frontend]
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    env:
+      # CI-only dummy values -- never real secrets. Every container using them is destroyed
+      # at the end of this job.
+      #
+      # DB_PASSWORD / JWT_SECRET have safe `${VAR:-default}` fallbacks in docker-compose.yml;
+      # setting them here is just explicit hygiene, not strictly required.
+      DB_PASSWORD: ci_test_db_password
+      JWT_SECRET: ci-test-jwt-secret-do-not-use-in-production
+      # ADMIN_EMAIL / ADMIN_PASSWORD / FINANCE_EMAIL / FINANCE_PASSWORD / GRAFANA_PASSWORD use
+      # docker-compose.yml's `${VAR:?error}` required-variable syntax (no committed default,
+      # by design -- see that file's comments). `docker compose` interpolates every service's
+      # variables up front, even ones outside the `--wait`/service list below, so
+      # GRAFANA_PASSWORD must be set here too even though the profile-gated grafana/prometheus
+      # services are never actually started. Omitting any of these five fails the whole
+      # `docker compose up` step before a single container starts.
+      #
+      # ADMIN_EMAIL / ADMIN_PASSWORD are deliberately set to match the credentials
+      # fe/e2e/02-admin.spec.ts (and the admin-login case in 01-public-and-auth.spec.ts) log in
+      # with, since the backend bootstraps its admin account from these exact env vars at
+      # startup (be/cmd/api/main.go) -- using different values here would make every admin e2e
+      # test fail at the login step regardless of the app's own correctness.
+      ADMIN_EMAIL: admin@yourpage.id
+      ADMIN_PASSWORD: admin123
+      FINANCE_EMAIL: finance-ci@example.com
+      FINANCE_PASSWORD: ci_test_finance_password
+      GRAFANA_PASSWORD: ci_test_grafana_password
+      # MINIO_USER / MINIO_PASSWORD are intentionally left unset here, which keeps them at
+      # docker-compose.yml's own "minioadmin"/"minioadmin" fallback. The minio-init service's
+      # entrypoint hardcodes that same literal fallback in its shell command instead of
+      # receiving it via `environment:`, so it never sees a CI override anyway -- setting these
+      # to anything else would desync minio's root credentials from what minio-init
+      # authenticates with and break bucket bootstrap for the whole stack.
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: fe/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: fe
+        run: npm ci
+
+      - name: Install Playwright browsers
+        working-directory: fe
+        run: npx playwright install --with-deps chromium
+
+      - name: Start stack (docker compose)
+        run: |
+          docker compose -f docker-compose.yml up -d --build --wait --wait-timeout 180 \
+            postgres redis minio minio-init migrate be fe
+
+      - name: Wait for backend health
+        run: |
+          for i in $(seq 1 40); do
+            if curl -sf http://localhost:8080/api/v1/health > /dev/null; then
+              echo "Backend is healthy"
+              exit 0
+            fi
+            echo "Waiting for backend... ($i/40)"
+            sleep 5
+          done
+          echo "::error::Backend did not become healthy in time"
+          exit 1
+
+      - name: Wait for frontend
+        run: |
+          for i in $(seq 1 40); do
+            if curl -sf http://localhost:3000 > /dev/null; then
+              echo "Frontend is up"
+              exit 0
+            fi
+            echo "Waiting for frontend... ($i/40)"
+            sleep 5
+          done
+          echo "::error::Frontend did not become ready in time"
+          exit 1
+
+      - name: Dump container status and logs on readiness failure
+        if: failure()
+        run: |
+          docker compose -f docker-compose.yml ps
+          docker compose -f docker-compose.yml logs --tail=200
+
+      - name: Run Playwright tests
+        working-directory: fe
+        run: npx playwright test --reporter=list,html
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            fe/test-results/
+            fe/playwright-report/
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Tear down docker compose
+        if: always()
+        run: docker compose -f docker-compose.yml down -v --remove-orphans
+
+  # ─── Security: govulncheck, npm audit, secret scan ───────────────
+  security:
+    name: Security scans
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: be/go.mod
+          cache: true
+          cache-dependency-path: be/go.sum
+
+      - name: govulncheck
+        working-directory: be
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          govulncheck ./...
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: fe/package-lock.json
+
+      - name: npm audit
+        working-directory: fe
+        # Non-blocking by design: `npm audit --audit-level=high` currently flags advisories in
+        # transitive deps (e.g. bundled inside `next`) that only have a breaking-change fix
+        # available (`npm audit fix --force`), which would make this gate fail on every run
+        # regardless of the PR's actual content. Findings still print in the job log for
+        # someone to triage and schedule a real upgrade; treat this as advisory, not a merge
+        # gate, until the underlying dependency is bumped.
+        run: npm audit --audit-level=high
+        continue-on-error: true
+
+      - name: Gitleaks secret scan
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Only required for org-owned private repos on gitleaks' paid tier; harmless if unset.
+          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}

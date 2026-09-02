@@ -110,3 +110,42 @@ func (h *FollowHandler) DeleteReadNotifications(c *gin.Context) {
 	}
 	response.OKMessage(c, "read notifications deleted")
 }
+
+// ---------------------------------------------------------------------------
+// Block
+// ---------------------------------------------------------------------------
+
+func (h *FollowHandler) BlockUser(c *gin.Context) {
+	blockedID, err := uuid.Parse(c.Param("userId"))
+	if err != nil {
+		response.BadRequest(c, "invalid user id")
+		return
+	}
+	if err := h.svc.BlockUser(c.Request.Context(), getUserID(c), blockedID); err != nil {
+		handleServiceError(c, err)
+		return
+	}
+	response.OKMessage(c, "user diblokir")
+}
+
+func (h *FollowHandler) UnblockUser(c *gin.Context) {
+	blockedID, err := uuid.Parse(c.Param("userId"))
+	if err != nil {
+		response.BadRequest(c, "invalid user id")
+		return
+	}
+	if err := h.svc.UnblockUser(c.Request.Context(), getUserID(c), blockedID); err != nil {
+		handleServiceError(c, err)
+		return
+	}
+	response.OKMessage(c, "user tidak lagi diblokir")
+}
+
+func (h *FollowHandler) ListBlocked(c *gin.Context) {
+	blocks, err := h.svc.ListBlocked(c.Request.Context(), getUserID(c))
+	if err != nil {
+		handleServiceError(c, err)
+		return
+	}
+	response.OK(c, blocks)
+}

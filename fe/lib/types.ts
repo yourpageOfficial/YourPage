@@ -8,6 +8,7 @@ export interface User {
   is_banned?: boolean;
   ban_reason?: string;
   deletion_scheduled_at?: string;
+  two_fa_enabled?: boolean;
   creator_profile?: CreatorProfile;
 }
 
@@ -296,6 +297,14 @@ export interface CreatorPage {
   donation_goal_title?: string;
   donation_goal_amount: number;
   donation_goal_current: number;
+  // Donation settings
+  donation_enabled?: boolean;
+  donation_min_amount?: number;
+  donation_preset_amounts?: number[];
+  // Tags & category
+  tags?: string[];
+  category?: string;
+  is_following?: boolean;
 }
 
 export interface PlatformSettings {
@@ -304,6 +313,29 @@ export interface PlatformSettings {
   min_withdrawal_idr: number;
   credit_rate_idr: number;
   platform_qris_url?: string;
+  qris_enabled: boolean;
+  stripe_enabled: boolean;
+  stripe_publishable_key?: string;
+  stripe_secret_key?: string;
+  stripe_webhook_secret?: string;
+}
+
+export interface PaymentMethods {
+  qris_enabled: boolean;
+  stripe_enabled: boolean;
+  platform_qris_url?: string;
+}
+
+export interface TopupRequest {
+  id: string;
+  amount_idr: number;
+  credits: number;
+  status: "pending" | "paid" | "failed" | "expired";
+  unique_code: number;
+  method: "qris" | "stripe";
+  checkout_url?: string;
+  stripe_session_id?: string;
+  created_at: string;
 }
 
 export interface Payment {
@@ -324,4 +356,87 @@ export interface ApiResponse<T> {
   data: T;
   message?: string;
   error?: string;
+}
+
+// ── User Block ──────────────────────────────────────────────────────────────
+export interface UserBlock {
+  id: string;
+  blocker_id: string;
+  blocked_id: string;
+  created_at: string;
+}
+
+// ── Leaderboard ─────────────────────────────────────────────────────────────
+export interface LeaderboardEntry {
+  rank: number;
+  donor_name: string;
+  total_idr: number;
+  count: number;
+}
+
+export interface LeaderboardSettings {
+  is_enabled: boolean;
+  period: "all_time" | "monthly" | "weekly";
+  max_entries: number;
+  show_amount: boolean;
+  title: string;
+}
+
+// ── Referral ─────────────────────────────────────────────────────────────────
+export interface ReferralStats {
+  code: string;
+  total_referred: number;
+  total_credits_earned: number;
+  reward_per_referral: number;
+}
+
+export interface ReferralUse {
+  id: string;
+  referred_user: { display_name: string; username: string; avatar_url?: string };
+  reward_credits: number;
+  created_at: string;
+}
+
+// ── Media Share ──────────────────────────────────────────────────────────────
+export interface MediaShareSettings {
+  is_enabled: boolean;
+  price_credits: number;
+  allowed_types: string;
+}
+
+export interface MediaShare {
+  id: string;
+  sender_name: string;
+  media_url: string;
+  media_type: string;
+  message?: string;
+  status: "pending" | "playing" | "played" | "skipped";
+  created_at: string;
+}
+
+// ── Platform Announcement ────────────────────────────────────────────────────
+export interface PlatformAnnouncement {
+  id: string;
+  title: string;
+  body: string;
+  target_role: "all" | "creator" | "supporter";
+  is_active: boolean;
+  expires_at?: string;
+  created_at: string;
+}
+
+// ── Realtime Admin Stats ─────────────────────────────────────────────────────
+export interface RealtimeStats {
+  pending_topups: number;
+  pending_withdrawals: number;
+  pending_kyc: number;
+  pending_reports: number;
+  new_users_today?: number;
+  gmv_today?: number;
+}
+
+// ── 2FA / QR Login ───────────────────────────────────────────────────────────
+export interface LoginChallenge {
+  requires_2fa: boolean;
+  challenge_token: string;
 }

@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/yourpage/be/internal/entity"
+	"github.com/yourpage/be/internal/pkg/audit"
 	"github.com/yourpage/be/internal/repository"
 )
 
@@ -39,6 +40,7 @@ type withdrawalService struct {
 	walletRepo     repository.WalletRepository
 	kycRepo        repository.KYCRepository
 	platformRepo   repository.PlatformRepository
+	audit          audit.Logger
 }
 
 func NewWithdrawalService(
@@ -47,6 +49,7 @@ func NewWithdrawalService(
 	walletRepo repository.WalletRepository,
 	kycRepo repository.KYCRepository,
 	platformRepo repository.PlatformRepository,
+	auditLog audit.Logger,
 ) WithdrawalService {
 	return &withdrawalService{
 		withdrawalRepo: withdrawalRepo,
@@ -54,6 +57,7 @@ func NewWithdrawalService(
 		walletRepo:     walletRepo,
 		kycRepo:        kycRepo,
 		platformRepo:   platformRepo,
+		audit:          auditLog,
 	}
 }
 
@@ -109,8 +113,12 @@ func (s *withdrawalService) Create(ctx context.Context, creatorID uuid.UUID, req
 		return nil, fmt.Errorf("withdrawal: create: %w", err)
 	}
 
-	// Notify admin (non-blocking) — TODO: add admin notification
-
+	s.audit.Log(ctx, audit.Entry{
+		ActorID: &creatorID, ActorRole: "user", Event: audit.EventWithdrawRequested,
+		ReferenceType: "withdrawal", ReferenceID: &w.ID,
+		AmountIDR: req.AmountIDR, Method: "bank",
+		Detail: entity.JSONMap{"bank_name": req.BankName},
+	})
 	return w, nil
 }
 

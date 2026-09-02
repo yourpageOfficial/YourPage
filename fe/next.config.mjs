@@ -4,6 +4,11 @@ const minioHostname = process.env.MINIO_HOSTNAME || "minio";
 
 const nextConfig = {
   output: "standalone",
+  // nginx compresses in production. Leaving Next's compressor on breaks the
+  // OBS overlay: it re-compresses the proxied Server-Sent Events stream and
+  // buffers it, so alerts never reach the browser (curl looks fine because it
+  // does not request gzip).
+  compress: false,
   images: {
     remotePatterns: [
       // Restrict to MinIO only — prevents loading images from arbitrary origins

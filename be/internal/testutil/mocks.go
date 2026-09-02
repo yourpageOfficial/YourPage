@@ -40,6 +40,18 @@ func (m *MockPaymentRepo) UpdateStatus(_ context.Context, id uuid.UUID, s entity
 	m.mu.Lock(); defer m.mu.Unlock()
 	if p, ok := m.Payments[id]; ok { p.Status = s }; return nil
 }
+// UpdateStatusIfCurrent models the SQL compare-and-swap: only one concurrent
+// caller may move a payment out of a given state.
+func (m *MockPaymentRepo) UpdateStatusIfCurrent(_ context.Context, id uuid.UUID, from, to entity.PaymentStatus, _ interface{}) (bool, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	p, ok := m.Payments[id]
+	if !ok || p.Status != from {
+		return false, nil
+	}
+	p.Status = to
+	return true, nil
+}
 func (m *MockPaymentRepo) UpdateWebhookPayload(_ context.Context, id uuid.UUID, payload entity.JSONMap) error {
 	return nil
 }
@@ -230,10 +242,22 @@ type MockWalletRepo struct {
 	mu       sync.Mutex
 	Wallets  map[uuid.UUID]int64 // userID → balance
 	TxLog    []entity.CreditTransaction
+	Topups   map[uuid.UUID]*entity.CreditTopupRequest
 }
 
 func NewMockWalletRepo() *MockWalletRepo {
-	return &MockWalletRepo{Wallets: map[uuid.UUID]int64{}}
+	return &MockWalletRepo{
+		Wallets: map[uuid.UUID]int64{},
+		Topups:  map[uuid.UUID]*entity.CreditTopupRequest{},
+	}
+}
+
+// SeedTopup registers a topup so approval/rejection paths can be exercised.
+func (m *MockWalletRepo) SeedTopup(t *entity.CreditTopupRequest) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	cp := *t
+	m.Topups[t.ID] = &cp
 }
 
 func (m *MockWalletRepo) FindOrCreateWallet(_ context.Context, uid uuid.UUID) (*entity.UserWallet, error) {
@@ -264,8 +288,51 @@ func (m *MockWalletRepo) ListTransactions(_ context.Context, _ uuid.UUID, _ *uui
 func (m *MockWalletRepo) CreateTopupRequest(_ context.Context, _ *entity.CreditTopupRequest) error {
 	return nil
 }
-func (m *MockWalletRepo) FindTopupRequest(_ context.Context, _ uuid.UUID) (*entity.CreditTopupRequest, error) {
+func (m *MockWalletRepo) FindTopupRequest(_ context.Context, id uuid.UUID) (*entity.CreditTopupRequest, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	t, ok := m.Topups[id]
+	if !ok {
+		return nil, entity.ErrNotFound
+	}
+	cp := *t
+	return &cp, nil
+}
+func (m *MockWalletRepo) FindTopupByStripeSession(_ context.Context, sessionID string) (*entity.CreditTopupRequest, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	for _, t := range m.Topups {
+		if t.StripeSessionID != nil && *t.StripeSessionID == sessionID {
+			cp := *t
+			return &cp, nil
+		}
+	}
 	return nil, entity.ErrNotFound
+}
+func (m *MockWalletRepo) SetTopupStripeSession(_ context.Context, id uuid.UUID, sessionID string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if t, ok := m.Topups[id]; ok {
+		t.StripeSessionID = &sessionID
+	}
+	return nil
+}
+
+// MarkTopupStatusIfPending models the SQL compare-and-swap: exactly one
+// concurrent caller may move a topup out of pending.
+func (m *MockWalletRepo) MarkTopupStatusIfPending(_ context.Context, id uuid.UUID, status entity.PaymentStatus, adminNote *string) (bool, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	t, ok := m.Topups[id]
+	if !ok {
+		return false, nil
+	}
+	if t.Status != entity.PaymentStatusPending {
+		return false, nil
+	}
+	t.Status = status
+	t.AdminNote = adminNote
+	return true, nil
 }
 func (m *MockWalletRepo) UpdateTopupRequest(_ context.Context, _ uuid.UUID, _ entity.PaymentStatus, _ *string) error {
 	return nil
@@ -523,3 +590,60 @@ func (m *MockChatRepo) ResetUnread(_ context.Context, _ uuid.UUID, _ bool) error
 func (m *MockChatRepo) CountTodayMessages(_ context.Context, _ uuid.UUID) (int64, error) {
 	return 0, nil
 }
+
+// ---------------------------------------------------------------------------
+// Stubs for interface methods whose behaviour no unit test depends on yet.
+// They exist so the mocks keep satisfying the repository interfaces.
+// ---------------------------------------------------------------------------
+
+func (m *MockUserRepo) GetOrCreateReferralCode(_ context.Context, userID uuid.UUID) (*entity.ReferralCode, error) {
+	return &entity.ReferralCode{ID: uuid.New(), UserID: userID, Code: "TESTCODE"}, nil
+}
+func (m *MockUserRepo) CreateReferralUse(_ context.Context, _ *entity.ReferralUse) error { return nil }
+func (m *MockUserRepo) ListReferralUses(_ context.Context, _ uuid.UUID, _ *uuid.UUID, _ int) ([]entity.ReferralUse, error) {
+	return nil, nil
+}
+func (m *MockUserRepo) CountReferralEarnings(_ context.Context, _ uuid.UUID) (int64, error) {
+	return 0, nil
+}
+
+func (m *MockFollowRepo) BlockUser(_ context.Context, _, _ uuid.UUID) error   { return nil }
+func (m *MockFollowRepo) UnblockUser(_ context.Context, _, _ uuid.UUID) error { return nil }
+func (m *MockFollowRepo) IsBlocked(_ context.Context, _, _ uuid.UUID) (bool, error) {
+	return false, nil
+}
+func (m *MockFollowRepo) ListBlocked(_ context.Context, _ uuid.UUID) ([]entity.UserBlock, error) {
+	return nil, nil
+}
+func (m *MockFollowRepo) SavePushSubscription(_ context.Context, _ *entity.PushSubscription) error {
+	return nil
+}
+func (m *MockFollowRepo) DeletePushSubscription(_ context.Context, _ uuid.UUID, _ string) error {
+	return nil
+}
+func (m *MockFollowRepo) ListPushSubscriptionsByUser(_ context.Context, _ uuid.UUID) ([]entity.PushSubscription, error) {
+	return nil, nil
+}
+
+func (m *MockPlatformRepo) CreateAnnouncement(_ context.Context, _ *entity.PlatformAnnouncement) error {
+	return nil
+}
+func (m *MockPlatformRepo) ListAnnouncements(_ context.Context, _ string) ([]entity.PlatformAnnouncement, error) {
+	return nil, nil
+}
+func (m *MockPlatformRepo) ListAllAnnouncements(_ context.Context) ([]entity.PlatformAnnouncement, error) {
+	return nil, nil
+}
+func (m *MockPlatformRepo) DeleteAnnouncement(_ context.Context, _ uuid.UUID) error { return nil }
+
+func (m *MockDonationRepo) GetLeaderboard(_ context.Context, _ uuid.UUID, _ string, _ int) ([]entity.LeaderboardEntry, error) {
+	return nil, nil
+}
+func (m *MockDonationRepo) GetLeaderboardSettings(_ context.Context, _ uuid.UUID) (*entity.LeaderboardSettings, error) {
+	return &entity.LeaderboardSettings{}, nil
+}
+func (m *MockDonationRepo) UpsertLeaderboardSettings(_ context.Context, _ *entity.LeaderboardSettings) error {
+	return nil
+}
+
+func (MockMailer) SendTwoFAOTP(_ context.Context, _, _ string) error { return nil }

@@ -37,6 +37,10 @@ type UserRepository interface {
 	FindReferralCode(ctx context.Context, code string) (*entity.ReferralCode, error)
 	CreateReferralCode(ctx context.Context, r *entity.ReferralCode) error
 	IncrementReferralUsed(ctx context.Context, id uuid.UUID) error
+	GetOrCreateReferralCode(ctx context.Context, userID uuid.UUID) (*entity.ReferralCode, error)
+	CreateReferralUse(ctx context.Context, r *entity.ReferralUse) error
+	ListReferralUses(ctx context.Context, codeID uuid.UUID, cursor *uuid.UUID, limit int) ([]entity.ReferralUse, error)
+	CountReferralEarnings(ctx context.Context, userID uuid.UUID) (int64, error)
 
 	// Password History
 	AddPasswordHistory(ctx context.Context, userID uuid.UUID, passwordHash string) error
@@ -117,13 +121,16 @@ type PaymentRepository interface {
 	FindByID(ctx context.Context, id uuid.UUID) (*entity.Payment, error)
 	FindByExternalID(ctx context.Context, externalID string) (*entity.Payment, error)
 	UpdateStatus(ctx context.Context, id uuid.UUID, status entity.PaymentStatus, paidAt interface{}) error
+	// UpdateStatusIfCurrent moves a payment only when it is still in the
+	// expected state; returns true when this call won the transition.
+	UpdateStatusIfCurrent(ctx context.Context, id uuid.UUID, from, to entity.PaymentStatus, paidAt interface{}) (bool, error)
 	UpdateWebhookPayload(ctx context.Context, id uuid.UUID, payload entity.JSONMap) error
 	List(ctx context.Context, cursor *uuid.UUID, limit int) ([]entity.Payment, error) // admin
 	ListByPayer(ctx context.Context, payerID uuid.UUID, cursor *uuid.UUID, limit int) ([]entity.Payment, error)
 	ListByReferenceCreator(ctx context.Context, creatorID uuid.UUID, cursor *uuid.UUID, limit int) ([]entity.Payment, error)
 }
 
-// DonationRepository handles donations
+// DonationRepository handles donations and leaderboards
 type DonationRepository interface {
 	Create(ctx context.Context, d *entity.Donation) error
 	FindByID(ctx context.Context, id uuid.UUID) (*entity.Donation, error)
@@ -133,6 +140,11 @@ type DonationRepository interface {
 	ListAll(ctx context.Context, cursor *uuid.UUID, limit int) ([]entity.Donation, error)
 	GetLatest(ctx context.Context, creatorID uuid.UUID) (*entity.Donation, error)
 	GetTopSupporters(ctx context.Context, creatorID uuid.UUID, limit int) ([]entity.TopSupporter, error)
+
+	// Leaderboard
+	GetLeaderboard(ctx context.Context, creatorID uuid.UUID, period string, limit int) ([]entity.LeaderboardEntry, error)
+	GetLeaderboardSettings(ctx context.Context, creatorID uuid.UUID) (*entity.LeaderboardSettings, error)
+	UpsertLeaderboardSettings(ctx context.Context, s *entity.LeaderboardSettings) error
 }
 
 // WithdrawalRepository handles creator withdrawals
@@ -140,6 +152,9 @@ type WithdrawalRepository interface {
 	Create(ctx context.Context, w *entity.Withdrawal) error
 	FindByID(ctx context.Context, id uuid.UUID) (*entity.Withdrawal, error)
 	UpdateStatus(ctx context.Context, id uuid.UUID, status entity.WithdrawalStatus, adminNote *string) error
+	// UpdateStatusIfCurrent moves a withdrawal only when it is still in the
+	// expected state; returns true when this call won the transition.
+	UpdateStatusIfCurrent(ctx context.Context, id uuid.UUID, from, to entity.WithdrawalStatus, adminNote *string) (bool, error)
 	ListByCreator(ctx context.Context, creatorID uuid.UUID, cursor *uuid.UUID, limit int) ([]entity.Withdrawal, error)
 	ListAll(ctx context.Context, status string, cursor *uuid.UUID, limit int) ([]entity.Withdrawal, error) // admin
 	HasPreviousApproved(ctx context.Context, creatorID uuid.UUID) (bool, error)
@@ -158,14 +173,18 @@ type WalletRepository interface {
 
 	CreateTopupRequest(ctx context.Context, req *entity.CreditTopupRequest) error
 	FindTopupRequest(ctx context.Context, id uuid.UUID) (*entity.CreditTopupRequest, error)
+	FindTopupByStripeSession(ctx context.Context, sessionID string) (*entity.CreditTopupRequest, error)
+	SetTopupStripeSession(ctx context.Context, id uuid.UUID, sessionID string) error
 	UpdateTopupRequest(ctx context.Context, id uuid.UUID, status entity.PaymentStatus, adminNote *string) error
+	// MarkTopupStatusIfPending flips status only when still pending; returns true when this call won the transition.
+	MarkTopupStatusIfPending(ctx context.Context, id uuid.UUID, status entity.PaymentStatus, adminNote *string) (bool, error)
 	UpdateTopupProof(ctx context.Context, id uuid.UUID, donorName, proofURL string) error
 	ListTopupRequests(ctx context.Context, status string, cursor *uuid.UUID, limit int) ([]entity.CreditTopupRequest, error) // admin
 	CountPendingTopups(ctx context.Context) (int64, error)
 	CountPendingTopupsByUser(ctx context.Context, userID uuid.UUID) (int64, error)
 }
 
-// FollowRepository handles follows and notifications
+// FollowRepository handles follows, notifications, blocks, and push subscriptions
 type FollowRepository interface {
 	Follow(ctx context.Context, followerID, creatorID uuid.UUID) error
 	Unfollow(ctx context.Context, followerID, creatorID uuid.UUID) error
@@ -180,6 +199,17 @@ type FollowRepository interface {
 	MarkAllRead(ctx context.Context, userID uuid.UUID) error
 	DeleteNotification(ctx context.Context, notifID, userID uuid.UUID) error
 	DeleteReadNotifications(ctx context.Context, userID uuid.UUID) error
+
+	// User block
+	BlockUser(ctx context.Context, blockerID, blockedID uuid.UUID) error
+	UnblockUser(ctx context.Context, blockerID, blockedID uuid.UUID) error
+	IsBlocked(ctx context.Context, blockerID, blockedID uuid.UUID) (bool, error)
+	ListBlocked(ctx context.Context, blockerID uuid.UUID) ([]entity.UserBlock, error)
+
+	// Web push subscriptions
+	SavePushSubscription(ctx context.Context, sub *entity.PushSubscription) error
+	DeletePushSubscription(ctx context.Context, userID uuid.UUID, endpoint string) error
+	ListPushSubscriptionsByUser(ctx context.Context, userID uuid.UUID) ([]entity.PushSubscription, error)
 }
 
 // KYCRepository handles KYC and content reports
@@ -209,7 +239,7 @@ type ChatRepository interface {
 	CountTodayMessages(ctx context.Context, senderID uuid.UUID) (int64, error)
 }
 
-// PlatformRepository handles platform settings
+// PlatformRepository handles platform settings and announcements
 type PlatformRepository interface {
 	GetSettings(ctx context.Context) (*entity.PlatformSetting, error)
 	UpdateSettings(ctx context.Context, s *entity.PlatformSetting) error
@@ -217,4 +247,10 @@ type PlatformRepository interface {
 	ListPlatformWithdrawals(ctx context.Context) ([]entity.PlatformWithdrawal, error)
 	ListTiers(ctx context.Context) ([]entity.CreatorTier, error)
 	FindTier(ctx context.Context, id uuid.UUID) (*entity.CreatorTier, error)
+
+	// Announcements
+	CreateAnnouncement(ctx context.Context, a *entity.PlatformAnnouncement) error
+	ListAnnouncements(ctx context.Context, targetRole string) ([]entity.PlatformAnnouncement, error)
+	ListAllAnnouncements(ctx context.Context) ([]entity.PlatformAnnouncement, error)
+	DeleteAnnouncement(ctx context.Context, id uuid.UUID) error
 }

@@ -27,6 +27,8 @@ type Mailer interface {
 	SendTierExpired(ctx context.Context, toEmail string) error
 	// Admin digest
 	SendAdminPendingDigest(ctx context.Context, adminEmail string, pendingWithdrawals, pendingTopups, pendingKYC int) error
+	// 2FA OTP
+	SendTwoFAOTP(ctx context.Context, toEmail, otp string) error
 }
 
 type SMTPMailer struct {
@@ -266,4 +268,14 @@ func formatRupiah(amount int64) string {
 		result = append(result, byte(c))
 	}
 	return string(result)
+}
+
+func (m *SMTPMailer) SendTwoFAOTP(_ context.Context, toEmail, otp string) error {
+	return m.send(toEmail, "Kode Verifikasi 2FA — YourPage", fmt.Sprintf(
+		`<h2>Kode Verifikasi Login</h2>
+		<p>Gunakan kode berikut untuk masuk ke akunmu (berlaku 5 menit):</p>
+		<div style="text-align:center;padding:24px 0">
+			<span style="font-size:36px;font-weight:bold;letter-spacing:8px;color:#2563EB;background:#EFF6FF;padding:16px 32px;border-radius:8px">%s</span>
+		</div>
+		<p style="color:#999;font-size:13px">Jika kamu tidak mencoba login, abaikan email ini dan segera ganti password.</p>`, otp))
 }

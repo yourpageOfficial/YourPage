@@ -64,6 +64,7 @@ type PostMedia struct {
 	ThumbURL  *string   `json:"thumb_url"`
 	MediaType MediaType `json:"media_type"`
 	SortOrder int       `json:"sort_order" gorm:"default:0"`
+	FileSizeBytes int64 `json:"file_size_bytes" gorm:"default:0"`
 	CreatedAt time.Time `json:"created_at"`
 }
 

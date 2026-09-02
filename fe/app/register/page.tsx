@@ -9,12 +9,12 @@ import { Input } from "@/components/ui/input";
 import { Alert } from "@/components/ui/alert";
 import { PasswordStrength } from "@/components/ui/password-strength";
 import { PageTransition } from "@/components/ui/page-transition";
-import { Eye, EyeOff, Sparkles } from "lucide-react";
+import { Eye, EyeOff, Sparkles, Coffee, Palette } from "lucide-react";
 import Link from "next/link";
 
 const ROLE_OPTIONS = [
-  { value: "supporter" as const, label: "☕ Supporter", desc: "Beli konten, kirim donasi, chat dengan kreator" },
-  { value: "creator" as const, label: "🎨 Kreator", desc: "Jual konten, terima donasi, buka page sendiri" },
+  { value: "supporter" as const, label: "Supporter", Icon: Coffee, desc: "Beli konten, kirim donasi, chat dengan kreator" },
+  { value: "creator" as const, label: "Kreator", Icon: Palette, desc: "Jual konten, terima donasi, buka page sendiri" },
 ];
 
 export default function RegisterPage() {
@@ -105,8 +105,12 @@ function RegisterContent() {
                 <div className="grid grid-cols-2 gap-3">
                   {ROLE_OPTIONS.map((opt) => (
                     <button key={opt.value} type="button" onClick={() => setRole(opt.value)}
-                      className={`rounded-2xl border-2 p-4 text-left transition-all ${role === opt.value ? "border-primary bg-primary-50 dark:bg-primary-900/20 shadow-glow" : "border-primary-100 dark:border-primary-900/30 hover:border-primary-200 dark:hover:border-blue-800"}`}>
-                      <p className={`text-sm font-bold ${role === opt.value ? "text-primary" : ""}`}>{opt.label}</p>
+                      aria-pressed={role === opt.value}
+                      className={`cursor-pointer rounded-2xl border-2 p-4 text-left transition-all ${role === opt.value ? "border-primary bg-primary-50 dark:bg-primary-900/20 shadow-glow" : "border-primary-100 dark:border-primary-900/30 hover:border-primary-200 dark:hover:border-blue-800"}`}>
+                      <p className={`text-sm font-bold flex items-center gap-1.5 ${role === opt.value ? "text-primary" : ""}`}>
+                        <opt.Icon className="h-4 w-4" aria-hidden="true" />
+                        {opt.label}
+                      </p>
                       <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1 leading-tight">{opt.desc}</p>
                     </button>
                   ))}

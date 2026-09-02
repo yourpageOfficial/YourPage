@@ -64,7 +64,7 @@ export default function AdminDashboard() {
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold">Top-up {formatIDR(t.amount_idr)} → {t.credits} Credit</p>
                   <p className="text-xs text-gray-500 dark:text-gray-400">{t.donor_name} · {t.user?.username || t.user_id?.slice(0,8)} · {formatDate(t.created_at)}</p>
-                  {t.proof_image_url && <a href={t.proof_image_url} target="_blank" className="text-xs text-primary hover:underline">Lihat bukti</a>}
+                  {t.proof_image_url && <a href={t.proof_image_url} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline">Lihat bukti</a>}
                 </div>
                 <div className="flex gap-2 shrink-0">
                   <Button size="sm" onClick={() => approveTopup.mutate(t.id)}><CheckCircle className="mr-1 h-3 w-3" /> Approve</Button>

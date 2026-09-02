@@ -18,7 +18,7 @@ import { PageTransition } from "@/components/ui/page-transition";
 import { ImageFallback } from "@/components/ui/image-fallback";
 import { formatCredit } from "@/lib/utils";
 import { ListSkeleton } from "@/components/ui/skeleton";
-import { CheckCircle, Users, Heart, MessageCircle, Share2, Trophy, Star, Package, FileText, ExternalLink } from "lucide-react";
+import { CheckCircle, ExternalLink, FileText, Heart, MessageCircle, Package, PartyPopper, Share2, Star, Target, Trophy, Users, X } from "lucide-react";
 import Link from "next/link";
 import { ReportButton } from "@/components/report-button";
 import type { CreatorPage, Post, Product, MembershipTier, Membership, PaginatedResponse, ApiResponse } from "@/lib/types";
@@ -87,7 +87,14 @@ export default function CreatorPageView() {
   if (!creator) return <><Navbar /><div className="p-8 text-center text-gray-500 dark:text-gray-400">Kreator tidak ditemukan</div></>;
 
   const isOwn = user?.id === creator.user_id;
-  const donatePresets = [5, 10, 25, 50, 100];
+  // Presets and the minimum come from the creator's own donation settings;
+  // they are stored in IDR while this form works in Credits (1 Credit = Rp1.000).
+  const donatePresets = (creator.donation_preset_amounts?.length
+    ? creator.donation_preset_amounts
+    : [5000, 10000, 25000, 50000, 100000]
+  ).map((idr) => Math.max(1, Math.round(idr / 1000)));
+  const minDonateCredits = Math.max(1, Math.round((creator.donation_min_amount ?? 1000) / 1000));
+  const donationsOpen = creator.donation_enabled !== false;
   const accentColor = creator.page_color || "#2563EB";
 
   const handleDonate = async () => {
@@ -169,6 +176,15 @@ export default function CreatorPageView() {
               </div>
 
               {/* Bio */}
+              {creator.tags && creator.tags.length > 0 && (
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  {creator.tags.map((t: string) => (
+                    <span key={t} className="rounded-full bg-primary-50 px-2.5 py-1 text-xs font-medium text-primary-700 dark:bg-primary-900/25 dark:text-primary-300">
+                      {t}
+                    </span>
+                  ))}
+                </div>
+              )}
               {creator.bio && (
                 <p className="mt-4 text-sm text-gray-600 dark:text-gray-300 leading-relaxed max-w-xl">{creator.bio}</p>
               )}
@@ -202,9 +218,13 @@ export default function CreatorPageView() {
                       variant={followStatus ? "outline" : "default"}>
                       {followStatus ? "Unfollow" : "Follow"}
                     </Button>
-                    <Button size="sm" variant="secondary" className="rounded-2xl" onClick={() => setShowDonate(true)}>
-                      <Heart className="h-4 w-4 mr-1" /> Donasi
-                    </Button>
+                    {/* A creator who turned donations off must not be shown a
+                        donate button that would only fail on submit. */}
+                    {donationsOpen && (
+                      <Button size="sm" variant="secondary" className="rounded-2xl" onClick={() => setShowDonate(true)}>
+                        <Heart className="h-4 w-4 mr-1" /> Donasi
+                      </Button>
+                    )}
                     <Link href={`/chat?creator=${creator.user_id}&price=${creator.chat_price_idr || 0}`}>
                       <Button size="sm" variant="outline" className="rounded-2xl">
                         <MessageCircle className="h-4 w-4 mr-1" /> Chat {(creator.chat_price_idr ?? 0) > 0 ? `(${(creator.chat_price_idr ?? 0) / 1000}C)` : ""}
@@ -228,7 +248,7 @@ export default function CreatorPageView() {
               <CardContent className="p-4">
                 <div className="flex items-center gap-2 mb-3">
                   <div className="h-8 w-8 rounded-xl flex items-center justify-center" style={{ backgroundColor: `${accentColor}15` }}>
-                    <span className="text-sm">🎯</span>
+                    <Target className="h-4 w-4 text-primary" aria-hidden="true" />
                   </div>
                   <p className="text-sm font-bold flex-1 truncate">{creator.donation_goal_title}</p>
                 </div>
@@ -364,14 +384,14 @@ export default function CreatorPageView() {
         <>
           <button
             onClick={() => setShowDonate(!showDonate)}
-            className="fixed bottom-20 sm:bottom-6 right-3 sm:right-6 z-50 h-14 w-14 rounded-2xl text-white shadow-lg shadow-primary/30 flex items-center justify-center text-xl hover:scale-105 active:scale-95 transition-all"
+            className="yp-fixed-cta fixed bottom-20 sm:bottom-6 right-3 sm:right-6 z-50 h-14 w-14 rounded-2xl text-white shadow-lg shadow-primary/30 flex items-center justify-center text-xl transition-all hover:scale-105 active:scale-95"
             style={{ backgroundColor: accentColor }}
             title="Kirim Donasi"
           >
             <Heart className="h-6 w-6" />
           </button>
 
-          {showDonate && (
+          {showDonate && donationsOpen && (
             <>
               <div className="fixed inset-0 z-40 bg-black/20 backdrop-blur-sm sm:hidden" onClick={() => setShowDonate(false)} />
               <div className="fixed bottom-0 sm:bottom-24 right-0 sm:right-6 z-50 w-full sm:w-96 sm:rounded-2xl overflow-hidden">
@@ -384,12 +404,12 @@ export default function CreatorPageView() {
                         </div>
                         <p className="font-bold">Dukung {creator.display_name}</p>
                       </div>
-                      <button onClick={() => setShowDonate(false)} className="h-8 w-8 rounded-xl bg-primary-50 dark:bg-navy-800 flex items-center justify-center text-gray-400 hover:text-gray-600">✕</button>
+                      <button onClick={() => setShowDonate(false)} className="h-8 w-8 rounded-xl bg-primary-50 dark:bg-navy-800 flex items-center justify-center text-gray-400 hover:text-gray-600" aria-label="Tutup"><X className="h-4 w-4" /></button>
                     </div>
 
                     {donateSuccess ? (
                       <div className="text-center py-4">
-                        <div className="text-4xl mb-2">🎉</div>
+                        <PartyPopper className="mx-auto mb-2 h-10 w-10 text-primary" aria-hidden="true" />
                         <p className="font-bold text-green-600">Donasi terkirim!</p>
                         <p className="text-xs text-gray-400 mt-1">Terima kasih atas dukunganmu</p>
                         <Button size="sm" className="mt-4 rounded-xl" onClick={() => setDonateSuccess(false)}>Donasi Lagi</Button>
@@ -405,12 +425,12 @@ export default function CreatorPageView() {
                             </button>
                           ))}
                         </div>
-                        <Input type="number" placeholder="Nominal lain (min 1)" value={donateAmount} onChange={(e) => setDonateAmount(e.target.value)} />
+                        <Input type="number" min={minDonateCredits} placeholder={`Nominal lain (min ${minDonateCredits})`} value={donateAmount} onChange={(e) => setDonateAmount(e.target.value)} />
                         <Input placeholder="Pesan (opsional)" value={donateMsg} onChange={(e) => setDonateMsg(e.target.value)} maxLength={500} />
                         {donateError && <p className="text-xs text-red-500">{donateError}</p>}
                         {donateError.includes("Top-up") && <Link href="/wallet/topup" className="text-xs text-primary hover:underline">Top-up Credit →</Link>}
                         <Button className="w-full h-12 rounded-2xl font-bold" onClick={handleDonate}
-                          disabled={donating || !donateAmount || parseInt(donateAmount) < 1}
+                          disabled={donating || !donateAmount || parseInt(donateAmount) < minDonateCredits}
                           style={{ backgroundColor: accentColor }}>
                           {donating ? "Mengirim..." : `Kirim ${donateAmount ? donateAmount + " Credit" : ""}`}
                         </Button>

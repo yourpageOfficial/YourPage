@@ -7,7 +7,7 @@ import api from "@/lib/api";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatCredit, formatDate } from "@/lib/utils";
-import { Receipt, TrendingUp, ShoppingCart, Heart, Package } from "lucide-react";
+import { Coins, FileText, Heart, Package, Receipt, ShoppingCart, TrendingUp } from "lucide-react";
 
 const usecaseLabel: Record<string, string> = { post_purchase: "Post", product_purchase: "Produk", donation: "Donasi" };
 const usecaseEmoji: Record<string, string> = { post_purchase: "📝", product_purchase: "📦", donation: "💰" };
@@ -38,19 +38,19 @@ export default function DashboardSales() {
         </Card>
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
-            <div className="h-9 w-9 rounded-xl bg-primary-50 dark:bg-primary-900/20 flex items-center justify-center text-sm">📝</div>
+            <div className="h-9 w-9 rounded-xl bg-primary-50 dark:bg-primary-900/20 flex items-center justify-center"><FileText className="h-4 w-4 text-primary" aria-hidden="true" /></div>
             <div><p className="text-lg font-black">{postSales}</p><p className="text-[10px] text-gray-400">Post</p></div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
-            <div className="h-9 w-9 rounded-xl bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center text-sm">📦</div>
+            <div className="h-9 w-9 rounded-xl bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center"><Package className="h-4 w-4 text-purple-500" aria-hidden="true" /></div>
             <div><p className="text-lg font-black">{productSales}</p><p className="text-[10px] text-gray-400">Produk</p></div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
-            <div className="h-9 w-9 rounded-xl bg-pink-50 dark:bg-pink-900/20 flex items-center justify-center text-sm">💰</div>
+            <div className="h-9 w-9 rounded-xl bg-pink-50 dark:bg-pink-900/20 flex items-center justify-center"><Coins className="h-4 w-4 text-pink-500" aria-hidden="true" /></div>
             <div><p className="text-lg font-black">{donationSales}</p><p className="text-[10px] text-gray-400">Donasi</p></div>
           </CardContent>
         </Card>

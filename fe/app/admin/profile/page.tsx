@@ -13,7 +13,7 @@ export default function AdminProfile() {
     <div>
       <h1 className="mb-6 text-2xl font-display font-black tracking-tight">Admin Profile</h1>
       <div className="space-y-4">
-        <CollapsibleCard title="👤 Profil" defaultOpen>
+        <CollapsibleCard title="Profil" defaultOpen>
           <div className="flex items-center gap-4">
             <Avatar src={user?.avatar_url} name={user?.display_name} size="xl" />
             <div>

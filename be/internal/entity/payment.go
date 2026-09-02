@@ -35,6 +35,25 @@ const (
 	PaymentStatusRefunded PaymentStatus = "refunded"
 )
 
+// PaymentAuditLog is an immutable record of a money/credit movement.
+type PaymentAuditLog struct {
+	ID            uuid.UUID  `json:"id" gorm:"type:uuid;primaryKey"`
+	ActorID       *uuid.UUID `json:"actor_id" gorm:"type:uuid"`
+	Actor         *User      `json:"actor,omitempty" gorm:"foreignKey:ActorID"`
+	ActorRole     string     `json:"actor_role"`
+	Event         string     `json:"event"`
+	ReferenceType string     `json:"reference_type"`
+	ReferenceID   *uuid.UUID `json:"reference_id" gorm:"type:uuid"`
+	AmountIDR     int64      `json:"amount_idr" gorm:"column:amount_idr"`
+	Credits       int64      `json:"credits"`
+	Method        string     `json:"method"`
+	Detail        JSONMap    `json:"detail,omitempty" gorm:"type:jsonb"`
+	IPAddress     string     `json:"ip_address"`
+	CreatedAt     time.Time  `json:"created_at"`
+}
+
+func (PaymentAuditLog) TableName() string { return "payment_audit_logs" }
+
 type Payment struct {
 	ID             uuid.UUID       `json:"id" gorm:"type:uuid;primaryKey;default:uuid_generate_v4()"`
 	ExternalID     string          `json:"external_id" gorm:"uniqueIndex"`

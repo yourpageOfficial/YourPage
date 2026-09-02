@@ -3,25 +3,134 @@ name: Deploy Full
 on:
   push:
     tags: ['v*']
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
 
 jobs:
   deploy:
     name: Build & Deploy All
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: production
     steps:
-      - uses: appleboy/ssh-action@v1
+      # The .env on the VM is written fresh from GitHub Secrets on every deploy,
+      # so no credential is ever committed to the repo or edited by hand on the
+      # server. Rotating a secret means updating it in GitHub and redeploying.
+      #
+      # Every variable referenced by docker-compose.production.yml must be
+      # present here: compose interpolates variables for ALL services up front,
+      # including profile-gated ones that never start (e.g. grafana), so a
+      # missing value aborts the deploy before any container is created.
+      - name: Write .env on VM from GitHub Secrets
+        uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.VM_HOST }}
           username: ${{ secrets.VM_USER }}
           key: ${{ secrets.VM_SSH_KEY }}
-          command_timeout: 15m
+          command_timeout: 5m
+          envs: DOMAIN,DB_USER,DB_PASSWORD,DB_NAME,REDIS_PASSWORD,JWT_SECRET,MINIO_USER,MINIO_PASSWORD,MINIO_ROOT_PASSWORD,GRAFANA_PASSWORD,ADMIN_EMAIL,ADMIN_PASSWORD,FINANCE_EMAIL,FINANCE_PASSWORD,SMTP_HOST,SMTP_PORT,SMTP_USER,SMTP_PASS,SMTP_FROM
           script: |
-            set -e
+            set -euo pipefail
+            cd ~/YourPage
+
+            umask 077
+            cat > .env.new <<'ENVEOF'
+            DOMAIN=${DOMAIN}
+            DB_USER=${DB_USER}
+            DB_PASSWORD=${DB_PASSWORD}
+            DB_NAME=${DB_NAME}
+            REDIS_PASSWORD=${REDIS_PASSWORD}
+            JWT_SECRET=${JWT_SECRET}
+            MINIO_USER=${MINIO_USER}
+            MINIO_PASSWORD=${MINIO_PASSWORD}
+            MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
+            GRAFANA_PASSWORD=${GRAFANA_PASSWORD}
+            ADMIN_EMAIL=${ADMIN_EMAIL}
+            ADMIN_PASSWORD=${ADMIN_PASSWORD}
+            FINANCE_EMAIL=${FINANCE_EMAIL}
+            FINANCE_PASSWORD=${FINANCE_PASSWORD}
+            SMTP_HOST=${SMTP_HOST}
+            SMTP_PORT=${SMTP_PORT}
+            SMTP_USER=${SMTP_USER}
+            SMTP_PASS=${SMTP_PASS}
+            SMTP_FROM=${SMTP_FROM}
+            ENVEOF
+
+            # Refuse to deploy with an unresolved secret rather than booting the
+            # stack with an empty password.
+            if grep -qE '^[A-Z_]+=$' .env.new; then
+              echo "::error::Empty value(s) in .env — a GitHub Secret is missing:"
+              grep -nE '^[A-Z_]+=$' .env.new | cut -d= -f1
+              rm -f .env.new
+              exit 1
+            fi
+
+            chmod 600 .env.new
+            mv .env.new .env
+            echo "✅ .env written from GitHub Secrets ($(grep -c . .env) vars)"
+        env:
+          DOMAIN: ${{ secrets.DOMAIN }}
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          DB_NAME: ${{ secrets.DB_NAME }}
+          REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          MINIO_USER: ${{ secrets.MINIO_USER }}
+          MINIO_PASSWORD: ${{ secrets.MINIO_PASSWORD }}
+          MINIO_ROOT_PASSWORD: ${{ secrets.MINIO_ROOT_PASSWORD }}
+          GRAFANA_PASSWORD: ${{ secrets.GRAFANA_PASSWORD }}
+          ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+          FINANCE_EMAIL: ${{ secrets.FINANCE_EMAIL }}
+          FINANCE_PASSWORD: ${{ secrets.FINANCE_PASSWORD }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          SMTP_FROM: ${{ secrets.SMTP_FROM }}
+
+      - name: Build, migrate & deploy
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USER }}
+          key: ${{ secrets.VM_SSH_KEY }}
+          command_timeout: 20m
+          script: |
+            set -euo pipefail
             cd ~/YourPage
             git fetch --all --tags
             git checkout main
             git pull origin main
+
             sudo docker compose -f docker-compose.production.yml build be fe
+            sudo docker compose -f docker-compose.production.yml run --rm migrate
             sudo docker compose -f docker-compose.production.yml up -d
             sudo docker image prune -f
-            echo "✅ Full deploy $(git describe --tags) at $(date)"
+            echo "✅ Full deploy $(git describe --tags --always) at $(date)"
+
+      - name: Verify deployment health
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USER }}
+          key: ${{ secrets.VM_SSH_KEY }}
+          command_timeout: 5m
+          script: |
+            set -euo pipefail
+            for i in $(seq 1 30); do
+              if curl -fsS http://localhost:8080/api/v1/health > /dev/null; then
+                echo "✅ Backend healthy after ${i} attempt(s)"
+                exit 0
+              fi
+              sleep 5
+            done
+            echo "::error::Backend did not become healthy — recent logs:"
+            cd ~/YourPage && sudo docker compose -f docker-compose.production.yml logs --tail 60 be
+            exit 1

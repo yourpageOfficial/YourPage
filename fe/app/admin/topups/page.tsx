@@ -81,14 +81,18 @@ export default function AdminTopups() {
                   <div><span className="text-gray-500 dark:text-gray-400">Kode Unik:</span> <span className="font-bold text-primary">{t.unique_code || "-"}</span></div>
                   <div><span className="text-gray-500 dark:text-gray-400">Tanggal:</span> {formatDate(t.created_at)}</div>
                 </div>
-                {t.proof_image_url && <a href={t.proof_image_url} target="_blank"><img loading="lazy" src={t.proof_image_url} alt="bukti" className="max-h-48 rounded border object-contain" /></a>}
+                {t.proof_image_url && <a href={t.proof_image_url} target="_blank" rel="noopener noreferrer"><img loading="lazy" src={t.proof_image_url} alt="bukti" className="max-h-48 rounded border object-contain" /></a>}
                 {t.admin_note && <p className="text-sm bg-primary-50/50 dark:bg-navy-800 p-2 rounded">Note: {t.admin_note}</p>}
                 {t.status === "pending" && <>
                   <Input placeholder="Catatan (opsional)" value={notes[t.id] || ""} onChange={(e) => setNotes({ ...notes, [t.id]: e.target.value })} />
                   <div className="flex gap-2">
-                    <Button size="sm" onClick={() => approve.mutate(t.id)}>Setujui</Button>
+                    {/* Disabled while in flight: approving credits real money,
+                        so a double-click must not send two requests. */}
+                    <Button size="sm" onClick={() => approve.mutate(t.id)} disabled={approve.isPending || reject.isPending}>
+                      {approve.isPending ? "Memproses..." : "Setujui"}
+                    </Button>
                     <ConfirmDialog title="Tolak Top-up?" message={`Yakin ingin menolak top-up ${formatIDR(t.amount_idr)}?`} confirmLabel="Tolak" variant="destructive" onConfirm={() => reject.mutate(t.id)}>
-                      {(open) => <Button size="sm" variant="destructive" onClick={open}>Tolak</Button>}
+                      {(open) => <Button size="sm" variant="destructive" onClick={open} disabled={approve.isPending || reject.isPending}>Tolak</Button>}
                     </ConfirmDialog>
                   </div>
                 </>}

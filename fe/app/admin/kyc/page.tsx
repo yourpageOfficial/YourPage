@@ -49,6 +49,18 @@ export default function AdminKYC() {
                   <div><span className="text-gray-500 dark:text-gray-400">Submitted:</span> {formatDate(k.created_at)}</div>
                   {k.reviewed_at && <div><span className="text-gray-500 dark:text-gray-400">Reviewed:</span> {formatDate(k.reviewed_at)}</div>}
                 </div>
+                {/* The reviewer previously had no document to look at and
+                    approved blind. This link is signed and short-lived. */}
+                {k.ktp_image_url ? (
+                  <a href={k.ktp_image_url} target="_blank" rel="noopener noreferrer" className="block">
+                    <img loading="lazy" src={k.ktp_image_url} alt={`Dokumen identitas ${k.full_name}`} className="max-h-56 rounded-xl border object-contain dark:border-navy-800" />
+                    <span className="mt-1 block text-xs text-gray-500 dark:text-gray-400">Klik untuk memperbesar &middot; tautan kedaluwarsa 15 menit</span>
+                  </a>
+                ) : (
+                  <p className="rounded-xl border border-dashed border-amber-300 bg-amber-50 p-2 text-xs text-amber-700 dark:border-amber-700 dark:bg-amber-900/20 dark:text-amber-400">
+                    Dokumen tidak tersedia. Minta user mengunggah ulang sebelum menyetujui.
+                  </p>
+                )}
                 {k.admin_note && <p className="text-sm bg-primary-50/50 dark:bg-navy-800 p-2 rounded">Note: {k.admin_note}</p>}
                 {k.status === "pending" && <>
                   <Input placeholder="Catatan (opsional)" value={notes[k.id] || ""} onChange={(e) => setNotes({ ...notes, [k.id]: e.target.value })} />

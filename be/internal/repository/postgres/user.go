@@ -2,6 +2,9 @@ package postgres
 
 import (
 	"context"
+	"crypto/rand"
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -99,11 +102,14 @@ func (r *userRepo) UpdateCreatorProfile(ctx context.Context, p *entity.CreatorPr
 	return r.db.WithContext(ctx).Save(p).Error
 }
 
+// IncrementCreatorStorage adjusts storage usage. bytes may be negative when
+// media is deleted; usage is clamped at 0 so historical rows without a
+// recorded size can never drive it below zero.
 func (r *userRepo) IncrementCreatorStorage(ctx context.Context, creatorID uuid.UUID, bytes int64) error {
 	return r.db.WithContext(ctx).
 		Model(&entity.CreatorProfile{}).
 		Where("id = ?", creatorID).
-		Update("storage_used_bytes", gorm.Expr("storage_used_bytes + ?", bytes)).Error
+		Update("storage_used_bytes", gorm.Expr("GREATEST(storage_used_bytes + ?, 0)", bytes)).Error
 }
 
 func (r *userRepo) IncrementFollowerCount(ctx context.Context, creatorID uuid.UUID, delta int) error {
@@ -181,7 +187,17 @@ func (r *userRepo) CreateOverlayTier(ctx context.Context, t *entity.OverlayTier)
 }
 
 func (r *userRepo) DeleteOverlayTier(ctx context.Context, id, creatorID uuid.UUID) error {
-	return r.db.WithContext(ctx).Where("id = ? AND creator_id = ?", id, creatorID).Delete(&entity.OverlayTier{}).Error
+	// The owner predicate keeps the data safe, but GORM reports no error when
+	// it matches nothing — so a delete that hit someone else's tier, or a stale
+	// id, still answered "deleted". Report the miss instead.
+	res := r.db.WithContext(ctx).Where("id = ? AND creator_id = ?", id, creatorID).Delete(&entity.OverlayTier{})
+	if res.Error != nil {
+		return res.Error
+	}
+	if res.RowsAffected == 0 {
+		return entity.ErrNotFound
+	}
+	return nil
 }
 
 func (r *userRepo) ListFollowerIDs(ctx context.Context, creatorID uuid.UUID) ([]uuid.UUID, error) {
@@ -208,6 +224,64 @@ func (r *userRepo) CreateReferralCode(ctx context.Context, ref *entity.ReferralC
 
 func (r *userRepo) IncrementReferralUsed(ctx context.Context, id uuid.UUID) error {
 	return r.db.WithContext(ctx).Model(&entity.ReferralCode{}).Where("id = ?", id).Update("used_count", gorm.Expr("used_count + 1")).Error
+}
+
+func (r *userRepo) GetOrCreateReferralCode(ctx context.Context, userID uuid.UUID) (*entity.ReferralCode, error) {
+	var ref entity.ReferralCode
+	if err := r.db.WithContext(ctx).Where("user_id = ?", userID).First(&ref).Error; err == nil {
+		return &ref, nil
+	}
+	// Auto-generate code: upper(username[:4]) + 4 random hex chars
+	var user entity.User
+	if err := r.db.WithContext(ctx).Where("id = ?", userID).First(&user).Error; err != nil {
+		return nil, err
+	}
+	prefix := strings.ToUpper(user.Username)
+	if len(prefix) > 4 {
+		prefix = prefix[:4]
+	}
+	for i := 0; i < 10; i++ {
+		b := make([]byte, 2)
+		if _, err := rand.Read(b); err != nil {
+			return nil, fmt.Errorf("failed to generate random bytes: %w", err)
+		}
+		code := fmt.Sprintf("%s%02X%02X", prefix, b[0], b[1])
+		ref = entity.ReferralCode{
+			ID:            uuid.New(),
+			UserID:        userID,
+			Code:          code,
+			RewardCredits: 10,
+		}
+		if err := r.db.WithContext(ctx).Create(&ref).Error; err == nil {
+			return &ref, nil
+		}
+	}
+	return nil, fmt.Errorf("failed to generate unique referral code")
+}
+
+func (r *userRepo) CreateReferralUse(ctx context.Context, ru *entity.ReferralUse) error {
+	return r.db.WithContext(ctx).Create(ru).Error
+}
+
+func (r *userRepo) ListReferralUses(ctx context.Context, codeID uuid.UUID, cursor *uuid.UUID, limit int) ([]entity.ReferralUse, error) {
+	var uses []entity.ReferralUse
+	q := r.db.WithContext(ctx).Preload("ReferredUser").Where("referral_code_id = ?", codeID)
+	if cursor != nil {
+		q = q.Where("id < ?", *cursor)
+	}
+	err := q.Order("created_at DESC").Limit(limit).Find(&uses).Error
+	return uses, err
+}
+
+func (r *userRepo) CountReferralEarnings(ctx context.Context, userID uuid.UUID) (int64, error) {
+	var total int64
+	err := r.db.WithContext(ctx).
+		Table("referral_uses ru").
+		Joins("JOIN referral_codes rc ON rc.id = ru.referral_code_id").
+		Where("rc.user_id = ?", userID).
+		Select("COALESCE(SUM(ru.reward_credits), 0)").
+		Scan(&total).Error
+	return total, err
 }
 
 func (r *userRepo) HardDelete(ctx context.Context, id uuid.UUID) error {

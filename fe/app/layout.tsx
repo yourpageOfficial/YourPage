@@ -1,12 +1,9 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { Providers } from "./providers";
-import { BottomNav } from "@/components/bottom-nav";
 import { ToastContainer } from "@/components/toast-container";
 import { ErrorBoundary } from "@/components/error-boundary";
-import { OfflineIndicator } from "@/components/offline-indicator";
-import { InstallPrompt } from "@/components/install-prompt";
-import { CookieConsent } from "@/components/cookie-consent";
+import { AppChrome } from "@/components/app-chrome";
 
 // Skip static prerendering — all pages are client-side
 export const dynamic = "force-dynamic";
@@ -51,13 +48,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-primary focus:text-white focus:rounded-lg focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2">Skip to main content</a>
             <OfflineIndicator />
             <div className="pb-16 sm:pb-0">
+            <a href="#main" className="skip-to-main" style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}>Skip to main content</a>
+            <AppChrome>
               <main id="main">{children}</main>
-            </div>
+            </AppChrome>
           </ErrorBoundary>
           <ToastContainer />
-          <BottomNav />
-          <InstallPrompt />
-          <CookieConsent />
         </Providers>
       </body>
     </html>
