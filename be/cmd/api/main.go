@@ -83,7 +83,7 @@ func main() {
 	broker := realtime.NewBroker(rdb)
 
 	// ---- Services ----
-	authSvc := service.NewAuthService(userRepo, walletRepo, platformRepo, rdb, cfg.JWT, mailSvc)
+	authSvc := service.NewAuthService(userRepo, walletRepo, platformRepo, rdb, cfg.JWT, cfg.OAuth, mailSvc)
 	postSvc := service.NewPostService(postRepo, userRepo, followRepo, storageSvc, cfg)
 	productSvc := service.NewProductService(productRepo, userRepo, storageSvc, cfg)
 	donationSvc := service.NewDonationService(donationRepo, paymentRepo, userRepo, platformRepo)

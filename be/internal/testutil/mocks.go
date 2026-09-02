@@ -606,6 +606,15 @@ func (m *MockUserRepo) ListReferralUses(_ context.Context, _ uuid.UUID, _ *uuid.
 func (m *MockUserRepo) CountReferralEarnings(_ context.Context, _ uuid.UUID) (int64, error) {
 	return 0, nil
 }
+func (m *MockUserRepo) FindOAuthAccount(_ context.Context, _, _ string) (*entity.UserOAuthAccount, error) {
+	return nil, entity.ErrNotFound
+}
+func (m *MockUserRepo) CreateOAuthAccount(_ context.Context, _ *entity.UserOAuthAccount) error { return nil }
+func (m *MockUserRepo) ListOAuthAccountsByUserID(_ context.Context, _ uuid.UUID) ([]entity.UserOAuthAccount, error) {
+	return nil, nil
+}
+func (m *MockUserRepo) DeleteOAuthAccount(_ context.Context, _ uuid.UUID, _ string) error { return nil }
+
 
 func (m *MockFollowRepo) BlockUser(_ context.Context, _, _ uuid.UUID) error   { return nil }
 func (m *MockFollowRepo) UnblockUser(_ context.Context, _, _ uuid.UUID) error { return nil }
@@ -647,3 +656,6 @@ func (m *MockDonationRepo) UpsertLeaderboardSettings(_ context.Context, _ *entit
 }
 
 func (MockMailer) SendTwoFAOTP(_ context.Context, _, _ string) error { return nil }
+func (MockMailer) SendMagicLink(_ context.Context, _, _ string) error { return nil }
+func (MockMailer) SendSecurityAlert(_ context.Context, _, _, _ string) error { return nil }
+

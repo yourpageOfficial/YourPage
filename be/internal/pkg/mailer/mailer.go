@@ -29,6 +29,9 @@ type Mailer interface {
 	SendAdminPendingDigest(ctx context.Context, adminEmail string, pendingWithdrawals, pendingTopups, pendingKYC int) error
 	// 2FA OTP
 	SendTwoFAOTP(ctx context.Context, toEmail, otp string) error
+	// Magic Link & Security Alerts
+	SendMagicLink(ctx context.Context, toEmail, token string) error
+	SendSecurityAlert(ctx context.Context, toEmail, ip, userAgent string) error
 }
 
 type SMTPMailer struct {
@@ -279,3 +282,26 @@ func (m *SMTPMailer) SendTwoFAOTP(_ context.Context, toEmail, otp string) error 
 		</div>
 		<p style="color:#999;font-size:13px">Jika kamu tidak mencoba login, abaikan email ini dan segera ganti password.</p>`, otp))
 }
+
+func (m *SMTPMailer) SendMagicLink(_ context.Context, toEmail, token string) error {
+	link := fmt.Sprintf("%s/auth/magic-link?token=%s", m.frontendURL, token)
+	return m.send(toEmail, "Login Tanpa Password — YourPage", fmt.Sprintf(
+		`<h2>Masuk ke Akun YourPage</h2>
+		<p>Klik tombol di bawah untuk langsung masuk ke akun kamu (berlaku 15 menit, hanya sekali pakai):</p>
+		<p style="text-align:center;padding:16px 0">
+			<a href="%s" style="background:#2563EB;color:white;padding:12px 32px;border-radius:8px;text-decoration:none;font-weight:bold">Masuk Sekarang</a>
+		</p>
+		<p style="color:#999;font-size:13px">Jika kamu tidak meminta link ini, abaikan email ini.</p>`, link))
+}
+
+func (m *SMTPMailer) SendSecurityAlert(_ context.Context, toEmail, ip, userAgent string) error {
+	return m.send(toEmail, "Peringatan Keamanan: Login Baru Terdeteksi — YourPage", fmt.Sprintf(
+		`<h2>Aktivitas Login Baru</h2>
+		<p>Kami mendeteksi aktivitas login baru pada akun YourPage kamu:</p>
+		<ul>
+			<li><strong>Alamat IP:</strong> %s</li>
+			<li><strong>Perangkat/Browser:</strong> %s</li>
+		</ul>
+		<p>Jika ini bukan kamu, segera amankan akun dengan mengubah kata sandi.</p>`, ip, userAgent))
+}
+

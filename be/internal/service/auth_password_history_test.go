@@ -25,7 +25,7 @@ func TestPasswordHistory(t *testing.T) {
 		RefreshTTL: 7 * 24 * time.Hour,
 	}
 	mailerMock := testutil.MockMailer{}
-	authSvc := service.NewAuthService(userRepo, walletRepo, platformRepo, nil, jwtCfg, mailerMock)
+	authSvc := service.NewAuthService(userRepo, walletRepo, platformRepo, nil, jwtCfg, config.OAuthConfig{}, mailerMock)
 
 	// 1. Register a user with password "initial_password_123"
 	regResp, err := authSvc.Register(ctx, service.RegisterRequest{

@@ -4,8 +4,13 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
+	"net/url"
+	"regexp"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -19,6 +24,7 @@ import (
 	"github.com/yourpage/be/internal/pkg/validator"
 	"github.com/yourpage/be/internal/repository"
 )
+
 
 // ------------------------------------------------------------------ requests
 
@@ -121,6 +127,17 @@ type AuthService interface {
 
 	// Tags
 	UpdateTags(ctx context.Context, userID uuid.UUID, tags []string) error
+
+	// OAuth
+	GetOAuthURL(ctx context.Context, provider string) (string, error)
+	HandleOAuthCallback(ctx context.Context, provider, code, state string) (*LoginResponse, error)
+	ListOAuthAccounts(ctx context.Context, userID uuid.UUID) ([]entity.UserOAuthAccount, error)
+	UnlinkOAuthAccount(ctx context.Context, userID uuid.UUID, provider string) error
+
+	// Magic Link & Suspicious Login
+	SendMagicLink(ctx context.Context, email string) error
+	VerifyMagicLink(ctx context.Context, token string) (*LoginResponse, error)
+	CheckSuspiciousLogin(ctx context.Context, user *entity.User, ip, userAgent string)
 }
 
 // ------------------------------------------------------------------ Redis key helpers
@@ -157,6 +174,7 @@ type authService struct {
 	platformRepo repository.PlatformRepository
 	rdb          *redis.Client
 	jwtCfg       config.JWTConfig
+	oauthCfg     config.OAuthConfig
 	mailer       mailer.Mailer
 }
 
@@ -166,6 +184,7 @@ func NewAuthService(
 	platformRepo repository.PlatformRepository,
 	rdb *redis.Client,
 	jwtCfg config.JWTConfig,
+	oauthCfg config.OAuthConfig,
 	m mailer.Mailer,
 ) AuthService {
 	return &authService{
@@ -174,6 +193,7 @@ func NewAuthService(
 		platformRepo: platformRepo,
 		rdb:          rdb,
 		jwtCfg:       jwtCfg,
+		oauthCfg:     oauthCfg,
 		mailer:       m,
 	}
 }
@@ -1003,3 +1023,337 @@ func (s *authService) UpdateTags(ctx context.Context, userID uuid.UUID, tags []s
 	cp.Tier = nil
 	return s.userRepo.UpdateCreatorProfile(ctx, cp)
 }
+
+// ---------------------------------------------------------------------------
+// OAuth
+// ---------------------------------------------------------------------------
+
+const (
+	oauthStatePrefix = "oauth_state:"
+	oauthStateTTL    = 5 * time.Minute
+)
+
+type oauthUserInfo struct {
+	ID    string
+	Email string
+	Name  string
+}
+
+func (s *authService) GetOAuthURL(ctx context.Context, provider string) (string, error) {
+	stateBytes := make([]byte, 16)
+	if _, err := rand.Read(stateBytes); err != nil {
+		return "", err
+	}
+	state := hex.EncodeToString(stateBytes)
+
+	if s.rdb != nil {
+		if err := s.rdb.Set(ctx, oauthStatePrefix+state, provider, oauthStateTTL).Err(); err != nil {
+			return "", fmt.Errorf("oauth: store state: %w", err)
+		}
+	}
+
+	switch provider {
+	case "google":
+		if s.oauthCfg.GoogleClientID == "" {
+			return "", errors.New("google oauth not configured")
+		}
+		params := url.Values{
+			"client_id":     {s.oauthCfg.GoogleClientID},
+			"redirect_uri":  {s.oauthCfg.GoogleRedirectURI},
+			"response_type": {"code"},
+			"scope":         {"openid email profile"},
+			"state":         {state},
+			"access_type":   {"offline"},
+			"prompt":        {"select_account"},
+		}
+		return "https://accounts.google.com/o/oauth2/v2/auth?" + params.Encode(), nil
+
+	case "facebook":
+		if s.oauthCfg.FacebookClientID == "" {
+			return "", errors.New("facebook oauth not configured")
+		}
+		params := url.Values{
+			"client_id":    {s.oauthCfg.FacebookClientID},
+			"redirect_uri": {s.oauthCfg.FacebookRedirectURI},
+			"state":        {state},
+			"scope":        {"email,public_profile"},
+		}
+		return "https://www.facebook.com/v19.0/dialog/oauth?" + params.Encode(), nil
+
+	default:
+		return "", fmt.Errorf("unsupported oauth provider: %s", provider)
+	}
+}
+
+func (s *authService) HandleOAuthCallback(ctx context.Context, provider, code, state string) (*LoginResponse, error) {
+	if s.rdb != nil {
+		val, err := s.rdb.Get(ctx, oauthStatePrefix+state).Result()
+		if err != nil || val != provider {
+			return nil, entity.ErrInvalidToken
+		}
+		s.rdb.Del(ctx, oauthStatePrefix+state)
+	}
+
+	var userInfo *oauthUserInfo
+	var err error
+
+	switch provider {
+	case "google":
+		userInfo, err = s.exchangeGoogle(ctx, code)
+	case "facebook":
+		userInfo, err = s.exchangeFacebook(ctx, code)
+	default:
+		return nil, fmt.Errorf("unsupported oauth provider: %s", provider)
+	}
+	if err != nil {
+		return nil, err
+	}
+	if userInfo == nil || userInfo.Email == "" {
+		return nil, errors.New("oauth: could not retrieve email from provider")
+	}
+
+	// 1. Check if OAuth account already linked
+	oauthAcc, err := s.userRepo.FindOAuthAccount(ctx, provider, userInfo.ID)
+	if err == nil && oauthAcc != nil {
+		user, err := s.userRepo.FindByID(ctx, oauthAcc.UserID)
+		if err != nil {
+			return nil, err
+		}
+		return s.issueTokenPair(ctx, user.ID, string(user.Role))
+	}
+
+	// 2. Check if user with that email already exists
+	user, err := s.userRepo.FindByEmail(ctx, userInfo.Email)
+	if err == nil && user != nil {
+		_ = s.userRepo.CreateOAuthAccount(ctx, &entity.UserOAuthAccount{
+			ID:             uuid.New(),
+			UserID:         user.ID,
+			Provider:       provider,
+			ProviderUserID: userInfo.ID,
+			Email:          userInfo.Email,
+		})
+		return s.issueTokenPair(ctx, user.ID, string(user.Role))
+	}
+
+	// 3. New user registration via OAuth
+	userID := uuid.New()
+	displayName := userInfo.Name
+	if displayName == "" {
+		displayName = strings.Split(userInfo.Email, "@")[0]
+	}
+	username := strings.ToLower(regexp.MustCompile(`[^a-zA-Z0-9_]`).ReplaceAllString(displayName, ""))
+	if len(username) < 3 {
+		username = "user" + strings.ReplaceAll(userID.String()[:8], "-", "")
+	}
+	if _, err := s.userRepo.FindByUsername(ctx, username); err == nil {
+		prefix := username
+		if len(prefix) > 10 {
+			prefix = prefix[:10]
+		}
+		username = fmt.Sprintf("%s_%s", prefix, userID.String()[:4])
+	}
+
+	newUser := &entity.User{
+		ID:            userID,
+		Email:         userInfo.Email,
+		Username:      username,
+		DisplayName:   displayName,
+		Role:          entity.RoleSupporter,
+		EmailVerified: true,
+	}
+	if err := s.userRepo.Create(ctx, newUser); err != nil {
+		return nil, fmt.Errorf("oauth: create user: %w", err)
+	}
+
+	_ = s.userRepo.CreateOAuthAccount(ctx, &entity.UserOAuthAccount{
+		ID:             uuid.New(),
+		UserID:         newUser.ID,
+		Provider:       provider,
+		ProviderUserID: userInfo.ID,
+		Email:          userInfo.Email,
+	})
+
+	return s.issueTokenPair(ctx, newUser.ID, string(newUser.Role))
+}
+
+func (s *authService) exchangeGoogle(ctx context.Context, code string) (*oauthUserInfo, error) {
+	data := url.Values{
+		"code":          {code},
+		"client_id":     {s.oauthCfg.GoogleClientID},
+		"client_secret": {s.oauthCfg.GoogleClientSecret},
+		"redirect_uri":  {s.oauthCfg.GoogleRedirectURI},
+		"grant_type":    {"authorization_code"},
+	}
+	req, err := http.NewRequestWithContext(ctx, "POST", "https://oauth2.googleapis.com/token", strings.NewReader(data.Encode()))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("google token request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	var tok struct {
+		AccessToken string `json:"access_token"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&tok); err != nil || tok.AccessToken == "" {
+		return nil, errors.New("failed to retrieve google access token")
+	}
+
+	reqInfo, err := http.NewRequestWithContext(ctx, "GET", "https://www.googleapis.com/oauth2/v3/userinfo", nil)
+	if err != nil {
+		return nil, err
+	}
+	reqInfo.Header.Set("Authorization", "Bearer "+tok.AccessToken)
+
+	respInfo, err := http.DefaultClient.Do(reqInfo)
+	if err != nil {
+		return nil, fmt.Errorf("google userinfo: %w", err)
+	}
+	defer respInfo.Body.Close()
+
+	var info struct {
+		Sub   string `json:"sub"`
+		Email string `json:"email"`
+		Name  string `json:"name"`
+	}
+	if err := json.NewDecoder(respInfo.Body).Decode(&info); err != nil {
+		return nil, errors.New("failed to decode google user info")
+	}
+	return &oauthUserInfo{ID: info.Sub, Email: info.Email, Name: info.Name}, nil
+}
+
+func (s *authService) exchangeFacebook(ctx context.Context, code string) (*oauthUserInfo, error) {
+	data := url.Values{
+		"client_id":     {s.oauthCfg.FacebookClientID},
+		"client_secret": {s.oauthCfg.FacebookClientSecret},
+		"redirect_uri":  {s.oauthCfg.FacebookRedirectURI},
+		"code":          {code},
+	}
+	req, err := http.NewRequestWithContext(ctx, "GET", "https://graph.facebook.com/v19.0/oauth/access_token?"+data.Encode(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("facebook token request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	var tok struct {
+		AccessToken string `json:"access_token"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&tok); err != nil || tok.AccessToken == "" {
+		return nil, errors.New("failed to retrieve facebook access token")
+	}
+
+	reqInfo, err := http.NewRequestWithContext(ctx, "GET", "https://graph.facebook.com/me?fields=id,name,email&access_token="+url.QueryEscape(tok.AccessToken), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	respInfo, err := http.DefaultClient.Do(reqInfo)
+	if err != nil {
+		return nil, fmt.Errorf("facebook userinfo: %w", err)
+	}
+	defer respInfo.Body.Close()
+
+	var info struct {
+		ID    string `json:"id"`
+		Email string `json:"email"`
+		Name  string `json:"name"`
+	}
+	if err := json.NewDecoder(respInfo.Body).Decode(&info); err != nil {
+		return nil, errors.New("failed to decode facebook user info")
+	}
+	return &oauthUserInfo{ID: info.ID, Email: info.Email, Name: info.Name}, nil
+}
+
+func (s *authService) ListOAuthAccounts(ctx context.Context, userID uuid.UUID) ([]entity.UserOAuthAccount, error) {
+	return s.userRepo.ListOAuthAccountsByUserID(ctx, userID)
+}
+
+func (s *authService) UnlinkOAuthAccount(ctx context.Context, userID uuid.UUID, provider string) error {
+	return s.userRepo.DeleteOAuthAccount(ctx, userID, provider)
+}
+
+// ---------------------------------------------------------------------------
+// Magic Link & Suspicious Login
+// ---------------------------------------------------------------------------
+
+const (
+	magicLinkKeyPrefix = "magic:"
+	magicLinkTTL       = 15 * time.Minute
+	userKnownIPsPrefix = "user_ips:"
+)
+
+func (s *authService) SendMagicLink(ctx context.Context, email string) error {
+	user, err := s.userRepo.FindByEmail(ctx, email)
+	if err != nil {
+		// Silent success to prevent account enumeration
+		return nil
+	}
+
+	tokenBytes := make([]byte, 32)
+	if _, err := rand.Read(tokenBytes); err != nil {
+		return fmt.Errorf("magic link: generate token: %w", err)
+	}
+	token := hex.EncodeToString(tokenBytes)
+
+	if s.rdb != nil {
+		if err := s.rdb.Set(ctx, magicLinkKeyPrefix+token, user.ID.String(), magicLinkTTL).Err(); err != nil {
+			return fmt.Errorf("magic link: store token: %w", err)
+		}
+	}
+
+	return s.mailer.SendMagicLink(ctx, user.Email, token)
+}
+
+func (s *authService) VerifyMagicLink(ctx context.Context, token string) (*LoginResponse, error) {
+	if s.rdb == nil {
+		return nil, entity.ErrInvalidToken
+	}
+
+	userIDStr, err := s.rdb.Get(ctx, magicLinkKeyPrefix+token).Result()
+	if err != nil || userIDStr == "" {
+		return nil, entity.ErrInvalidToken
+	}
+	// Single-use: delete immediately
+	s.rdb.Del(ctx, magicLinkKeyPrefix+token)
+
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		return nil, entity.ErrInvalidToken
+	}
+
+	user, err := s.userRepo.FindByID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	return s.issueTokenPair(ctx, user.ID, string(user.Role))
+}
+
+func (s *authService) CheckSuspiciousLogin(ctx context.Context, user *entity.User, ip, userAgent string) {
+	if s.rdb == nil || ip == "" || ip == "127.0.0.1" || ip == "::1" {
+		return
+	}
+
+	key := userKnownIPsPrefix + user.ID.String()
+	isKnown, err := s.rdb.SIsMember(ctx, key, ip).Result()
+	if err == nil && !isKnown {
+		card, _ := s.rdb.SCard(ctx, key).Result()
+		if card > 0 {
+			go func() {
+				_ = s.mailer.SendSecurityAlert(context.Background(), user.Email, ip, userAgent)
+			}()
+		}
+		s.rdb.SAdd(ctx, key, ip)
+	}
+}
+
+

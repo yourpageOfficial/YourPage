@@ -109,8 +109,9 @@ func (h *KYCHandler) upload(c *gin.Context, bucket string) {
 		return
 	}
 
-	// Track storage for creators
-	if uploadType != "kyc" {
+	// Track storage for creators (exclude private/KYC uploads)
+	uploadType := c.Query("type")
+	if uploadType != "kyc" && bucket != h.cfg.MinIO.PrivateBucket {
 		uid := getUserID(c)
 		if profile, err := h.userRepo.FindCreatorByUserID(c.Request.Context(), uid); err == nil && profile != nil {
 			_ = h.userRepo.IncrementCreatorStorage(c.Request.Context(), profile.ID, header.Size)

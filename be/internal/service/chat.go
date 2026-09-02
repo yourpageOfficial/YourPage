@@ -126,7 +126,7 @@ func (s *chatService) SendMessage(ctx context.Context, senderID uuid.UUID, req S
 
 		feeIDR := creatorProfile.ChatPriceIDR * int64(feePct) / 100
 		netIDR := creatorProfile.ChatPriceIDR - feeIDR
-		now := time.Now()
+		var now = time.Now()
 		paymentID := uuid.New()
 		payment := &entity.Payment{
 			ID: paymentID, ExternalID: fmt.Sprintf("CHAT-%s", paymentID),
@@ -136,6 +136,8 @@ func (s *chatService) SendMessage(ctx context.Context, senderID uuid.UUID, req S
 			Status: entity.PaymentStatusPaid, PaidAt: &now,
 		}
 		if err := s.paymentRepo.Create(ctx, payment); err != nil {
+			_ = s.walletRepo.AddCredits(ctx, senderID, chatCredits)
+			_ = s.walletRepo.DeductCredits(ctx, req.CreatorID, netCredits)
 			return nil, fmt.Errorf("chat: create payment record: %w", err)
 		}
 
@@ -158,7 +160,17 @@ func (s *chatService) SendMessage(ctx context.Context, senderID uuid.UUID, req S
 		ID: uuid.New(), ConversationID: conv.ID, SenderID: senderID,
 		Content: req.Content, IsPaid: isPaid, AmountIDR: creatorProfile.ChatPriceIDR,
 	}
-	if err := s.chatRepo.CreateMessage(ctx, msg); err != nil { return nil, err }
+	if err := s.chatRepo.CreateMessage(ctx, msg); err != nil {
+		if isPaid {
+			chatCredits := creatorProfile.ChatPriceIDR / 1000
+			feePct := 20
+			if creatorProfile.CustomFeePercent != nil { feePct = *creatorProfile.CustomFeePercent }
+			netCredits := chatCredits - (chatCredits * int64(feePct) / 100)
+			_ = s.walletRepo.AddCredits(ctx, senderID, chatCredits)
+			_ = s.walletRepo.DeductCredits(ctx, req.CreatorID, netCredits)
+		}
+		return nil, err
+	}
 	s.chatRepo.IncrementUnread(ctx, conv.ID, true)
 
 	// Notify creator about new chat

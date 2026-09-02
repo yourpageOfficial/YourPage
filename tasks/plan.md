@@ -37,6 +37,14 @@ This plan provides a prioritized, vertically-sliced roadmap to resolve all techn
 - **Decision:** Implement programmatic SEO landing pages (`/vs/[competitor]`, `/kreator/[category]`, `/untuk/[niche]`) using Next.js Server Components with Incremental Static Regeneration (ISR, `revalidate = 3600`), dynamic `@vercel/og` image generation, and JSON-LD structured data.
 - **Rationale:** Ensures optimal crawlability and indexability by search engines without client-side hydration delays.
 
+### F. Dynamic Creator Storefront Theming (CSS Variables & Font Whitelisting)
+- **Decision:** Store creator custom appearance (`page_color`, `font_style`, `custom_icon`, `card_style`, `custom_styles` JSONB) in PostgreSQL `creator_profiles` table. Inject styling into public storefront containers via scoped CSS Custom Properties (`--creator-accent`, `--creator-font`, `--creator-card-bg`) and whitelist safe Google Fonts (`Outfit`, `Rubik`, `Plus Jakarta Sans`, `Playfair Display`, `Space Grotesk`, `Inter`).
+- **Rationale:** Prevents CSS injection / XSS vulnerabilities, eliminates heavy client-side style re-compilation, preserves Tailwind CSS purging optimizations, and delivers instant, zero-latency visual personalization for creators.
+
+### G. Centralized Verification Badge System & Trust Architecture
+- **Decision:** Establish a unified, accessible `<VerifiedBadge size="sm"|"md"|"lg" tooltip={true} />` component linked to `creator_profiles.is_verified` (and user verification status), rendered consistently across creator profiles, post feeds, comments, explore cards, direct messages, and admin consoles.
+- **Rationale:** Standardizes identity trust signals sitewide, replaces fragmented ad-hoc icons, enforces WCAG 2.1 AA screen reader labeling, and empowers administrators to audit and toggle verification status with full accountability.
+
 ---
 
 ## 3. Phased Execution Roadmap
@@ -56,21 +64,24 @@ graph TD
     P6 --> C6{Checkpoint 6: Engagement & Creator Hub}
     C6 --> P7[Phase 7: Production Hardening, Email & Launch]
     P7 --> C7{Checkpoint 7: Production Ready}
+    C7 --> P8[Phase 8: User Profile Custom Styles & Verified Badge System]
+    P8 --> C8{Checkpoint 8: Storefront Personalization & Trust Ready}
 ```
 
 ### Phase 1: Security, Financial Integrity & Core Backend
-- [ ] **Task 1:** Fix Members-Only Access Gating & Private Media Pre-signing ([`../be/internal/service/post.go`](../be/internal/service/post.go), [`../be/internal/pkg/storage/minio.go`](../be/internal/pkg/storage/minio.go))
-- [ ] **Task 2:** Database Transaction Atomicity for Wallet & Checkout ([`../be/internal/service/payment.go`](../be/internal/service/payment.go), [`../be/internal/service/chat.go`](../be/internal/service/chat.go))
-- [ ] **Task 3:** KYC Document Privacy & Admin Presigned View Endpoints ([`../be/internal/handler/kyc.go`](../be/internal/handler/kyc.go), [`../be/internal/service/admin.go`](../be/internal/service/admin.go))
-- [ ] **Task 4:** CreditTransaction Audit Ledger Completion for Chat & Referral Rewards ([`../be/internal/service/chat.go`](../be/internal/service/chat.go), [`../be/internal/service/auth.go`](../be/internal/service/auth.go))
-- [ ] **Task 5:** Schema Hygiene & Missing Composite Indexes Migration ([`../be/migrations/0048_schema_cleanup.sql`](../be/migrations/0048_schema_cleanup.sql))
+- [x] **Task 1:** Fix Members-Only Access Gating & Private Media Pre-signing ([`../be/internal/service/post.go`](../be/internal/service/post.go), [`../be/internal/pkg/storage/minio.go`](../be/internal/pkg/storage/minio.go))
+- [x] **Task 2:** Database Transaction Atomicity for Wallet & Checkout ([`../be/internal/service/payment.go`](../be/internal/service/payment.go), [`../be/internal/service/chat.go`](../be/internal/service/chat.go))
+- [x] **Task 3:** KYC Document Privacy & Admin Presigned View Endpoints ([`../be/internal/handler/kyc.go`](../be/internal/handler/kyc.go), [`../be/internal/service/admin.go`](../be/internal/service/admin.go))
+- [x] **Task 4:** CreditTransaction Audit Ledger Completion for Chat & Referral Rewards ([`../be/internal/service/chat.go`](../be/internal/service/chat.go), [`../be/internal/service/auth.go`](../be/internal/service/auth.go))
+- [x] **Task 5:** Schema Hygiene & Missing Composite Indexes Migration ([`../be/migrations/0048_schema_cleanup.sql`](../be/migrations/0048_schema_cleanup.sql))
 
 ### Phase 2: Advanced Authentication, OAuth & Identity Security
-- [ ] **Task 6:** OAuth2 Social Sign-In: Google & Facebook Login Integration ([`../be/internal/service/auth.go`](../be/internal/service/auth.go), [`../fe/app/login/page.tsx`](../fe/app/login/page.tsx))
+- [x] **Task 6:** OAuth2 Social Sign-In: Google & Facebook Login Integration ([`../be/internal/service/auth.go`](../be/internal/service/auth.go), [`../fe/app/login/page.tsx`](../fe/app/login/page.tsx))
 - [x] **Task 7:** Password History & Security Policy Enforcement ([`../be/internal/service/auth.go`](../be/internal/service/auth.go), [`../fe/app/s/settings/page.tsx`](../fe/app/s/settings/page.tsx))
-- [ ] **Task 8:** Two-Factor Authentication (2FA / TOTP) with Emergency Backup Codes ([`../be/internal/service/auth.go`](../be/internal/service/auth.go), [`../fe/app/s/settings/page.tsx`](../fe/app/s/settings/page.tsx))
+- [x] **Task 8:** Two-Factor Authentication (2FA / TOTP) with Emergency Backup Codes ([`../be/internal/service/auth.go`](../be/internal/service/auth.go), [`../fe/app/s/settings/page.tsx`](../fe/app/s/settings/page.tsx))
 - [ ] **Task 9:** Active Device & Session Management with Remote Revocation ([`../be/internal/service/auth.go`](../be/internal/service/auth.go), [`../fe/app/s/settings/page.tsx`](../fe/app/s/settings/page.tsx))
-- [ ] **Task 10:** Magic Link Passwordless Sign-In & Suspicious Activity Alerts ([`../be/internal/service/auth.go`](../be/internal/service/auth.go), [`../fe/app/login/page.tsx`](../fe/app/login/page.tsx))
+- [x] **Task 10:** Magic Link Passwordless Sign-In & Suspicious Activity Alerts ([`../be/internal/service/auth.go`](../be/internal/service/auth.go), [`../fe/app/login/page.tsx`](../fe/app/login/page.tsx))
+
 
 ### Phase 3: Frontend UX, Accessibility & OBS Isolation
 - [ ] **Task 11:** OBS Overlay Isolation & Global Popup Suppression ([`../fe/components/cookie-consent.tsx`](../fe/components/cookie-consent.tsx), [`../fe/components/install-prompt.tsx`](../fe/components/install-prompt.tsx))
@@ -106,6 +117,14 @@ graph TD
 - [ ] **Task 33:** Full-Stack APM & Observability Integration: OpenTelemetry, Prometheus & Grafana / SigNoz ([`../be/cmd/api/main.go`](../be/cmd/api/main.go), [`../fe/app/layout.tsx`](../fe/app/layout.tsx))
 - [x] **Task 34:** Nginx SSL/TLS Hardening, Rate Limit Tuning & Production Launch Checklist ([`../nginx/nginx.production.conf`](../nginx/nginx.production.conf))
 
+### Phase 8: User Profile Custom Styles & Verified Badge System
+- [ ] **Task 35:** Database Schema & Migration for Custom Appearance & Verification Badges ([`../be/migrations/0063_creator_custom_styles_and_badges.sql`](../be/migrations/0063_creator_custom_styles_and_badges.sql), [`../be/internal/entity/user.go`](../be/internal/entity/user.go))
+- [ ] **Task 36:** Backend API Endpoints for Custom Theming & Admin Verification Control ([`../be/internal/handler/auth.go`](../be/internal/handler/auth.go), [`../be/internal/handler/public.go`](../be/internal/handler/public.go), [`../be/internal/handler/admin.go`](../be/internal/handler/admin.go))
+- [ ] **Task 37:** Reusable `<VerifiedBadge />` Component & Sitewide Trust Signaling Integration ([`../fe/components/ui/verified-badge.tsx`](../fe/components/ui/verified-badge.tsx), [`../fe/components/post-card.tsx`](../fe/components/post-card.tsx), [`../fe/app/c/[slug]/page.tsx`](../fe/app/c/[slug]/page.tsx))
+- [ ] **Task 38:** Creator Dashboard Appearance Studio UI (Colors, Fonts, Custom Icons, Card Styles) ([`../fe/app/dashboard/profile/page.tsx`](../fe/app/dashboard/profile/page.tsx), [`../fe/components/profile/theme-customizer.tsx`](../fe/components/profile/theme-customizer.tsx))
+- [ ] **Task 39:** Dynamic Theme Injection & Responsive Storefront Rendering Engine ([`../fe/app/c/[slug]/page.tsx`](../fe/app/c/[slug]/page.tsx), [`../fe/app/c/[slug]/components/creator-storefront-theme.tsx`](../fe/app/c/[slug]/components/creator-storefront-theme.tsx))
+- [ ] **Task 40:** Automated E2E Testing, Contrast Accessibility & Verification Regression ([`../fe/e2e/creator-styling.spec.ts`](../fe/e2e/creator-styling.spec.ts), [`../be/internal/service/auth_test.go`](../be/internal/service/auth_test.go))
+
 ---
 
 ## 4. Risk Analysis & Mitigation Matrix
@@ -116,6 +135,8 @@ graph TD
 | **User Lockout due to Lost 2FA TOTP Authenticator** | Permanent account lockout | **HIGH** | Generate 8 single-use cryptographically hashed emergency recovery codes during 2FA enrollment; support admin identity recovery flow with KYC re-validation. |
 | **Financial Race Condition during Top-up/Payout** | Double spending or negative balance | **HIGH** | Strict DB-level `CHECK (balance_credits >= 0)` constraint combined with `db.Transaction` and row-level locking (`SELECT ... FOR UPDATE`). |
 | **Leak of KYC PII Documents (KTP/ID cards)** | Regulatory non-compliance (UU PDP) & privacy breach | **HIGH** | Strict private MinIO bucket segregation + admin-only short-lived pre-signed download URLs with audit logging. |
+| **Low-Contrast Custom Page Colors Breaking WCAG Legibility** | Illegible text / poor user accessibility | **MEDIUM** | Frontend dynamic luminance calculation calculates whether custom accent requires `#FFFFFF` or `#0F0D1A` text contrast automatically. |
+| **Malicious CSS / Font Injection via Custom Style Inputs** | Cross-Site Scripting (XSS) or visual spoofing | **HIGH** | Strict regex validation (`^#([A-Fa-f0-9]{6})$`) for hex colors; enforce rigid enum whitelist for fonts and icons; sanitize JSONB payload keys. |
 | **OBS Overlay Visual Breakage During Live Streams** | Disrupted live stream production for creators | **MEDIUM** | Strict route guards suppressing cookie consent, modals, install prompts, and navigation on `/overlay` routes. |
 | **Search Engine Penalization for Thin Programmatic Content** | Loss of organic search rank | **MEDIUM** | Anti-thin content guardrails: only index category pages with $\ge 3$ active creators; serve `noindex, follow` on sparse pages. |
 

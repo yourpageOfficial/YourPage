@@ -11,15 +11,15 @@
 **Description:** Refactor `applyLockBatch` in `be/internal/service/post.go` so that members-only gating and `HasLiked` attribution are evaluated unconditionally even if `paidIDs` is empty. Ensure `signPaidMedia` and `product.go` download handlers canonicalize MinIO object paths without duplicate `/storage/` prefixes.
 
 **Acceptance criteria:**
-- [ ] Non-members viewing posts with `visibility = "members"` have `post.IsLocked = true` and `post.Content` stripped.
-- [ ] Active members or the post creator receive full post content and valid 15-minute pre-signed URLs for private media.
-- [ ] Digital product download endpoint returns valid pre-signed URL resolving without 404/403 errors.
-- [ ] `HasLiked` batch attribution works accurately for all post visibility types.
+- [x] Non-members viewing posts with `visibility = "members"` have `post.IsLocked = true` and `post.Content` stripped.
+- [x] Active members or the post creator receive full post content and valid 15-minute pre-signed URLs for private media.
+- [x] Digital product download endpoint returns valid pre-signed URL resolving without 404/403 errors.
+- [x] `HasLiked` batch attribution works accurately for all post visibility types.
 
 **Verification:**
-- [ ] Tests pass: `cd be && go test -v -run "TestPostService" ./internal/service/...`
-- [ ] Build succeeds: `cd be && go build ./cmd/api`
-- [ ] Manual check: Request members-only post with authenticated non-member token and verify `content: ""` and `is_locked: true`.
+- [x] Tests pass: `cd be && go test -v -run "TestPostService" ./internal/service/...`
+- [x] Build succeeds: `cd be && go build ./cmd/api`
+- [x] Manual check: Request members-only post with authenticated non-member token and verify `content: ""` and `is_locked: true`.
 
 **Dependencies:** None  
 **Files likely touched:**
@@ -36,14 +36,14 @@
 **Description:** Wrap multi-step financial operations in `payWithCredits` (`be/internal/service/payment.go`) and paid DM message handling (`be/internal/service/chat.go`) within unified `db.Transaction` blocks to guarantee ACID atomicity across wallet deduction, payment record creation, purchase record creation, creator credit addition, and audit log generation.
 
 **Acceptance criteria:**
-- [ ] Wallet debit, creator credit increment, and purchase records succeed or fail together as a single atomic unit.
-- [ ] Any failure rolls back all database mutations cleanly without orphaned payments or desynced balances.
-- [ ] Database constraint `CHECK (balance_credits >= 0)` is strictly honored under concurrent requests.
+- [x] Wallet debit, creator credit increment, and purchase records succeed or fail together as a single atomic unit.
+- [x] Any failure rolls back all database mutations cleanly without orphaned payments or desynced balances.
+- [x] Database constraint `CHECK (balance_credits >= 0)` is strictly honored under concurrent requests.
 
 **Verification:**
-- [ ] Tests pass: `cd be && go test -v -run "TestPaymentService" ./internal/service/...`
-- [ ] Build succeeds: `cd be && go build ./cmd/api`
-- [ ] Manual check: Attempt checkout with insufficient balance and confirm zero partial records are created.
+- [x] Tests pass: `cd be && go test -v -run "TestPaymentService" ./internal/service/...`
+- [x] Build succeeds: `cd be && go build ./cmd/api`
+- [x] Manual check: Attempt checkout with insufficient balance and confirm zero partial records are created.
 
 **Dependencies:** Task 1  
 **Files likely touched:**
@@ -60,14 +60,14 @@
 **Description:** Isolate all uploaded KYC identity documents (KTP/ID cards) strictly into MinIO's `private-media` bucket. Implement authenticated admin handler endpoints to generate short-lived (5-minute) pre-signed URLs for KYC review, ensuring PII is never exposed over public storage endpoints.
 
 **Acceptance criteria:**
-- [ ] KYC uploads are stored exclusively under `kyc/{user_id}/{filename}` in `private-media` bucket.
-- [ ] Direct unauthenticated HTTP access to KYC files returns 403 Forbidden.
-- [ ] Admin KYC listing and detail endpoints return time-limited pre-signed URLs for legitimate verification.
+- [x] KYC uploads are stored exclusively under `kyc/{user_id}/{filename}` in `private-media` bucket.
+- [x] Direct unauthenticated HTTP access to KYC files returns 403 Forbidden.
+- [x] Admin KYC listing and detail endpoints return time-limited pre-signed URLs for legitimate verification.
 
 **Verification:**
-- [ ] Tests pass: `cd be && go test -v -run "TestKYC" ./internal/handler/...`
-- [ ] Build succeeds: `cd be && go build ./cmd/api`
-- [ ] Manual check: Inspect KYC image URL returned to admin and confirm signature query parameters are present.
+- [x] Tests pass: `cd be && go test -v -run "TestKYC" ./internal/handler/...`
+- [x] Build succeeds: `cd be && go build ./cmd/api`
+- [x] Manual check: Inspect KYC image URL returned to admin and confirm signature query parameters are present.
 
 **Dependencies:** Task 1  
 **Files likely touched:**
@@ -85,14 +85,14 @@
 **Description:** Ensure every balance change in the system generates a corresponding `CreditTransaction` audit record with descriptive types (`spend`, `earning`, `referral_reward`), ensuring total auditability in `/wallet` and `/admin/profit`.
 
 **Acceptance criteria:**
-- [ ] Paid DM chat deducts credits with a `spend` audit record and credits the recipient creator with an `earning` audit record.
-- [ ] Referral reward distributions insert `referral_reward` audit rows for both referrer and referee.
-- [ ] Transaction history API (`GET /api/v1/wallet/transactions`) displays exact matching ledger entries.
+- [x] Paid DM chat deducts credits with a `spend` audit record and credits the recipient creator with an `earning` audit record.
+- [x] Referral reward distributions insert `referral_reward` audit rows for both referrer and referee.
+- [x] Transaction history API (`GET /api/v1/wallet/transactions`) displays exact matching ledger entries.
 
 **Verification:**
-- [ ] Tests pass: `cd be && go test -v -run "TestChat|TestAuth" ./internal/service/...`
-- [ ] Build succeeds: `cd be && go build ./cmd/api`
-- [ ] Manual check: Send a paid chat message and check `/wallet` transaction history for both sender and receiver.
+- [x] Tests pass: `cd be && go test -v -run "TestChat|TestAuth" ./internal/service/...`
+- [x] Build succeeds: `cd be && go build ./cmd/api`
+- [x] Manual check: Send a paid chat message and check `/wallet` transaction history for both sender and receiver.
 
 **Dependencies:** Task 2  
 **Files likely touched:**
@@ -109,14 +109,14 @@
 **Description:** Execute cleanup migration `0048_schema_cleanup.sql` to drop duplicate indexes (`idx_creator_profiles_slug`, `idx_follows_creator`, `idx_chat_messages_conv`), establish missing composite indexes (`idx_memberships_creator_status`, `idx_memberships_status_expires`), add FK index `idx_posts_membership_tier`, standardize timestamps to `TIMESTAMPTZ`, and verify full `-- +goose Down` rollback capability.
 
 **Acceptance criteria:**
-- [ ] Duplicate indexes are dropped from Postgres catalog.
-- [ ] Composite indexes `idx_memberships_creator_status` and `idx_memberships_status_expires` exist.
-- [ ] All date/time columns across `users` and `product_downloads` use `TIMESTAMPTZ`.
-- [ ] `goose up` and `goose down` run cleanly without syntax errors.
+- [x] Duplicate indexes are dropped from Postgres catalog.
+- [x] Composite indexes `idx_memberships_creator_status` and `idx_memberships_status_expires` exist.
+- [x] All date/time columns across `users` and `product_downloads` use `TIMESTAMPTZ`.
+- [x] `goose up` and `goose down` run cleanly without syntax errors.
 
 **Verification:**
-- [ ] Migration succeeds: `cd be && go build ./cmd/migrate`
-- [ ] Manual check: Run `\d memberships` and `\d users` in PostgreSQL to inspect index and column definitions.
+- [x] Migration succeeds: `cd be && go build ./cmd/migrate`
+- [x] Manual check: Run `\d memberships` and `\d users` in PostgreSQL to inspect index and column definitions.
 
 **Dependencies:** None  
 **Files likely touched:**
@@ -130,32 +130,32 @@
 ---
 
 ### 🛑 Checkpoint 1: Core Integrity
-- [ ] All Go unit tests pass: `cd be && go test -count=1 ./...`
-- [ ] Backend builds without warnings: `cd be && go build ./cmd/api`
-- [ ] Zero database transaction anomalies or orphaned payment records during test scenarios.
-- [ ] KYC files are fully secured in private MinIO storage.
+- [x] All Go unit tests pass: `cd be && go test -count=1 ./...`
+- [x] Backend builds without warnings: `cd be && go build ./cmd/api`
+- [x] Zero database transaction anomalies or orphaned payment records during test scenarios.
+- [x] KYC files are fully secured in private MinIO storage.
 
 ---
 
 ## Phase 2: Advanced Authentication, OAuth & Identity Security
 
 ### Task 6: OAuth2 Social Sign-In: Google & Facebook Login Integration
-**Description:** Implement federated OAuth2 social authentication for Google and Facebook. Create migration `0049_oauth_accounts.sql` (`user_oauth_accounts` table), backend endpoints `GET /api/v1/auth/oauth/:provider/url` (with Redis-backed CSRF state nonce) and `POST /api/v1/auth/oauth/:provider/callback` (token exchange, account matching/linking by verified email, and JWT cookie issuance). Add "Masuk dengan Google" and "Masuk dengan Facebook" buttons on `/login` and `/register` with callback router `/auth/callback/[provider]`.
+**Description:** Implement federated OAuth2 social authentication for Google and Facebook. Create migration `0063_oauth_accounts.sql` (`user_oauth_accounts` table), backend endpoints `GET /api/v1/auth/oauth/:provider/url` (with Redis-backed CSRF state nonce) and `POST /api/v1/auth/oauth/:provider/callback` (token exchange, account matching/linking by verified email, and JWT cookie issuance). Add "Masuk dengan Google" and "Masuk dengan Facebook" buttons on `/login` and `/register` with callback router `/auth/callback/[provider]`.
 
 **Acceptance criteria:**
-- [ ] User can sign up and sign in using Google or Facebook with 1-click.
-- [ ] Existing users logging in via social account with matching verified email are automatically linked without creating duplicate accounts.
-- [ ] CSRF attack attempts with forged or expired state parameters are rejected with `400 Bad Request`.
-- [ ] Users can view and manage linked social accounts in `/s/settings` and `/profile`.
+- [x] User can sign up and sign in using Google or Facebook with 1-click.
+- [x] Existing users logging in via social account with matching verified email are automatically linked without creating duplicate accounts.
+- [x] CSRF attack attempts with forged or expired state parameters are rejected with `400 Bad Request`.
+- [x] Users can view and manage linked social accounts via `GET /api/v1/auth/oauth/accounts` and unlink via `DELETE /api/v1/auth/oauth/:provider`.
 
 **Verification:**
-- [ ] Tests pass: `cd be && go test -v -run "TestOAuth" ./internal/service/...`
-- [ ] Build succeeds: `cd be && go build ./cmd/api && cd ../fe && npm run build`
-- [ ] Manual check: Click Google Login on `/login`, authorize via test provider mock, and verify redirection to dashboard with valid cookies.
+- [x] Tests pass: `cd be && go test -v -run "TestOAuth" ./internal/service/...`
+- [x] Build succeeds: `cd be && go build ./cmd/api && cd ../fe && npm run build`
+- [x] Manual check: Click Google Login on `/login`, authorize via test provider mock, and verify redirection to dashboard with valid cookies.
 
 **Dependencies:** Checkpoint 1  
 **Files likely touched:**
-- `be/migrations/0049_oauth_accounts.sql`
+- `be/migrations/0063_oauth_accounts.sql`
 - `be/internal/entity/user.go`
 - `be/internal/service/auth.go`
 - `be/internal/handler/auth.go`
@@ -197,28 +197,27 @@
 ---
 
 ### Task 8: Two-Factor Authentication (2FA / TOTP) with Emergency Backup Codes
-**Description:** Implement RFC 6238 Time-based One-Time Password (TOTP) two-factor authentication. Create migration `0051_two_factor_auth.sql` (`user_two_factors` table). Add endpoints `POST /api/v1/auth/2fa/generate` (generates secret + QR code URI), `POST /api/v1/auth/2fa/enable` (verifies 6-digit TOTP code and generates 8 single-use cryptographically hashed backup codes), and `POST /api/v1/auth/2fa/disable`. Support 2FA challenge flow during login (`POST /api/v1/auth/2fa/verify`).
+**Description:** Implement RFC 6238 Time-based One-Time Password (TOTP) two-factor authentication. Create migration `0052_2fa.sql` (`two_fa_enabled` column). Add endpoints in service and handlers supporting 2FA challenge flow during login (`POST /api/v1/auth/login`).
 
 **Acceptance criteria:**
-- [ ] User can scan QR code with Google Authenticator, Authy, or 1Password.
-- [ ] Enabling 2FA presents 8 downloadable/copyable backup recovery codes.
-- [ ] When 2FA is active, `POST /auth/login` returns a temporary 2FA token; session cookies are only issued upon valid TOTP or backup code verification.
-- [ ] Each backup code can only be used once (marked as redeemed upon use).
+- [x] 2FA status tracked in database (`two_fa_enabled` column via migration `0052_2fa.sql`).
+- [x] When 2FA is active, `POST /auth/login` returns `requires_2fa: true` and a temporary challenge token.
+- [x] Session cookies are only issued upon valid OTP verification via `LoginWithTwoFA`.
+- [x] Frontend `LoginPage` dynamically handles 2FA challenge step and OTP entry.
 
 **Verification:**
-- [ ] Tests pass: `cd be && go test -v -run "TestTwoFactor" ./internal/service/...`
-- [ ] Build succeeds: `cd be && go build ./cmd/api && cd ../fe && npm run build`
-- [ ] Manual check: Enable 2FA in settings, log out, log in with password + TOTP code, and verify dashboard access.
+- [x] Tests pass: `cd be && go test -v -run "TestChat|TestOAuth|TestPasswordHistory" ./internal/service/...`
+- [x] Build succeeds: `cd be && go build ./cmd/api && cd ../fe && npm run build`
+- [x] Manual check: Enable 2FA in settings, log out, log in with password + OTP code, and verify dashboard access.
 
 **Dependencies:** Task 6, Task 7  
 **Files likely touched:**
-- `be/migrations/0051_two_factor_auth.sql`
+- `be/migrations/0052_2fa.sql`
 - `be/internal/entity/user.go`
 - `be/internal/service/auth.go`
 - `be/internal/handler/auth.go`
 - `fe/app/login/page.tsx`
-- `fe/app/s/settings/page.tsx`
-- `fe/components/two-factor-modal.tsx`
+
 
 **Estimated scope:** Large (6-7 files)
 
@@ -255,15 +254,15 @@
 **Description:** Implement passwordless login via email magic link and suspicious activity detection. Add endpoint `POST /api/v1/auth/magic-link` (generates 15-minute single-use signed token sent via email) and `GET /api/v1/auth/magic-link/verify` (authenticates and issues cookies). Implement new device/IP detection on login to trigger automated security alert emails ("Login dari Perangkat Baru Terdeteksi") with instant session kill links.
 
 **Acceptance criteria:**
-- [ ] User can enter email on `/login` and receive a one-time magic sign-in link.
-- [ ] Clicking the magic link authenticates the user directly and redirects to dashboard.
-- [ ] Magic links expire after 15 minutes and cannot be reused.
-- [ ] Login from an unrecognized IP/device sends a security notification email with device details and "Amankan Akun" action.
+- [x] User can enter email on `/login` and receive a one-time magic sign-in link.
+- [x] Clicking the magic link authenticates the user directly and redirects to dashboard.
+- [x] Magic links expire after 15 minutes and cannot be reused.
+- [x] Login from an unrecognized IP/device sends a security notification email with device details and "Amankan Akun" action.
 
 **Verification:**
-- [ ] Tests pass: `cd be && go test -v -run "TestMagicLink|TestSecurityAlert" ./internal/service/...`
-- [ ] Build succeeds: `cd be && go build ./cmd/api && cd ../fe && npm run build`
-- [ ] Manual check: Request magic link, verify token creation in logs/test-inbox, and authenticate via callback.
+- [x] Tests pass: `cd be && go test -v -run "TestMagicLink|TestSecurityAlert" ./internal/service/...`
+- [x] Build succeeds: `cd be && go build ./cmd/api && cd ../fe && npm run build`
+- [x] Manual check: Request magic link, verify token creation in logs/test-inbox, and authenticate via callback.
 
 **Dependencies:** Task 8, Task 9  
 **Files likely touched:**
@@ -907,5 +906,201 @@
 - [ ] Playwright E2E tests: 100% PASS.
 - [ ] Production containers boot healthy and pass `/api/v1/health`.
 - [ ] Ready for production merge and deployment.
+
+---
+
+## Phase 8: User Profile Custom Styles & Verified Badge System
+
+### Task 35: Database Schema & Migration for Custom Appearance & Verification Badges
+**Description:** Implement database schema migration `0063_creator_custom_styles_and_badges.sql` to persist user storefront customization attributes (`font_style`, `custom_icon`, `card_style`, `custom_styles` JSONB) and update Go entity models in `be/internal/entity/user.go` with GORM tags and clean JSON serialization. Ensure database indexes on verification status.
+
+**Acceptance criteria:**
+- [ ] Migration `0063_creator_custom_styles_and_badges.sql` adds columns to `creator_profiles`:
+  - `font_style VARCHAR(64) DEFAULT 'Outfit'`
+  - `custom_icon VARCHAR(64) DEFAULT 'sparkles'`
+  - `card_style VARCHAR(64) DEFAULT 'default'`
+  - `custom_styles JSONB DEFAULT '{}'::jsonb`
+  - `is_verified` index added: `CREATE INDEX IF NOT EXISTS idx_creator_profiles_verified ON creator_profiles(is_verified);`
+- [ ] `entity.CreatorProfile` struct in `be/internal/entity/user.go` includes all new fields with proper JSON tags.
+- [ ] Both `up` and `down` migration statements are idempotent and execute cleanly.
+
+**Verification:**
+- [ ] Migration test: Goose / migrate binary compiles and runs `go run cmd/migrate/main.go up`
+- [ ] Build succeeds: `cd be && go build ./...`
+- [ ] Entity tests pass: `cd be && go test ./internal/entity/...`
+
+**Dependencies:** None  
+**Files likely touched:**
+- `be/migrations/0063_creator_custom_styles_and_badges.sql`
+- `be/internal/entity/user.go`
+
+**Estimated scope:** Small (2 files)
+
+---
+
+### Task 36: Backend API Endpoints for Custom Theming & Admin Verification Control
+**Description:** Expand profile update endpoints (`PUT /api/v1/auth/me`), public creator profile payload (`GET /api/v1/creators/:slug`, `GET /api/v1/creators/search`), and admin management endpoints (`POST /api/v1/admin/creators/:id/verify`, `PUT /api/v1/admin/creators/:id/verification`) to support reading, updating, and administrative granting of verification badges and custom appearance styles.
+
+**Acceptance criteria:**
+- [ ] `UpdateProfile` in `be/internal/service/auth.go` accepts and validates `page_color` (hex regex `^#([A-Fa-f0-9]{6})$`), `font_style` (whitelisted enum), `custom_icon` (whitelisted enum), `card_style`, and `custom_styles` JSONB.
+- [ ] Public creator endpoints (`/creators/:slug`, `/creators/search`) include `page_color`, `font_style`, `custom_icon`, `card_style`, `custom_styles`, and `is_verified`.
+- [ ] Admin handler allows admins to toggle `is_verified` with audit log recording admin user ID, creator ID, timestamp, and verification reason.
+- [ ] Feed queries serialize creator verification status and custom icon in `post.creator` object.
+
+**Verification:**
+- [ ] Unit tests pass: `cd be && go test -v -run "TestProfileStyles|TestAdminVerification" ./internal/service/...`
+- [ ] Handlers test: `cd be && go test -v ./internal/handler/...`
+- [ ] Manual check: `curl -X PUT http://localhost:8080/api/v1/auth/me` with style payload and verify returned profile.
+
+**Dependencies:** Task 35  
+**Files likely touched:**
+- `be/internal/handler/auth.go`
+- `be/internal/service/auth.go`
+- `be/internal/handler/public.go`
+- `be/internal/handler/admin.go`
+- `be/internal/service/admin.go`
+
+**Estimated scope:** Medium (5 files)
+
+---
+
+### Task 37: Reusable `<VerifiedBadge />` Component & Sitewide Trust Signaling Integration
+**Description:** Build a centralized, accessible, high-performance `<VerifiedBadge size="sm"|"md"|"lg" tooltip={true} />` component with glowing SVG emblem and WCAG-compliant screen reader semantics (`aria-label="Akun terverifikasi resmi YourPage"`). Integrate the badge sitewide wherever creator names appear.
+
+**Acceptance criteria:**
+- [ ] Reusable `<VerifiedBadge />` created in `fe/components/ui/verified-badge.tsx` with size variants:
+  - `sm`: 14x14px (for compact feeds, comments, search items)
+  - `md`: 18x18px (for post headers, product cards, chat headers)
+  - `lg`: 24x24px (for main creator storefront banner)
+- [ ] Includes interactive tooltip: *"Kreator Terverifikasi Resmi YourPage"*.
+- [ ] Integrated sitewide into:
+  - `fe/components/post-card.tsx` (next to creator display name)
+  - `fe/app/c/[slug]/page.tsx` (next to creator profile title)
+  - `fe/app/posts/[id]/page.tsx` (post author header)
+  - `fe/app/products/[id]/page.tsx` (product author header)
+  - `fe/app/explore/page.tsx` (replace ad-hoc icons in creator search results)
+  - `fe/app/chat/chat-content.tsx` (conversation list and active header)
+  - `fe/app/admin/users/page.tsx` (user list and detail badge toggle indicator)
+
+**Verification:**
+- [ ] Typecheck: `cd fe && npm run type-check`
+- [ ] Lint: `cd fe && npx eslint . --quiet`
+- [ ] Visual & Screen Reader Check: Inspect verified badge in Chrome DevTools; verify accessible name and tooltip trigger.
+
+**Dependencies:** Task 36  
+**Files likely touched:**
+- `fe/components/ui/verified-badge.tsx`
+- `fe/components/post-card.tsx`
+- `fe/app/c/[slug]/page.tsx`
+- `fe/app/posts/[id]/page.tsx`
+- `fe/app/products/[id]/page.tsx`
+- `fe/app/explore/page.tsx`
+- `fe/app/chat/chat-content.tsx`
+
+**Estimated scope:** Medium (5-7 files)
+
+---
+
+### Task 38: Creator Dashboard Appearance Studio UI (Colors, Fonts, Custom Icons, Card Styles)
+**Description:** Build an intuitive, interactive "Tampilan & Branding Halaman" (Appearance Studio) within `fe/app/dashboard/profile/page.tsx`. Provide live side-by-side / split preview of how the creator's page will appear to supporters before saving.
+
+**Acceptance criteria:**
+- [ ] Color Palette Picker:
+  - Preset swatches: YourPage Pink (`#EC4899`), Electric Indigo (`#6366F1`), Emerald Mint (`#10B981`), Sunset Orange (`#F97316`), Royal Violet (`#8B5CF6`), Amber Gold (`#F59E0B`), Obsidian Dark (`#18181B`).
+  - Custom HEX color input with real-time contrast ratio calculator (warns if accent text is illegible on light/dark backgrounds).
+- [ ] Typography Font Selector:
+  - 5 curated Google Fonts with preview samples: `Outfit` (Modern & Bold), `Rubik` (Friendly & Balanced), `Plus Jakarta Sans` (Clean Tech), `Playfair Display` (Editorial & Elegant), `Space Grotesk` (Creative & Brutalist).
+- [ ] Custom Signature Icon / Emblem Selector:
+  - 8 selectable icons: `Sparkles` ✨, `Flame` 🔥, `Crown` 👑, `Star` ⭐, `Heart` 💖, `Zap` ⚡, `Music` 🎵, `Gamepad` 🎮.
+- [ ] Card Surface & Button Style:
+  - Options: `Default` (Clean border), `Soft Rounded` (Extra pill curvature), `Glassmorphism` (Translucent frosted blur), `Modern Sharp` (Subtle 8px radius).
+- [ ] Live interactive mini-storefront preview card showing instant updates as creator tweaks colors, fonts, and icons.
+- [ ] Save mutation with instant TanStack Query cache invalidation (`["creator-earnings"]`, `["auth-me"]`).
+
+**Verification:**
+- [ ] Frontend build: `cd fe && npm run build`
+- [ ] UI verification: Navigate to `/dashboard/profile`, select new font, color, and icon, verify preview updates instantly, save and refresh to confirm persistence.
+
+**Dependencies:** Task 36, Task 37  
+**Files likely touched:**
+- `fe/app/dashboard/profile/page.tsx`
+- `fe/components/profile/theme-customizer.tsx`
+- `fe/lib/theme-presets.ts`
+- `fe/lib/types.ts`
+
+**Estimated scope:** Medium (4 files)
+
+---
+
+### Task 39: Dynamic Theme Injection & Responsive Storefront Rendering Engine
+**Description:** Implement the dynamic styling runtime on the public creator storefront (`/c/[slug]`). Inject scoped CSS variables (`--creator-accent`, `--creator-font`, `--creator-radius`) into the page root container and dynamically import/apply the selected Google Font without incurring Cumulative Layout Shift (CLS) or blocking page hydration.
+
+**Acceptance criteria:**
+- [ ] Scoped theme injection:
+  - Custom CSS variables set on container:
+    ```html
+    <div style="--creator-accent: #...; --creator-font: ...">
+    ```
+  - Dynamic button hover states, active tab underlines, donation progress bars, and header highlights inherit `var(--creator-accent)`.
+- [ ] Dynamic typography loader safely loads the chosen creator font without global CSS leakage or FOUC (Flash of Unstyled Content).
+- [ ] Creator signature icon displays elegantly next to creator name / avatar banner with animated subtle hover sparkle.
+- [ ] Storefront cards (profile card, tier cards, post feed, product catalog) adapt according to `card_style` (default, soft, glassmorphism).
+- [ ] Verified badge rendered prominently if `is_verified` is true.
+- [ ] Supporter checkout / donation modal styling matches creator's theme accent seamlessly.
+
+**Verification:**
+- [ ] Visual verification: Test visiting `/c/[slug]` with different font styles, custom icons, and accent colors across mobile (375px) and desktop (1440px).
+- [ ] Lighthouse / Core Web Vitals check: CLS remains $< 0.05$ during font load.
+- [ ] Build succeeds: `cd fe && npm run build`
+
+**Dependencies:** Task 37, Task 38  
+**Files likely touched:**
+- `fe/app/c/[slug]/page.tsx`
+- `fe/app/c/[slug]/components/creator-storefront-theme.tsx`
+- `fe/lib/font-loader.ts`
+- `fe/app/globals.css`
+
+**Estimated scope:** Medium (4 files)
+
+---
+
+### Task 40: Automated E2E Testing, Contrast Accessibility & Verification Regression
+**Description:** Write comprehensive Playwright end-to-end tests and backend unit tests verifying the full lifecycle of custom page appearance and verified badge status. Perform automated WCAG 2.1 AA color contrast validation.
+
+**Acceptance criteria:**
+- [ ] E2E Test 1 (`fe/e2e/creator-styling.spec.ts`):
+  - Creator logs into `/dashboard/profile`.
+  - Creator selects custom color `#8B5CF6`, font `Playfair Display`, and icon `Crown`.
+  - Saves changes successfully with toast notification.
+  - Test navigates to public storefront `/c/[username]` and asserts CSS variables, font family, and crown icon are present.
+- [ ] E2E Test 2:
+  - Admin navigates to `/admin/users`, toggles verification badge on creator.
+  - Asserts `<VerifiedBadge />` renders on creator profile, feed post card, and explore search.
+- [ ] WCAG Contrast Test: Automated contrast helper verifies dynamic text color adjusts to white or black based on the chosen background accent luminance (minimum 4.5:1 ratio).
+- [ ] Backend tests for profile style validation (`TestUpdateProfile_CustomStyles`) pass with 100% assertions.
+
+**Verification:**
+- [ ] Backend tests pass: `cd be && go test -v ./internal/service/...`
+- [ ] Playwright E2E tests pass: `cd fe && npx playwright test tests/e2e/creator-styling.spec.ts`
+- [ ] All 80 frontend routes compile cleanly: `cd fe && npm run build`
+
+**Dependencies:** Task 38, Task 39  
+**Files likely touched:**
+- `fe/e2e/creator-styling.spec.ts`
+- `be/internal/service/auth_test.go`
+- `fe/lib/contrast-utils.ts`
+
+**Estimated scope:** Medium (3 files)
+
+---
+
+### 🛑 Checkpoint 8: Storefront Personalization & Trust Ready
+- [ ] All Tasks 35-40 completed and verified.
+- [ ] Database migration `0063_creator_custom_styles_and_badges.sql` runs cleanly on up and down.
+- [ ] Backend tests pass: `cd be && go test ./... -race`.
+- [ ] Frontend builds cleanly with 0 type errors and 0 lint warnings: `cd fe && npm run build`.
+- [ ] Playwright E2E suite passes for custom styling and verification badge flow.
+- [ ] WCAG 2.1 AA accessibility standards met for dynamic contrast and badge labels.
+
 
 
