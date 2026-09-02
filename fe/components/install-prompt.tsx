@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { X, Download } from "lucide-react";
 
@@ -10,6 +11,7 @@ interface BeforeInstallPromptEvent extends Event {
 }
 
 export function InstallPrompt() {
+  const pathname = usePathname();
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [show, setShow] = useState(false);
 
@@ -42,7 +44,7 @@ export function InstallPrompt() {
     localStorage.setItem("install-prompt-dismissed", String(Date.now()));
   };
 
-  if (!show) return null;
+  if (!show || pathname.startsWith("/overlay")) return null;
 
   return (
     <div className="fixed bottom-16 sm:bottom-4 left-3 right-3 sm:left-auto sm:right-4 sm:w-80 z-50 bg-white dark:bg-navy-800 border dark:border-primary-900/30 rounded-xl shadow-xl p-4 animate-slide-up">

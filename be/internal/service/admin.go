@@ -376,11 +376,11 @@ func (s *adminService) UpdateWithdrawalStatus(ctx context.Context, id uuid.UUID,
 	if user, err := s.userRepo.FindByID(ctx, w.CreatorID); err == nil {
 		switch req.Status {
 		case entity.WithdrawalStatusProcessed:
-			go s.mailer.SendWithdrawalProcessed(ctx, user.Email, w.AmountIDR, w.BankName)
+			go s.mailer.SendWithdrawalProcessed(context.Background(), user.Email, w.AmountIDR, w.BankName)
 		case entity.WithdrawalStatusRejected:
 			reason := "Tidak memenuhi syarat"
 			if req.AdminNote != nil { reason = *req.AdminNote }
-			go s.mailer.SendWithdrawalRejected(ctx, user.Email, reason)
+			go s.mailer.SendWithdrawalRejected(context.Background(), user.Email, reason)
 		}
 	}
 
@@ -425,13 +425,16 @@ func (s *adminService) UpdateKYCStatus(ctx context.Context, id uuid.UUID, req Up
 	kyc, err := s.kycRepo.FindKYCByID(ctx, id)
 	if err != nil { return entity.ErrNotFound }
 	// 7.9: Idempotency
-	if string(kyc.Status) == string(req.Status) { return nil }
-	userID := kyc.UserID
+	if kyc.Status != entity.KYCStatusPending {
+		return fmt.Errorf("⚠ KYC sudah diproses sebelumnya")
+	}
 
 	if err := s.kycRepo.UpdateKYCStatus(ctx, id, req.Status, req.AdminNote); err != nil {
 		return err
 	}
 
+	// Notify user
+	userID := kyc.UserID
 	if userID != uuid.Nil {
 		body := "KYC kamu telah disetujui. Kamu sekarang bisa melakukan penarikan."
 		if req.Status == entity.KYCStatusRejected {
@@ -450,11 +453,11 @@ func (s *adminService) UpdateKYCStatus(ctx context.Context, id uuid.UUID, req Up
 	if userID != uuid.Nil {
 		if user, err := s.userRepo.FindByID(ctx, userID); err == nil {
 			if req.Status == entity.KYCStatusApproved {
-				go s.mailer.SendKYCApproved(ctx, user.Email)
+				go s.mailer.SendKYCApproved(context.Background(), user.Email)
 			} else if req.Status == entity.KYCStatusRejected {
 				reason := "Dokumen tidak valid"
 				if req.AdminNote != nil { reason = *req.AdminNote }
-				go s.mailer.SendKYCRejected(ctx, user.Email, reason)
+				go s.mailer.SendKYCRejected(context.Background(), user.Email, reason)
 			}
 		}
 	}

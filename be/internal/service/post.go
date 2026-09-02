@@ -216,17 +216,7 @@ func (s *postService) GetByID(ctx context.Context, postID uuid.UUID, viewerID *u
 		if locked {
 			applyPostLock(post)
 		} else {
-			// Generate pre-signed URLs for paid content media (stored in private bucket)
-			for i := range post.Media {
-				url := post.Media[i].URL
-				if url != "" && !strings.HasPrefix(url, "/storage/") && !strings.HasPrefix(url, "http") {
-					// Private bucket object — generate pre-signed URL
-					signed, err := s.storage.GetPresignedURL(ctx, s.cfg.MinIO.PrivateBucket, url, 15*time.Minute)
-					if err == nil {
-						post.Media[i].URL = signed
-					}
-				}
-			}
+			s.signPaidMedia(post)
 		}
 	}
 
@@ -583,15 +573,14 @@ func (s *postService) applyLockBatch(ctx context.Context, posts []entity.Post, v
 		return nil
 	}
 
-	// Collect IDs of paid posts.
+	// Collect IDs of paid posts and all posts.
 	var paidIDs []uuid.UUID
+	allIDs := make([]uuid.UUID, len(posts))
 	for i := range posts {
+		allIDs[i] = posts[i].ID
 		if posts[i].AccessType == entity.PostAccessPaid {
 			paidIDs = append(paidIDs, posts[i].ID)
 		}
-	}
-	if len(paidIDs) == 0 {
-		return nil
 	}
 
 	// Determine which paid posts the viewer has purchased.
@@ -600,13 +589,13 @@ func (s *postService) applyLockBatch(ctx context.Context, posts []entity.Post, v
 
 	if viewerID != nil {
 		var err error
-		purchasedIDs, err = s.postRepo.FindPurchasedPostIDs(ctx, *viewerID, paidIDs)
-		if err != nil {
-			return err
+		if len(paidIDs) > 0 {
+			purchasedIDs, err = s.postRepo.FindPurchasedPostIDs(ctx, *viewerID, paidIDs)
+			if err != nil {
+				return err
+			}
 		}
 		// Batch check likes for all posts
-		allIDs := make([]uuid.UUID, len(posts))
-		for i := range posts { allIDs[i] = posts[i].ID }
 		likedIDs, _ = s.postRepo.HasLikedBatch(ctx, *viewerID, allIDs)
 	}
 
@@ -664,7 +653,7 @@ func (s *postService) applyLockBatch(ctx context.Context, posts []entity.Post, v
 func (s *postService) signPaidMedia(post *entity.Post) {
 	for i := range post.Media {
 		url := post.Media[i].URL
-		if url != "" && !strings.HasPrefix(url, "/storage/") && !strings.HasPrefix(url, "http") {
+		if url != "" && (strings.Contains(url, s.cfg.MinIO.PrivateBucket) || !strings.HasPrefix(url, "/storage/")) && !strings.Contains(url, "?") {
 			signed, err := s.storage.GetPresignedURL(context.Background(), s.cfg.MinIO.PrivateBucket, url, 15*time.Minute)
 			if err == nil {
 				post.Media[i].URL = signed

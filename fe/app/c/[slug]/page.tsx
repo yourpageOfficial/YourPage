@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { toast } from "@/lib/toast";
 import api from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -21,11 +21,14 @@ import { ListSkeleton } from "@/components/ui/skeleton";
 import { CheckCircle, ExternalLink, FileText, Heart, MessageCircle, Package, PartyPopper, Share2, Star, Target, Trophy, Users, X } from "lucide-react";
 import Link from "next/link";
 import { ReportButton } from "@/components/report-button";
+import { useTranslation } from "@/lib/internationalization";
 import type { CreatorPage, Post, Product, MembershipTier, Membership, PaginatedResponse, ApiResponse } from "@/lib/types";
 
 export default function CreatorPageView() {
   const { slug } = useParams<{ slug: string }>();
+  const router = useRouter();
   const { user } = useAuth();
+  const { t, interpolate } = useTranslation();
   const qc = useQueryClient();
   const [showDonate, setShowDonate] = useState(false);
   const [subscribing, setSubscribing] = useState("");
@@ -83,7 +86,7 @@ export default function CreatorPageView() {
   });
 
   if (isLoading) return <><Navbar /><div className="p-8"><ListSkeleton count={3} /></div></>;
-  if (!creator) return <><Navbar /><div className="p-8 text-center text-gray-500 dark:text-gray-400">Kreator tidak ditemukan</div></>;
+  if (!creator) return <><Navbar /><div className="p-8 text-center text-gray-500 dark:text-gray-400">{t.creatorPage.notFound}</div></>;
 
   const isOwn = user?.id === creator.user_id;
   // Presets and the minimum come from the creator's own donation settings;
@@ -97,7 +100,7 @@ export default function CreatorPageView() {
   const accentColor = creator.page_color || "#2563EB";
 
   const handleDonate = async () => {
-    if (!user) { window.location.href = "/login"; return; }
+    if (!user) { router.push("/login"); return; }
     setDonating(true); setDonateError("");
     try {
       await api.post("/checkout/donation", {
@@ -107,8 +110,8 @@ export default function CreatorPageView() {
       setDonateSuccess(true); setDonateAmount(""); setDonateMsg("");
       qc.invalidateQueries({ queryKey: ["creator", slug] });
     } catch (err: any) {
-      const msg = err.response?.data?.error || "Gagal";
-      setDonateError(msg.includes("Credit") || msg.includes("insufficient") ? "Credit tidak cukup. Top-up dulu." : msg);
+      const msg = err.response?.data?.error || t.common.error;
+      setDonateError(msg.includes("Credit") || msg.includes("insufficient") ? t.product.topupRequired : msg);
     } finally { setDonating(false); }
   };
 
@@ -165,11 +168,11 @@ export default function CreatorPageView() {
                 <div className="flex items-center gap-3 shrink-0">
                   <div className="text-center">
                     <p className="text-lg font-black" style={{ color: accentColor }}>{creator.follower_count}</p>
-                    <p className="text-[10px] text-gray-400 uppercase tracking-wider">Followers</p>
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wider">{t.creatorPage.followersCount}</p>
                   </div>
                   <div className="text-center">
                     <p className="text-lg font-black">{posts?.length || 0}</p>
-                    <p className="text-[10px] text-gray-400 uppercase tracking-wider">Posts</p>
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wider">{t.creatorPage.postsCount}</p>
                   </div>
                 </div>
               </div>
@@ -204,35 +207,35 @@ export default function CreatorPageView() {
               <div className="mt-5 flex items-center justify-center sm:justify-start gap-2 flex-wrap">
                 {isOwn ? (
                   <>
-                    <Link href="/dashboard/profile"><Button size="sm" variant="outline" className="rounded-2xl">Edit Profil</Button></Link>
+                    <Link href="/dashboard/profile"><Button size="sm" variant="outline" className="rounded-2xl">{t.creatorPage.editProfile}</Button></Link>
                     <Button size="sm" variant="ghost" className="rounded-2xl" onClick={() => {
                       const url = window.location.href + "?ref=" + creator.username;
-                      navigator.share ? navigator.share({ title: creator.display_name, url }) : navigator.clipboard.writeText(url).then(() => toast.success("Link disalin!"));
-                    }}><Share2 className="h-4 w-4 mr-1" /> Bagikan</Button>
+                      navigator.share ? navigator.share({ title: creator.display_name, url }) : navigator.clipboard.writeText(url).then(() => toast.success(t.common.copied));
+                    }}><Share2 className="h-4 w-4 mr-1" /> {t.creatorPage.shareProfile}</Button>
                   </>
                 ) : user ? (
                   <>
                     <Button size="sm" onClick={() => toggleFollow.mutate()} className="rounded-2xl"
                       style={!followStatus ? { backgroundColor: accentColor, borderColor: accentColor, color: 'white' } : undefined}
                       variant={followStatus ? "outline" : "default"}>
-                      {followStatus ? "Unfollow" : "Follow"}
+                      {followStatus ? t.creatorPage.unfollowButton : t.creatorPage.followButton}
                     </Button>
                     {/* A creator who turned donations off must not be shown a
                         donate button that would only fail on submit. */}
                     {donationsOpen && (
                       <Button size="sm" variant="secondary" className="rounded-2xl" onClick={() => setShowDonate(true)}>
-                        <Heart className="h-4 w-4 mr-1" /> Donasi
+                        <Heart className="h-4 w-4 mr-1" /> {t.creatorPage.donateButton}
                       </Button>
                     )}
                     <Link href={`/chat?creator=${creator.user_id}&price=${creator.chat_price_idr || 0}`}>
                       <Button size="sm" variant="outline" className="rounded-2xl">
-                        <MessageCircle className="h-4 w-4 mr-1" /> Chat {(creator.chat_price_idr ?? 0) > 0 ? `(${(creator.chat_price_idr ?? 0) / 1000}C)` : ""}
+                        <MessageCircle className="h-4 w-4 mr-1" /> {t.creatorPage.chatButton} {(creator.chat_price_idr ?? 0) > 0 ? `(${(creator.chat_price_idr ?? 0) / 1000}C)` : ""}
                       </Button>
                     </Link>
                     <ReportButton targetType="user" targetId={creator.user_id} />
                   </>
                 ) : (
-                  <Link href="/login"><Button size="sm" className="rounded-2xl" style={{ backgroundColor: accentColor, color: 'white' }}>Follow</Button></Link>
+                  <Link href="/login"><Button size="sm" className="rounded-2xl" style={{ backgroundColor: accentColor, color: 'white' }}>{t.creatorPage.followButton}</Button></Link>
                 )}
               </div>
             </CardContent>
@@ -269,7 +272,7 @@ export default function CreatorPageView() {
               <CardContent className="p-4">
                 <div className="flex items-center gap-2 mb-3">
                   <div className="h-8 w-8 rounded-xl bg-accent-50 dark:bg-accent-900/20 flex items-center justify-center"><Trophy className="h-4 w-4 text-accent-600" /></div>
-                  <p className="text-sm font-bold">Top Supporter</p>
+                  <p className="text-sm font-bold">{t.creatorPage.topSupporterTitle}</p>
                 </div>
                 <div className="space-y-2">
                   {topSupporters.slice(0, 5).map((s: any, i: number) => (
@@ -292,25 +295,25 @@ export default function CreatorPageView() {
               <CardContent className="p-4">
                 <div className="flex items-center gap-2 mb-3">
                   <div className="h-8 w-8 rounded-xl bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center"><Star className="h-4 w-4 text-purple-500" /></div>
-                  <p className="text-sm font-bold">Jadi Member</p>
+                  <p className="text-sm font-bold">{t.creatorPage.becomeMemberTitle}</p>
                 </div>
                 <div className="grid sm:grid-cols-2 gap-2">
-                  {membershipTiers.map((t: any) => (
-                    <div key={t.id} className="flex items-center justify-between p-3 rounded-2xl bg-primary-50/50 dark:bg-navy-800 border border-primary-100 dark:border-primary-900/30">
+                  {membershipTiers.map((tier: any) => (
+                    <div key={tier.id} className="flex items-center justify-between p-3 rounded-2xl bg-primary-50/50 dark:bg-navy-800 border border-primary-100 dark:border-primary-900/30">
                       <div>
-                        <p className="font-semibold text-sm">{t.name}</p>
-                        <p className="text-[10px] text-gray-400">{t.price_credits} Credit/bulan</p>
-                        {t.perks && <p className="text-[10px] text-gray-500 mt-0.5 line-clamp-1">{t.perks}</p>}
+                        <p className="font-semibold text-sm">{tier.name}</p>
+                        <p className="text-[10px] text-gray-400">{tier.price_credits} {t.creatorPage.perMonth}</p>
+                        {tier.perks && <p className="text-[10px] text-gray-500 mt-0.5 line-clamp-1">{tier.perks}</p>}
                       </div>
                       {user && !isOwn && (
-                        subscribedTierID === t.id ? (
-                          <Badge variant="success" className="text-[10px]">✓ Member</Badge>
+                        subscribedTierID === tier.id ? (
+                          <Badge variant="success" className="text-[10px]">{t.creatorPage.memberBadge}</Badge>
                         ) : (
-                          <Button size="sm" variant="outline" className="rounded-xl text-xs" disabled={subscribing === t.id} onClick={async () => {
-                            setSubscribing(t.id);
-                            try { await api.post("/memberships/subscribe", { tier_id: t.id }); toast.success("Berhasil subscribe! ⭐"); qc.invalidateQueries({ queryKey: ["my-memberships"] }); } catch (e: any) { toast.error(e.response?.data?.error || "Gagal"); }
+                          <Button size="sm" variant="outline" className="rounded-xl text-xs" disabled={subscribing === tier.id} onClick={async () => {
+                            setSubscribing(tier.id);
+                            try { await api.post("/memberships/subscribe", { tier_id: tier.id }); toast.success(t.common.success); qc.invalidateQueries({ queryKey: ["my-memberships"] }); } catch (e: any) { toast.error(e.response?.data?.error || t.common.error); }
                             finally { setSubscribing(""); }
-                          }}>{subscribing === t.id ? "..." : `${t.price_credits}C`}</Button>
+                          }}>{subscribing === tier.id ? "..." : `${tier.price_credits}C`}</Button>
                         )
                       )}
                     </div>
@@ -325,8 +328,8 @@ export default function CreatorPageView() {
         <div className="mt-6 sm:mt-8 mx-2 sm:mx-0">
           <Tabs defaultValue="posts">
             <TabsList>
-              <TabsTrigger value="posts" count={posts?.length}><FileText className="h-4 w-4 mr-1" /> Post</TabsTrigger>
-              <TabsTrigger value="catalog" count={products?.length}><Package className="h-4 w-4 mr-1" /> Katalog</TabsTrigger>
+              <TabsTrigger value="posts" count={posts?.length}><FileText className="h-4 w-4 mr-1" /> {t.creatorPage.tabPosts}</TabsTrigger>
+              <TabsTrigger value="catalog" count={products?.length}><Package className="h-4 w-4 mr-1" /> {t.creatorPage.tabProducts}</TabsTrigger>
             </TabsList>
 
             <TabsContent value="posts" className="mt-5">
@@ -335,8 +338,8 @@ export default function CreatorPageView() {
                 {posts?.length === 0 && (
                   <div className="text-center py-16">
                     <div className="h-14 w-14 rounded-2xl bg-primary-50 dark:bg-primary-900/20 flex items-center justify-center mx-auto mb-3"><FileText className="h-7 w-7 text-primary" /></div>
-                    <p className="font-semibold">Belum ada post</p>
-                    <p className="text-xs text-gray-400 mt-1">Follow untuk update terbaru</p>
+                    <p className="font-semibold">{t.creatorPage.emptyPostsTitle}</p>
+                    <p className="text-xs text-gray-400 mt-1">{t.creatorPage.emptyPostsDesc}</p>
                   </div>
                 )}
               </div>
@@ -360,7 +363,7 @@ export default function CreatorPageView() {
                           <span className="text-sm font-black" style={{ color: accentColor }}>{formatCredit(p.price_idr)}</span>
                           <Badge variant="outline" className="text-[10px]">{p.type}</Badge>
                         </div>
-                        <p className="text-[10px] text-gray-400 mt-1">{p.sales_count} terjual</p>
+                        <p className="text-[10px] text-gray-400 mt-1">{p.sales_count} {t.product.salesCount}</p>
                       </CardContent>
                     </Card>
                   </Link>
@@ -368,7 +371,8 @@ export default function CreatorPageView() {
                 {products?.length === 0 && (
                   <div className="text-center py-16 col-span-full">
                     <div className="h-14 w-14 rounded-2xl bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center mx-auto mb-3"><Package className="h-7 w-7 text-purple-500" /></div>
-                    <p className="font-semibold">Belum ada produk</p>
+                    <p className="font-semibold">{t.creatorPage.emptyProductsTitle}</p>
+                    <p className="text-xs text-gray-400 mt-1">{t.creatorPage.emptyProductsDesc}</p>
                   </div>
                 )}
               </div>
@@ -383,9 +387,9 @@ export default function CreatorPageView() {
         <>
           <button
             onClick={() => setShowDonate(!showDonate)}
-            className="yp-fixed-cta fixed bottom-20 sm:bottom-6 right-3 sm:right-6 z-50 h-14 w-14 rounded-2xl text-white shadow-lg shadow-primary/30 flex items-center justify-center text-xl transition-all hover:scale-105 active:scale-95"
+            className="yp-fixed-cta fixed bottom-20 sm:bottom-6 right-3 sm:right-6 z-50 h-14 w-14 rounded-2xl text-white shadow-lg shadow-primary/30 flex items-center justify-center text-xl transition-all hover:scale-105 active:scale-95 cursor-pointer"
             style={{ backgroundColor: accentColor }}
-            title="Kirim Donasi"
+            title={t.creatorPage.donateButton}
           >
             <Heart className="h-6 w-6" />
           </button>
@@ -401,17 +405,17 @@ export default function CreatorPageView() {
                         <div className="h-8 w-8 rounded-xl flex items-center justify-center" style={{ backgroundColor: `${accentColor}15` }}>
                           <Heart className="h-4 w-4" style={{ color: accentColor }} />
                         </div>
-                        <p className="font-bold">Dukung {creator.display_name}</p>
+                        <p className="font-bold">{t.creatorPage.supportCreator} {creator.display_name}</p>
                       </div>
-                      <button onClick={() => setShowDonate(false)} className="h-8 w-8 rounded-xl bg-primary-50 dark:bg-navy-800 flex items-center justify-center text-gray-400 hover:text-gray-600" aria-label="Tutup"><X className="h-4 w-4" /></button>
+                      <button onClick={() => setShowDonate(false)} className="h-8 w-8 rounded-xl bg-primary-50 dark:bg-navy-800 flex items-center justify-center text-gray-400 hover:text-gray-600" aria-label={t.common.close}><X className="h-4 w-4" /></button>
                     </div>
 
                     {donateSuccess ? (
                       <div className="text-center py-4">
                         <PartyPopper className="mx-auto mb-2 h-10 w-10 text-primary" aria-hidden="true" />
-                        <p className="font-bold text-green-600">Donasi terkirim!</p>
-                        <p className="text-xs text-gray-400 mt-1">Terima kasih atas dukunganmu</p>
-                        <Button size="sm" className="mt-4 rounded-xl" onClick={() => setDonateSuccess(false)}>Donasi Lagi</Button>
+                        <p className="font-bold text-green-600">{t.creatorPage.donateSuccessTitle}</p>
+                        <p className="text-xs text-gray-400 mt-1">{t.creatorPage.donateSuccessDesc}</p>
+                        <Button size="sm" className="mt-4 rounded-xl" onClick={() => setDonateSuccess(false)}>{t.creatorPage.donateAgain}</Button>
                       </div>
                     ) : (
                       <>
@@ -424,16 +428,16 @@ export default function CreatorPageView() {
                             </button>
                           ))}
                         </div>
-                        <Input type="number" min={minDonateCredits} placeholder={`Nominal lain (min ${minDonateCredits})`} value={donateAmount} onChange={(e) => setDonateAmount(e.target.value)} />
-                        <Input placeholder="Pesan (opsional)" value={donateMsg} onChange={(e) => setDonateMsg(e.target.value)} maxLength={500} />
+                        <Input type="number" min={minDonateCredits} placeholder={interpolate(t.creatorPage.customAmountPlaceholder, { min: minDonateCredits })} value={donateAmount} onChange={(e) => setDonateAmount(e.target.value)} />
+                        <Input placeholder={t.creatorPage.messagePlaceholder} value={donateMsg} onChange={(e) => setDonateMsg(e.target.value)} maxLength={500} />
                         {donateError && <p className="text-xs text-red-500">{donateError}</p>}
                         {donateError.includes("Top-up") && <Link href="/wallet/topup" className="text-xs text-primary hover:underline">Top-up Credit →</Link>}
                         <Button className="w-full h-12 rounded-2xl font-bold" onClick={handleDonate}
                           disabled={donating || !donateAmount || parseInt(donateAmount) < minDonateCredits}
                           style={{ backgroundColor: accentColor }}>
-                          {donating ? "Mengirim..." : `Kirim ${donateAmount ? donateAmount + " Credit" : ""}`}
+                          {donating ? t.common.processing : `${t.creatorPage.sendDonationButton} ${donateAmount ? donateAmount + " Credit" : ""}`}
                         </Button>
-                        <p className="text-[10px] text-gray-400 text-center">Dibayar dengan Credit dari wallet kamu</p>
+                        <p className="text-[10px] text-gray-400 text-center">{t.creatorPage.paidByCredits}</p>
                       </>
                     )}
                   </CardContent>

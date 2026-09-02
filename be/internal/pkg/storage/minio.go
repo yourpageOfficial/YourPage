@@ -85,15 +85,9 @@ func (s *minioStorage) GetPresignedURL(ctx context.Context, bucket, storedName s
 	if err != nil {
 		return "", fmt.Errorf("minio: presign: %w", err)
 	}
-	// Rewrite internal minio URL to relative /storage/ path for browser access
-	result := u.String()
-	// Replace http://minio:9000/ with /storage/
-	if strings.Contains(result, s.endpoint) {
-		result = "/storage/" + strings.SplitN(result, "/"+bucket+"/", 2)[1]
-		// Append query params (signature etc)
-		if u.RawQuery != "" {
-			result = "/storage/" + bucket + "/" + objectName + "?" + u.RawQuery
-		}
+	result := fmt.Sprintf("/storage/%s/%s", bucket, objectName)
+	if u.RawQuery != "" {
+		result += "?" + u.RawQuery
 	}
 	return result, nil
 }

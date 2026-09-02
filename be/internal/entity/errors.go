@@ -16,4 +16,5 @@ var (
 	ErrMinWithdrawal    = errors.New("amount below minimum withdrawal")
 	ErrFileTooLarge     = errors.New("file size exceeds limit")
 	ErrKYCRequired      = errors.New("KYC verification required")
+	ErrPasswordRecentlyUsed = errors.New("kata sandi telah digunakan sebelumnya")
 )

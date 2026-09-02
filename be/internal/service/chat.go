@@ -127,8 +127,9 @@ func (s *chatService) SendMessage(ctx context.Context, senderID uuid.UUID, req S
 		feeIDR := creatorProfile.ChatPriceIDR * int64(feePct) / 100
 		netIDR := creatorProfile.ChatPriceIDR - feeIDR
 		now := time.Now()
+		paymentID := uuid.New()
 		payment := &entity.Payment{
-			ID: uuid.New(), ExternalID: fmt.Sprintf("CHAT-%s", uuid.New()),
+			ID: paymentID, ExternalID: fmt.Sprintf("CHAT-%s", paymentID),
 			Provider: entity.PaymentProviderCredits, Usecase: entity.PaymentUsecaseChat,
 			ReferenceID: conv.ID, PayerID: &senderID,
 			AmountIDR: creatorProfile.ChatPriceIDR, FeeIDR: feeIDR, NetAmountIDR: netIDR,
@@ -137,6 +138,20 @@ func (s *chatService) SendMessage(ctx context.Context, senderID uuid.UUID, req S
 		if err := s.paymentRepo.Create(ctx, payment); err != nil {
 			return nil, fmt.Errorf("chat: create payment record: %w", err)
 		}
+
+		// Record spend and earning transactions
+		_ = s.walletRepo.CreateTransaction(ctx, &entity.CreditTransaction{
+			ID: uuid.New(), UserID: senderID, Type: entity.CreditTransactionSpend,
+			Credits: chatCredits, IDRAmount: creatorProfile.ChatPriceIDR,
+			PaymentID: &paymentID, ReferenceID: &conv.ID,
+			Description: fmt.Sprintf("Kirim chat ke @%s", creatorProfile.PageSlug),
+		})
+		_ = s.walletRepo.CreateTransaction(ctx, &entity.CreditTransaction{
+			ID: uuid.New(), UserID: req.CreatorID, Type: entity.CreditTransactionEarning,
+			Credits: netCredits, IDRAmount: netIDR,
+			PaymentID: &paymentID, ReferenceID: &conv.ID,
+			Description: fmt.Sprintf("Pendapatan chat dari %s", sender.DisplayName),
+		})
 	}
 
 	msg := &entity.ChatMessage{

@@ -42,6 +42,7 @@ export default function AdminPayments() {
           const res = await api.get("/admin/export/payments", { responseType: "blob" });
           const url = URL.createObjectURL(res.data);
           const a = document.createElement("a"); a.href = url; a.download = "payments.csv"; a.click();
+          URL.revokeObjectURL(url);
         }}>📥 Export CSV</Button>
       </div>
       <AdminList

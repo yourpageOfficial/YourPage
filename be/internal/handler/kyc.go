@@ -110,9 +110,11 @@ func (h *KYCHandler) upload(c *gin.Context, bucket string) {
 	}
 
 	// Track storage for creators
-	uid := getUserID(c)
-	if profile, err := h.userRepo.FindCreatorByUserID(c.Request.Context(), uid); err == nil && profile != nil {
-		_ = h.userRepo.IncrementCreatorStorage(c.Request.Context(), profile.ID, header.Size)
+	if uploadType != "kyc" {
+		uid := getUserID(c)
+		if profile, err := h.userRepo.FindCreatorByUserID(c.Request.Context(), uid); err == nil && profile != nil {
+			_ = h.userRepo.IncrementCreatorStorage(c.Request.Context(), profile.ID, header.Size)
+		}
 	}
 
 	response.OK(c, gin.H{"url": url})

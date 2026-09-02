@@ -138,6 +138,9 @@ func resetKey(token string) string   { return resetKeyPrefix + token }
 
 // invalidateAllRefreshTokens deletes all refresh tokens for a user using per-user set.
 func (s *authService) invalidateAllRefreshTokens(ctx context.Context, userID uuid.UUID) {
+	if s.rdb == nil {
+		return
+	}
 	tokens, err := s.rdb.SMembers(ctx, userRefreshSet(userID)).Result()
 	if err != nil { return }
 	for _, t := range tokens {
@@ -198,6 +201,9 @@ func (s *authService) Register(ctx context.Context, req RegisterRequest) (*Regis
 		return nil, fmt.Errorf("register: create user: %w", err)
 	}
 
+	// Record initial password in history
+	_ = s.userRepo.AddPasswordHistory(ctx, user.ID, user.PasswordHash)
+
 	if req.Role == entity.RoleCreator {
 		profile := &entity.CreatorProfile{
 			ID:       uuid.New(),
@@ -218,17 +224,29 @@ func (s *authService) Register(ctx context.Context, req RegisterRequest) (*Regis
 			s.userRepo.Update(ctx, user)
 			s.walletRepo.FindOrCreateWallet(ctx, ref.UserID)
 			s.walletRepo.AddCredits(ctx, ref.UserID, int64(ref.RewardCredits))
+			_ = s.walletRepo.CreateTransaction(ctx, &entity.CreditTransaction{
+				ID: uuid.New(), UserID: ref.UserID, Type: entity.CreditTransactionEarning,
+				Credits: int64(ref.RewardCredits), IDRAmount: int64(ref.RewardCredits) * 1000,
+				Description: fmt.Sprintf("Bonus referral dari pendaftaran %s", user.DisplayName),
+			})
 			s.walletRepo.FindOrCreateWallet(ctx, user.ID)
 			s.walletRepo.AddCredits(ctx, user.ID, int64(ref.RewardCredits))
+			_ = s.walletRepo.CreateTransaction(ctx, &entity.CreditTransaction{
+				ID: uuid.New(), UserID: user.ID, Type: entity.CreditTransactionEarning,
+				Credits: int64(ref.RewardCredits), IDRAmount: int64(ref.RewardCredits) * 1000,
+				Description: "Bonus selamat datang referral",
+			})
 			s.userRepo.IncrementReferralUsed(ctx, ref.ID)
 		}
 	}
 
 	// Send welcome + verification email
 	go s.mailer.SendWelcome(context.Background(), user.Email, user.DisplayName)
-	verifyToken, _ := randomHex(32)
-	s.rdb.Set(ctx, "verify:"+verifyToken, user.Email, 24*time.Hour)
-	go s.mailer.SendEmailVerification(context.Background(), user.Email, verifyToken)
+	if s.rdb != nil {
+		verifyToken, _ := randomHex(32)
+		s.rdb.Set(ctx, "verify:"+verifyToken, user.Email, 24*time.Hour)
+		go s.mailer.SendEmailVerification(context.Background(), user.Email, verifyToken)
+	}
 
 	return &RegisterResponse{
 		ID:          user.ID,
@@ -421,10 +439,26 @@ func (s *authService) ResetPassword(ctx context.Context, token, newPassword stri
 		return fmt.Errorf("reset_password: find user: %w", err)
 	}
 
+	// Check if new password matches current password
+	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(newPassword)); err == nil {
+		return entity.ErrPasswordRecentlyUsed
+	}
+
+	// Check against last 5 password histories
+	histories, _ := s.userRepo.GetPasswordHistories(ctx, user.ID, 5)
+	for _, h := range histories {
+		if err := bcrypt.CompareHashAndPassword([]byte(h.PasswordHash), []byte(newPassword)); err == nil {
+			return entity.ErrPasswordRecentlyUsed
+		}
+	}
+
 	hash, err := bcrypt.GenerateFromPassword([]byte(newPassword), 12)
 	if err != nil {
 		return fmt.Errorf("reset_password: hash password: %w", err)
 	}
+
+	// Save old password to history
+	_ = s.userRepo.AddPasswordHistory(ctx, user.ID, user.PasswordHash)
 
 	user.PasswordHash = string(hash)
 	if err := s.userRepo.Update(ctx, user); err != nil {
@@ -433,7 +467,7 @@ func (s *authService) ResetPassword(ctx context.Context, token, newPassword stri
 
 	_ = s.rdb.Del(ctx, resetKey(token))
 
-	// H-06: Invalidate all existing refresh tokens for this user
+	// Invalidate all existing refresh tokens for this user
 	s.invalidateAllRefreshTokens(ctx, user.ID)
 
 	return nil
@@ -524,7 +558,7 @@ func (s *authService) UpdateProfile(ctx context.Context, userID uuid.UUID, displ
 	return nil
 }
 
-// ChangePassword verifies old password and sets new one.
+// ChangePassword verifies old password and sets new one with password history check.
 func (s *authService) ChangePassword(ctx context.Context, userID uuid.UUID, oldPassword, newPassword string) error {
 	user, err := s.userRepo.FindByID(ctx, userID)
 	if err != nil {
@@ -533,14 +567,32 @@ func (s *authService) ChangePassword(ctx context.Context, userID uuid.UUID, oldP
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(oldPassword)); err != nil {
 		return entity.ErrUnauthorized
 	}
+
+	// Check if new password matches current password
+	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(newPassword)); err == nil {
+		return entity.ErrPasswordRecentlyUsed
+	}
+
+	// Check against last 5 password histories
+	histories, _ := s.userRepo.GetPasswordHistories(ctx, userID, 5)
+	for _, h := range histories {
+		if err := bcrypt.CompareHashAndPassword([]byte(h.PasswordHash), []byte(newPassword)); err == nil {
+			return entity.ErrPasswordRecentlyUsed
+		}
+	}
+
 	hash, err := bcrypt.GenerateFromPassword([]byte(newPassword), 12)
 	if err != nil {
 		return fmt.Errorf("change_password: hash: %w", err)
 	}
+
+	// Save old password to history
+	_ = s.userRepo.AddPasswordHistory(ctx, userID, user.PasswordHash)
+
 	user.PasswordHash = string(hash)
 	if err := s.userRepo.Update(ctx, user); err != nil { return err }
 
-	// 1.17: Invalidate all refresh tokens
+	// Invalidate all refresh tokens
 	s.invalidateAllRefreshTokens(ctx, userID)
 	return nil
 }

@@ -18,9 +18,11 @@ import { MessageCircle, Send, ArrowLeft, Coins, Sparkles } from "lucide-react";
 import { toast } from "@/lib/toast";
 import { motion } from "framer-motion";
 import { staggerChildren, staggerItem } from "@/lib/motion-variants";
+import { useTranslation } from "@/lib/internationalization";
 
 export default function ChatContent() {
   const { user } = useAuth();
+  const { t, locale, interpolate } = useTranslation();
   const qc = useQueryClient();
   const searchParams = useSearchParams();
   const [activeConv, setActiveConv] = useState<any>(null);
@@ -58,13 +60,13 @@ export default function ChatContent() {
       content: message,
     }),
     onSuccess: () => { setMessage(""); qc.invalidateQueries({ queryKey: ["chat-messages", activeConv?.id] }); qc.invalidateQueries({ queryKey: ["chat-conversations"] }); },
-    onError: (e: any) => toast.error(e.response?.data?.error || "Gagal kirim"),
+    onError: (e: any) => toast.error(e.response?.data?.error || t.chat.sendFailed),
   });
 
   const startChat = useMutation({
     mutationFn: () => api.post("/chat", { creator_id: initCreator, content: message }),
     onSuccess: () => { setMessage(""); qc.invalidateQueries({ queryKey: ["chat-conversations"] }); },
-    onError: (e: any) => toast.error(e.response?.data?.error || "Gagal kirim"),
+    onError: (e: any) => toast.error(e.response?.data?.error || t.chat.sendFailed),
   });
 
   const getOtherUser = (conv: any) => !user ? null : conv.creator_id === user.id ? conv.supporter : conv.creator;
@@ -79,22 +81,23 @@ export default function ChatContent() {
             <div className="h-14 w-14 rounded-2xl bg-primary-50 dark:bg-primary-900/20 flex items-center justify-center mx-auto mb-3">
               <MessageCircle className="h-7 w-7 text-primary" />
             </div>
-            <h1 className="text-lg font-display font-black tracking-tight">Chat Baru</h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Kirim pesan pertama</p>
+            <h1 className="text-lg font-display font-black tracking-tight">{t.chat.newChatTitle}</h1>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{t.chat.newChatSubtitle}</p>
           </div>
           <Card>
             <CardContent className="p-5 space-y-3">
               {chatPrice > 0 && (
                 <div className="flex items-center gap-2 bg-accent/5 border border-accent/20 rounded-xl px-3 py-2">
                   <Coins className="h-4 w-4 text-accent shrink-0" />
-                  <p className="text-xs text-accent-700 dark:text-accent-300">Setiap pesan dikenakan <span className="font-bold">{chatPrice / 1000} Credit</span></p>
+                  <p className="text-xs text-accent-700 dark:text-accent-300">{interpolate(t.chat.pricePerMessage, { price: chatPrice / 1000 })}</p>
                 </div>
               )}
-              <Input value={message} onChange={e => setMessage(e.target.value)} placeholder="Tulis pesan..." className="rounded-2xl"
-                onKeyDown={e => { if (e.key === "Enter" && message.trim()) startChat.mutate(); }} />
-              <Button onClick={() => startChat.mutate()} disabled={!message.trim() || startChat.isPending} loading={startChat.isPending} className="w-full">
-                <Send className="mr-2 h-4 w-4" /> Kirim
-              </Button>
+              <form onSubmit={(e) => { e.preventDefault(); if (message.trim()) startChat.mutate(); }} className="space-y-3">
+                <Input value={message} onChange={e => setMessage(e.target.value)} placeholder={t.chat.inputPlaceholder} className="rounded-2xl" />
+                <Button type="submit" disabled={!message.trim() || startChat.isPending} loading={startChat.isPending} className="w-full">
+                  <Send className="mr-2 h-4 w-4" /> {t.chat.sendButton}
+                </Button>
+              </form>
             </CardContent>
           </Card>
         </div>
@@ -110,9 +113,9 @@ export default function ChatContent() {
         <div className={`${activeConv ? "hidden sm:flex" : "flex"} flex-col w-full sm:w-80 sm:min-w-[320px] border-r border-primary-100 dark:border-primary-900/30 bg-white dark:bg-navy-900`}>
           {/* Sidebar header */}
           <div className="px-4 py-4 border-b border-primary-100 dark:border-primary-900/30 shrink-0">
-            <h1 className="text-lg font-display font-black tracking-tight">Chat</h1>
+            <h1 className="text-lg font-display font-black tracking-tight">{t.chat.title}</h1>
             {conversations && conversations.length > 0 && (
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{conversations.length} percakapan</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{interpolate(t.chat.conversationsCount, { count: conversations.length })}</p>
             )}
           </div>
 
@@ -134,8 +137,8 @@ export default function ChatContent() {
                 <div className="h-14 w-14 rounded-2xl bg-primary-50 dark:bg-primary-900/20 flex items-center justify-center mx-auto mb-3">
                   <MessageCircle className="h-7 w-7 text-primary/40" />
                 </div>
-                <p className="font-display font-bold text-sm">Belum ada percakapan</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Kunjungi halaman kreator dan mulai chat</p>
+                <p className="font-display font-bold text-sm">{t.chat.emptyConversationsTitle}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t.chat.emptyConversationsDesc}</p>
               </div>
             )}
 
@@ -166,7 +169,7 @@ export default function ChatContent() {
                           <p className={`text-sm truncate ${unread > 0 ? "font-bold text-primary" : "font-medium"}`}>{other?.display_name}</p>
                           {conv.last_message_at && (
                             <span className="text-[10px] text-gray-400 shrink-0">
-                              {new Date(conv.last_message_at).toLocaleDateString("id-ID", { day: "numeric", month: "short" })}
+                              {new Date(conv.last_message_at).toLocaleDateString(locale === "id" ? "id-ID" : "en-US", { day: "numeric", month: "short" })}
                             </span>
                           )}
                         </div>
@@ -194,8 +197,8 @@ export default function ChatContent() {
                 <div className="h-16 w-16 rounded-3xl bg-primary-50 dark:bg-primary-900/20 flex items-center justify-center mx-auto mb-4">
                   <MessageCircle className="h-8 w-8 text-primary/30" />
                 </div>
-                <p className="font-display font-bold text-gray-400">Pilih percakapan</p>
-                <p className="text-sm text-gray-400 mt-1">Pilih chat dari daftar di samping</p>
+                <p className="font-display font-bold text-gray-400">{t.chat.selectConversationTitle}</p>
+                <p className="text-sm text-gray-400 mt-1">{t.chat.selectConversationDesc}</p>
               </div>
             </div>
           ) : (
@@ -233,7 +236,7 @@ export default function ChatContent() {
                     <div className="h-12 w-12 rounded-2xl bg-primary-50 dark:bg-primary-900/20 flex items-center justify-center mx-auto mb-3">
                       <Sparkles className="h-6 w-6 text-primary/40" />
                     </div>
-                    <p className="text-sm text-gray-400">Mulai percakapan...</p>
+                    <p className="text-sm text-gray-400">{t.chat.startConversationPrompt}</p>
                   </div>
                 )}
                 {messages?.map((m: any) => {
@@ -250,11 +253,11 @@ export default function ChatContent() {
                         <div className="flex items-center gap-1.5 mt-1">
                           {m.is_paid && (
                             <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${isMe ? "bg-white/20 text-white/80" : "bg-accent/10 text-accent"}`}>
-                              <Coins className="h-2.5 w-2.5 inline mr-0.5" />Paid
+                              <Coins className="h-2.5 w-2.5 inline mr-0.5" />{t.chat.paidBadge}
                             </span>
                           )}
                           <span className={`text-[10px] ${isMe ? "text-white/50" : "text-gray-400"}`}>
-                            {new Date(m.created_at).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}
+                            {new Date(m.created_at).toLocaleTimeString(locale === "id" ? "id-ID" : "en-US", { hour: "2-digit", minute: "2-digit" })}
                           </span>
                         </div>
                       </div>
@@ -266,13 +269,12 @@ export default function ChatContent() {
 
               {/* Input */}
               <div className="p-3 border-t border-primary-100 dark:border-primary-900/30 shrink-0">
-                <div className="flex gap-2">
-                  <Input value={message} onChange={e => setMessage(e.target.value)} placeholder="Tulis pesan..." className="flex-1 rounded-2xl"
-                    onKeyDown={e => { if (e.key === "Enter" && message.trim()) send.mutate(); }} />
-                  <Button size="icon" onClick={() => send.mutate()} disabled={!message.trim() || send.isPending} className="rounded-2xl shrink-0">
+                <form onSubmit={(e) => { e.preventDefault(); if (message.trim()) send.mutate(); }} className="flex gap-2">
+                  <Input value={message} onChange={e => setMessage(e.target.value)} placeholder={t.chat.inputPlaceholder} className="flex-1 rounded-2xl" />
+                  <Button type="submit" size="icon" disabled={!message.trim() || send.isPending} className="rounded-2xl shrink-0" aria-label={t.chat.sendMessageAria}>
                     <Send className="h-4 w-4" />
                   </Button>
-                </div>
+                </form>
               </div>
             </>
           )}

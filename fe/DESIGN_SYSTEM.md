@@ -1,18 +1,21 @@
 # YourPage Design System
 
 ## Colors
-- Primary: `#2563EB` (Blue-600) — CTA, links, active states
-- Secondary: `#FACC15` (Yellow-400) — highlights, badges
-- Background: `white` / `dark:gray-900`
-- Surface: `gray-50` / `dark:gray-800/50`
-- Border: `gray-300` / `dark:gray-600`
+- Primary: `#EC4899` (Pink-500) — CTA, links, active highlights
+- Accent: `#F97316` (Orange-500) — badges, special callouts, tips
+- Secondary: `#7C3AED` (Purple-600) — creator tools, admin highlights
+- Navy: `#0F0D1A` (Dark background) / `#1A1726` (Dark surface)
+- Surface: `gray-50` / `dark:navy-800`
+- Border: `primary-100` / `dark:primary-900/30`
 - Text: `gray-900` / `dark:gray-100`
 - Text muted: `gray-500` / `dark:gray-400`
 
 ## Typography
-- Page title: `text-xl sm:text-2xl font-bold`
-- Section title: `text-base sm:text-lg font-semibold`
-- Body: `text-sm`
+- Font Display: `Outfit` (sans-serif) — headings, titles, logo
+- Font Body: `Rubik` (sans-serif) — body, forms, captions
+- Page title: `text-xl sm:text-2xl font-display font-bold`
+- Section title: `text-base sm:text-lg font-display font-semibold`
+- Body: `text-sm font-sans`
 - Caption: `text-xs text-gray-500 dark:text-gray-400`
 - Label: `text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300`
 

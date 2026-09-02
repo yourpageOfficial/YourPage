@@ -329,3 +329,42 @@ func (r *userRepo) CountCreatorSalesRange(ctx context.Context, userID uuid.UUID,
 		Scan(&result).Error
 	return result.Count, result.Total, err
 }
+
+func (r *userRepo) AddPasswordHistory(ctx context.Context, userID uuid.UUID, passwordHash string) error {
+	history := entity.PasswordHistory{
+		ID:           uuid.New(),
+		UserID:       userID,
+		PasswordHash: passwordHash,
+		CreatedAt:    time.Now(),
+	}
+	if err := r.db.WithContext(ctx).Create(&history).Error; err != nil {
+		return err
+	}
+
+	// Auto-prune beyond 5 most recent records per user
+	var count int64
+	r.db.WithContext(ctx).Model(&entity.PasswordHistory{}).Where("user_id = ?", userID).Count(&count)
+	if count > 5 {
+		subquery := r.db.WithContext(ctx).
+			Model(&entity.PasswordHistory{}).
+			Select("id").
+			Where("user_id = ?", userID).
+			Order("created_at DESC").
+			Limit(5)
+		_ = r.db.WithContext(ctx).
+			Where("user_id = ? AND id NOT IN (?)", userID, subquery).
+			Delete(&entity.PasswordHistory{}).Error
+	}
+	return nil
+}
+
+func (r *userRepo) GetPasswordHistories(ctx context.Context, userID uuid.UUID, limit int) ([]entity.PasswordHistory, error) {
+	var histories []entity.PasswordHistory
+	err := r.db.WithContext(ctx).
+		Where("user_id = ?", userID).
+		Order("created_at DESC").
+		Limit(limit).
+		Find(&histories).Error
+	return histories, err
+}
+

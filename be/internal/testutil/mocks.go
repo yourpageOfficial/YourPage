@@ -348,13 +348,18 @@ func (m *MockWalletRepo) CountPendingTopupsByUser(_ context.Context, _ uuid.UUID
 
 // MockUserRepo implements repository.UserRepository (minimal for payment tests)
 type MockUserRepo struct {
-	mu       sync.Mutex
-	Users    map[uuid.UUID]*entity.User
-	Profiles map[uuid.UUID]*entity.CreatorProfile
+	mu        sync.Mutex
+	Users     map[uuid.UUID]*entity.User
+	Profiles  map[uuid.UUID]*entity.CreatorProfile
+	Histories map[uuid.UUID][]entity.PasswordHistory
 }
 
 func NewMockUserRepo() *MockUserRepo {
-	return &MockUserRepo{Users: map[uuid.UUID]*entity.User{}, Profiles: map[uuid.UUID]*entity.CreatorProfile{}}
+	return &MockUserRepo{
+		Users:     map[uuid.UUID]*entity.User{},
+		Profiles:  map[uuid.UUID]*entity.CreatorProfile{},
+		Histories: map[uuid.UUID][]entity.PasswordHistory{},
+	}
 }
 
 func (m *MockUserRepo) Create(_ context.Context, u *entity.User) error {
@@ -446,6 +451,23 @@ func (m *MockUserRepo) CountCreatorDonationsRange(_ context.Context, _ uuid.UUID
 }
 func (m *MockUserRepo) CountCreatorSalesRange(_ context.Context, _ uuid.UUID, _, _ time.Time) (int64, int64, error) {
 	return 0, 0, nil
+}
+func (m *MockUserRepo) AddPasswordHistory(_ context.Context, userID uuid.UUID, passwordHash string) error {
+	m.mu.Lock(); defer m.mu.Unlock()
+	entry := entity.PasswordHistory{ID: uuid.New(), UserID: userID, PasswordHash: passwordHash, CreatedAt: time.Now()}
+	m.Histories[userID] = append([]entity.PasswordHistory{entry}, m.Histories[userID]...)
+	if len(m.Histories[userID]) > 5 {
+		m.Histories[userID] = m.Histories[userID][:5]
+	}
+	return nil
+}
+func (m *MockUserRepo) GetPasswordHistories(_ context.Context, userID uuid.UUID, limit int) ([]entity.PasswordHistory, error) {
+	m.mu.Lock(); defer m.mu.Unlock()
+	list := m.Histories[userID]
+	if limit > 0 && len(list) > limit {
+		list = list[:limit]
+	}
+	return list, nil
 }
 
 // MockFollowRepo implements repository.FollowRepository

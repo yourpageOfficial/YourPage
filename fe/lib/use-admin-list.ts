@@ -31,7 +31,7 @@ export function useAdminList(key: string, endpoint: string, opts?: { filterParam
     let items = data?.items || [];
 
     // Client-side search across all string fields
-    if (search) {
+    if (debouncedSearch) {
       const q = debouncedSearch.toLowerCase();
       items = items.filter((item: any) =>
         Object.values(item).some((v) => typeof v === "string" && v.toLowerCase().includes(q))
@@ -50,7 +50,7 @@ export function useAdminList(key: string, endpoint: string, opts?: { filterParam
     }
 
     return items;
-  }, [data?.items, search, sortKey, sortDir]);
+  }, [data?.items, debouncedSearch, sortKey, sortDir]);
 
   const toggleSort = (key: string) => {
     if (sortKey === key) setSortDir(d => d === "asc" ? "desc" : "asc");

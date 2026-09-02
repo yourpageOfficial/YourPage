@@ -356,7 +356,7 @@ func (s *paymentService) payWithCredits(
 	// 4. Record spend transaction
 	_ = s.walletRepo.CreateTransaction(ctx, &entity.CreditTransaction{
 		ID: uuid.New(), UserID: buyerID, Type: entity.CreditTransactionSpend,
-		Credits: -creditsNeeded, IDRAmount: amountIDR,
+		Credits: creditsNeeded, IDRAmount: amountIDR,
 		PaymentID: &paymentID, ReferenceID: &referenceID,
 		Description: fmt.Sprintf("Payment for %s", usecase),
 	})
@@ -394,11 +394,11 @@ func (s *paymentService) payWithCredits(
 		// Send emails
 		if creatorUser, err := s.userRepo.FindByID(ctx, creatorID); err == nil {
 			if usecase == entity.PaymentUsecaseDonation {
-				go s.mailer.SendDonationReceived(ctx, creatorUser.Email, "Supporter", netIDR/1000, "")
+				go s.mailer.SendDonationReceived(context.Background(), creatorUser.Email, "Supporter", netIDR/1000, "")
 			}
 		}
 		if buyer, err := s.userRepo.FindByID(ctx, buyerID); err == nil {
-			go s.mailer.SendPurchaseReceipt(ctx, buyer.Email, string(usecase), creditsNeeded)
+			go s.mailer.SendPurchaseReceipt(context.Background(), buyer.Email, string(usecase), creditsNeeded)
 		}
 	}
 

@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatIDR } from "@/lib/utils";
+import { toast } from "@/lib/toast";
 import { Upload, Clock, ArrowLeft, QrCode, CreditCard, CheckCircle2, XCircle, Loader2 } from "lucide-react";
 import type { Wallet, ApiResponse, PaymentMethods, TopupRequest } from "@/lib/types";
 
@@ -280,7 +281,7 @@ function TopupPageInner() {
                   <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Bukti Transfer</label>
                   <input ref={fileRef} type="file" accept="image/*,.pdf" className="hidden" onChange={(e) => {
                     const f = e.target.files?.[0];
-                    if (f && f.size > 10 * 1024 * 1024) { alert("Maksimal 10MB"); return; }
+                    if (f && f.size > 10 * 1024 * 1024) { toast.error("Maksimal 10MB"); return; }
                     setProofFile(f || null);
                   }} />
                   <div
