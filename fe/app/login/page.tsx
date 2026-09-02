@@ -159,12 +159,13 @@ export default function LoginPage() {
                 <form onSubmit={handleCredentials} className="space-y-4">
                   {error && <Alert variant="error">{error}</Alert>}
                   <div>
-                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">Email</label>
-                    <Input ref={emailRef} type="email" placeholder="nama@email.com" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" />
+                    <label htmlFor="login-email" className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">Email</label>
+                    <Input id="login-email" ref={emailRef} type="email" placeholder="nama@email.com" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" />
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">Password</label>
+                    <label htmlFor="login-password" className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">Password</label>
                     <Input
+                      id="login-password"
                       type={showPw ? "text" : "password"}
                       placeholder="Masukkan password"
                       value={password}
@@ -183,35 +184,6 @@ export default function LoginPage() {
                   </div>
                   <Button type="submit" className="w-full h-12" loading={loading}>Masuk</Button>
                 </form>
-
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {error && <Alert variant="error">{error}</Alert>}
-              <div>
-                <label htmlFor="login-email" className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">Email</label>
-                <Input id="login-email" ref={emailRef} type="email" placeholder="nama@email.com" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" />
-              </div>
-              <div>
-                <label htmlFor="login-password" className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">Password</label>
-                <Input
-                  id="login-password"
-                  type={showPw ? "text" : "password"}
-                  placeholder="Masukkan password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  autoComplete="current-password"
-                  iconRight={
-                    <button type="button" onClick={() => setShowPw(!showPw)} className="text-gray-400 hover:text-gray-600" aria-label={showPw ? "Sembunyikan password" : "Tampilkan password"}>
-                      {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </button>
-                  }
-                />
-              </div>
-              <div className="flex justify-end">
-                <Link href="/forgot-password" className="text-sm text-primary hover:underline">Lupa password?</Link>
-              </div>
-              <Button type="submit" className="w-full h-12" loading={loading}>Masuk</Button>
-            </form>
                 <div className="relative my-6">
                   <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200 dark:border-gray-700" /></div>
                   <div className="relative flex justify-center text-sm"><span className="bg-white dark:bg-navy-900 px-2 text-gray-500">atau</span></div>

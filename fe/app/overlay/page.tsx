@@ -84,7 +84,11 @@ function OverlayContent() {
   const showing = useRef(false);
   const seen = useRef<Set<string>>(new Set());
   const configRef = useRef<Config>(DEFAULTS);
-  configRef.current = config;
+  const playNextRef = useRef<() => void>(() => {});
+
+  useEffect(() => {
+    configRef.current = config;
+  }, [config]);
 
   useEffect(() => {
     if (!creatorId) return;
@@ -127,9 +131,13 @@ function OverlayContent() {
     window.setTimeout(() => {
       setCurrent(null);
       // Small gap so consecutive alerts read as separate events.
-      window.setTimeout(playNext, 400);
+      window.setTimeout(() => playNextRef.current(), 400);
     }, cfg.overlay_duration_ms);
   }, [speak]);
+
+  useEffect(() => {
+    playNextRef.current = playNext;
+  }, [playNext]);
 
   const enqueue = useCallback(
     (alert: Alert) => {
