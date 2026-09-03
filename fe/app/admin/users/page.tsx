@@ -16,6 +16,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { formatDate } from "@/lib/utils";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useTranslation } from "@/lib/internationalization";
 
 const roleBadge: Record<string, string> = { admin: "bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400", creator: "bg-primary-100 dark:bg-primary-900/30 text-blue-700 dark:text-blue-400", supporter: "bg-primary-50 dark:bg-navy-800 text-gray-700 dark:text-gray-400" };
 const filters = [{ label: "Creator", value: "creator" }, { label: "Supporter", value: "supporter" }, { label: "Admin", value: "admin" }];
@@ -24,6 +25,7 @@ const sorts = [{ label: "Username", key: "username" }, { label: "Display Name", 
 export default function AdminUsers() {
   const router = useRouter();
   const qc = useQueryClient();
+  const { t, interpolate } = useTranslation();
   const list = useAdminList("admin-users", "/admin/users", { filterParam: "role" });
   const verify = useMutation({ mutationFn: (id: string) => api.post(`/admin/users/${id}/verify`), onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin-users"] }); toast.success("Verification toggled"); } });
   const ban = useMutation({ mutationFn: (id: string) => api.post(`/admin/users/${id}/ban`), onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-users"] }) });
@@ -36,30 +38,30 @@ export default function AdminUsers() {
   const createFinance = useMutation({
     mutationFn: () => api.post("/admin/users/finance", { email: fEmail, password: fPassword, display_name: fName }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin-users"] }); toast.success("Finance user created"); setShowFinance(false); setFEmail(""); setFPassword(""); setFName(""); },
-    onError: (e: any) => toast.error(e.response?.data?.error || "Gagal"),
+    onError: (e: any) => toast.error(e.response?.data?.error || t.adminOverview.settingsSaveFailed),
   });
 
   return (
     <div>
-      <Breadcrumb items={[{ label: "Admin", href: "/admin" }, { label: "Pengguna" }]} className="mb-4" />
+      <Breadcrumb items={[{ label: t.adminOverview.breadcrumbAdmin, href: "/admin" }, { label: t.adminOverview.breadcrumbUsers }]} className="mb-4" />
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-display font-black tracking-tight">Users</h1>
-        <Button size="sm" variant="outline" onClick={() => setShowFinance(!showFinance)}>+ Finance User</Button>
+        <h1 className="text-2xl font-display font-black tracking-tight">{t.adminOverview.userListTitle}</h1>
+        <Button size="sm" variant="outline" onClick={() => setShowFinance(!showFinance)}>+ {t.adminOverview.addUserFinance}</Button>
       </div>
       {showFinance && (
         <Card className="mb-4">
           <CardContent className="p-4 space-y-3">
-            <p className="text-sm font-medium">Tambah Finance User</p>
+            <p className="text-sm font-medium">{t.adminOverview.financeUserTitle}</p>
             <Input placeholder="Email" value={fEmail} onChange={e => setFEmail(e.target.value)} />
             <Input placeholder="Display Name" value={fName} onChange={e => setFName(e.target.value)} />
             <Input type="password" placeholder="Password (min 8)" value={fPassword} onChange={e => setFPassword(e.target.value)} />
-            <Button size="sm" onClick={() => createFinance.mutate()} disabled={!fEmail || !fPassword || fPassword.length < 8 || !fName}>Buat Finance User</Button>
+            <Button size="sm" onClick={() => createFinance.mutate()} disabled={!fEmail || !fPassword || fPassword.length < 8 || !fName}>{t.adminOverview.createFinanceUser}</Button>
           </CardContent>
         </Card>
       )}
       <AdminList
         filters={filters} activeFilter={list.filter} onFilter={list.setFilter}
-        search={list.search} onSearch={list.setSearch} searchPlaceholder="Cari username, nama..."
+        search={list.search} onSearch={list.setSearch} searchPlaceholder={t.adminOverview.searchPlaceholder}
         sortOptions={sorts} sortKey={list.sortKey} sortDir={list.sortDir} onSort={list.toggleSort}
         nextCursor={list.nextCursor} onNext={list.onNext} onPrev={list.onPrev} hasPrev={list.hasPrev}
         count={list.items.length}
@@ -77,21 +79,21 @@ export default function AdminUsers() {
                 </div>
                 <div className="flex items-center gap-2">
                   <Badge className={roleBadge[u.role] || ""}>{u.role}</Badge>
-                  {u.is_banned && <Badge className="bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400">Banned</Badge>}
+                  {u.is_banned && <Badge className="bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400">{t.adminOverview.bannedBadge}</Badge>}
                   {u.role === "creator" && <Link href={`/c/${u.username}`} onClick={e => e.stopPropagation()}><Button size="sm" variant="outline">Page</Button></Link>}
                   {u.role === "creator" && <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); verify.mutate(u.id); }}>✓ Verify</Button>}
                   {u.role === "creator" && <Link href={`/admin/users/${u.id}`} onClick={e => e.stopPropagation()}><Button size="sm" variant="outline">🎯 Promo</Button></Link>}
-                  {u.is_banned ? <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); unban.mutate(u.id); }}>Unban</Button>
+                  {u.is_banned ? <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); unban.mutate(u.id); }}>{t.adminOverview.unbanUser}</Button>
                     : u.role !== "admin" && (
-                      <ConfirmDialog title="Ban User?" message={`Yakin ingin ban ${u.display_name}?`} confirmLabel="Ban" variant="destructive" onConfirm={() => ban.mutate(u.id)}>
-                        {(open) => <Button size="sm" variant="destructive" onClick={(e) => { e.stopPropagation(); open(); }}>Ban</Button>}
+                      <ConfirmDialog title={t.adminOverview.banConfirmTitle} message={interpolate(t.adminOverview.banConfirmMessage, { name: u.display_name })} confirmLabel={t.adminOverview.banUser} variant="destructive" onConfirm={() => ban.mutate(u.id)}>
+                        {(open) => <Button size="sm" variant="destructive" onClick={(e) => { e.stopPropagation(); open(); }}>{t.adminOverview.banUser}</Button>}
                       </ConfirmDialog>
                     )}
                 </div>
               </CardContent>
             </Card>
           ))}
-          {list.items.length === 0 && <p className="text-sm text-gray-500 dark:text-gray-400">Tidak ada user.</p>}
+          {list.items.length === 0 && <p className="text-sm text-gray-500 dark:text-gray-400">{t.adminOverview.noUsers}</p>}
         </div>
       </AdminList>
     </div>

@@ -1,17 +1,19 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "@/lib/internationalization";
 import { Card, CardContent } from "@/components/ui/card";
 import { CheckCircle, XCircle, Activity } from "lucide-react";
 
 export default function StatusPage() {
+  const { t } = useTranslation();
   const { data: services } = useQuery({
     queryKey: ["status"],
     queryFn: async () => {
       const checks = [
-        { name: "Website", url: "/", ok: false },
-        { name: "API", url: "/api/v1/health", ok: false },
-        { name: "Database", url: "/api/v1/tiers", ok: false },
+        { name: t.statusPage.website, url: "/", ok: false },
+        { name: t.statusPage.api, url: "/api/v1/health", ok: false },
+        { name: t.statusPage.database, url: "/api/v1/tiers", ok: false },
       ];
       // HEAD + no-store: we only need the status code. A plain GET pulls the
       // full landing page every 30s, and leaving its streamed body unread
@@ -38,10 +40,10 @@ export default function StatusPage() {
           <div className="h-14 w-14 rounded-2xl bg-primary-50 dark:bg-primary-900/20 flex items-center justify-center mx-auto mb-4">
             <Activity className="h-7 w-7 text-primary" />
           </div>
-          <h1 className="text-2xl font-display font-black tracking-tight">YourPage Status</h1>
+          <h1 className="text-2xl font-display font-black tracking-tight">{t.statusPage.title}</h1>
           <div className={`inline-flex items-center gap-2 mt-4 px-5 py-2.5 rounded-2xl text-sm font-bold ${allOk ? "bg-green-50 dark:bg-green-900/20 text-green-600" : "bg-red-50 dark:bg-red-900/20 text-red-600"}`}>
             {allOk ? <CheckCircle className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
-            {allOk ? "Semua Sistem Normal" : "Ada Gangguan"}
+            {allOk ? t.statusPage.allNormal : t.statusPage.disruption}
           </div>
         </div>
         <div className="space-y-3">
@@ -56,7 +58,7 @@ export default function StatusPage() {
             </Card>
           ))}
         </div>
-        <p className="text-center text-[10px] text-gray-400 mt-8">Auto-refresh setiap 30 detik</p>
+        <p className="text-center text-[10px] text-gray-400 mt-8">{t.statusPage.autoRefresh}</p>
       </div>
     </div>
   );

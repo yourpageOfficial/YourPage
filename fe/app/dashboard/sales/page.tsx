@@ -8,11 +8,15 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatCredit, formatDate } from "@/lib/utils";
 import { Coins, FileText, Heart, Package, Receipt, ShoppingCart, TrendingUp } from "lucide-react";
+import { useTranslation } from "@/lib/internationalization";
 
-const usecaseLabel: Record<string, string> = { post_purchase: "Post", product_purchase: "Produk", donation: "Donasi" };
 const usecaseEmoji: Record<string, string> = { post_purchase: "📝", product_purchase: "📦", donation: "💰" };
 
 export default function DashboardSales() {
+  const { t } = useTranslation();
+
+  const usecaseLabel: Record<string, string> = { post_purchase: t.monetization.postLabel, product_purchase: t.monetization.productLabel, donation: t.monetization.donationLabel };
+
   const { data: sales } = useQuery({
     queryKey: ["creator-sales"],
     queryFn: async () => { const { data } = await api.get("/creator/sales?limit=50"); return (data.data || []) as Sale[]; },
@@ -26,32 +30,32 @@ export default function DashboardSales() {
 
   return (
     <div>
-      <h1 className="text-2xl font-display font-black tracking-tight mb-5">Penjualan</h1>
+      <h1 className="text-2xl font-display font-black tracking-tight mb-5">{t.monetization.salesTitle}</h1>
 
       {/* Summary stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
         <Card className="bg-gradient-to-br from-green-50 to-white dark:from-green-900/10 dark:to-navy-800">
           <CardContent className="p-4 text-center">
             <p className="text-2xl font-black text-green-500">{formatCredit(totalNet)}</p>
-            <p className="text-[10px] text-gray-400 uppercase tracking-wider mt-0.5">Net Revenue</p>
+            <p className="text-[10px] text-gray-400 uppercase tracking-wider mt-0.5">{t.monetization.netRevenue}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
             <div className="h-9 w-9 rounded-xl bg-primary-50 dark:bg-primary-900/20 flex items-center justify-center"><FileText className="h-4 w-4 text-primary" aria-hidden="true" /></div>
-            <div><p className="text-lg font-black">{postSales}</p><p className="text-[10px] text-gray-400">Post</p></div>
+            <div><p className="text-lg font-black">{postSales}</p><p className="text-[10px] text-gray-400">{t.monetization.postLabel}</p></div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
             <div className="h-9 w-9 rounded-xl bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center"><Package className="h-4 w-4 text-purple-500" aria-hidden="true" /></div>
-            <div><p className="text-lg font-black">{productSales}</p><p className="text-[10px] text-gray-400">Produk</p></div>
+            <div><p className="text-lg font-black">{productSales}</p><p className="text-[10px] text-gray-400">{t.monetization.productLabel}</p></div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
             <div className="h-9 w-9 rounded-xl bg-pink-50 dark:bg-pink-900/20 flex items-center justify-center"><Coins className="h-4 w-4 text-pink-500" aria-hidden="true" /></div>
-            <div><p className="text-lg font-black">{donationSales}</p><p className="text-[10px] text-gray-400">Donasi</p></div>
+            <div><p className="text-lg font-black">{donationSales}</p><p className="text-[10px] text-gray-400">{t.monetization.donationLabel}</p></div>
           </CardContent>
         </Card>
       </div>
@@ -63,11 +67,11 @@ export default function DashboardSales() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-primary-100 dark:border-primary-900/30 text-left">
-                  <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Tipe</th>
-                  <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Pembeli</th>
-                  <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider text-right">Gross</th>
-                  <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider text-right">Net</th>
-                  <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider text-right">Tanggal</th>
+                  <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider">{t.monetization.colType}</th>
+                  <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider">{t.monetization.colBuyer}</th>
+                  <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider text-right">{t.monetization.colGross}</th>
+                  <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider text-right">{t.monetization.colNet}</th>
+                  <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider text-right">{t.monetization.colDate}</th>
                 </tr>
               </thead>
               <tbody>
@@ -92,8 +96,8 @@ export default function DashboardSales() {
       ) : (
         <Card><CardContent className="p-12 text-center">
           <div className="h-14 w-14 rounded-2xl bg-green-50 dark:bg-green-900/20 flex items-center justify-center mx-auto mb-3"><TrendingUp className="h-7 w-7 text-green-500" /></div>
-          <p className="font-semibold">Belum ada penjualan</p>
-          <p className="text-sm text-gray-400 mt-1">Buat konten berbayar untuk mulai menghasilkan</p>
+          <p className="font-semibold">{t.monetization.noSalesTitle}</p>
+          <p className="text-sm text-gray-400 mt-1">{t.monetization.noSalesDesc}</p>
         </CardContent></Card>
       )}
     </div>

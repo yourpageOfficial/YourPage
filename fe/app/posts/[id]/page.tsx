@@ -20,12 +20,14 @@ import { Avatar } from "@/components/ui/avatar";
 import { ImageFallback } from "@/components/ui/image-fallback";
 import { toast } from "@/lib/toast";
 import { useAuth } from "@/lib/auth";
+import { useTranslation } from "@/lib/internationalization";
 import type { Post, ApiResponse } from "@/lib/types";
 
 export default function PostDetailPage() {
   const { id } = useParams<{ id: string }>();
   const qc = useQueryClient();
   const { user } = useAuth();
+  const { t, interpolate } = useTranslation();
   const [buying, setBuying] = useState(false);
   const [error, setError] = useState("");
   const [shareOpen, setShareOpen] = useState(false);
@@ -53,7 +55,7 @@ export default function PostDetailPage() {
       refetch();
     } catch (err: any) {
       const msg = err.response?.data?.error || "Gagal";
-      setError(msg.includes("Credit") || msg.includes("insufficient") ? "Credit tidak cukup." : msg);
+      setError(msg.includes("Credit") || msg.includes("insufficient") ? t.post.insufficientCredits : msg);
     } finally { setBuying(false); }
   };
 
@@ -106,7 +108,7 @@ export default function PostDetailPage() {
           {post.access_type === "paid" && (
             <Badge className="bg-secondary-100 text-secondary-600">{formatCredit(post.price || 0)}</Badge>
           )}
-          {post.access_type === "free" && <Badge>Gratis</Badge>}
+          {post.access_type === "free" && <Badge>{t.post.freeBadge}</Badge>}
         </div>
 
         {/* Content */}
@@ -116,7 +118,7 @@ export default function PostDetailPage() {
             {post.excerpt && (
               <div className="mb-6">
                 <p className="text-lg text-gray-600 dark:text-gray-400 italic border-l-4 border-primary pl-4">{post.excerpt}</p>
-                <p className="text-xs text-gray-400 mt-2">👆 Preview — beli untuk baca selengkapnya</p>
+                <p className="text-xs text-gray-400 mt-2">{t.post.previewHint}</p>
               </div>
             )}
             <Card>
@@ -124,25 +126,25 @@ export default function PostDetailPage() {
                 <div className="h-20 w-20 rounded-xl bg-primary-50 dark:bg-navy-800 flex items-center justify-center mx-auto">
                   <Lock className="h-10 w-10 text-gray-400 dark:text-gray-500" />
                 </div>
-                <p className="mt-4 text-lg font-semibold text-gray-700 dark:text-gray-300">Konten Berbayar</p>
-                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Beli sekali, akses selamanya.</p>
+                <p className="mt-4 text-lg font-semibold text-gray-700 dark:text-gray-300">{t.post.paidContent}</p>
+                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{t.post.lockedDesc}</p>
                 {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
                 <div className="mt-6 flex flex-col items-center gap-3">
                   {!user ? (
                     <>
                       <Link href={`/login?redirect=/posts/${id}`}>
-                        <Button size="lg">Masuk untuk Membeli</Button>
+                        <Button size="lg">{t.post.buyForLogin}</Button>
                       </Link>
-                      <p className="text-xs text-gray-400">Belum punya akun? <Link href="/register" className="text-primary hover:underline">Daftar gratis</Link></p>
+                      <p className="text-xs text-gray-400">{t.post.registerFree} <Link href="/register" className="text-primary hover:underline">Daftar gratis</Link></p>
                     </>
                   ) : error.includes("Credit") ? (
                   <>
-                    <Link href="/wallet/topup"><Button size="lg">Top-up Credit Sekarang</Button></Link>
-                    <p className="text-xs text-gray-400">Kamu butuh <span className="font-semibold">{formatCredit(post.price || 0)}</span> untuk membuka konten ini</p>
+                    <Link href="/wallet/topup"><Button size="lg">{t.post.topupNow}</Button></Link>
+                    <p className="text-xs text-gray-400">{interpolate(t.post.needCreditsPost, { price: formatCredit(post.price || 0) })}</p>
                   </>
                 ) : (
                   <Button size="lg" onClick={handleBuy} disabled={buying} loading={buying}>
-                    {buying ? "Memproses..." : `Beli — ${formatCredit(post.price || 0)}`}
+                    {buying ? t.post.processing : interpolate(t.post.buyPost, { price: formatCredit(post.price || 0) })}
                   </Button>
                 )}
               </div>
@@ -176,7 +178,7 @@ export default function PostDetailPage() {
                     )}
                     {m.media_type === "document" && (
                       <div className="bg-primary-50/50 dark:bg-navy-800 rounded-xl p-4 text-center">
-                        <p className="text-gray-500 dark:text-gray-400">📄 Dokumen terlampir</p>
+                        <p className="text-gray-500 dark:text-gray-400">📄 {t.post.attachedDocument}</p>
                       </div>
                     )}
                   </div>
@@ -190,20 +192,20 @@ export default function PostDetailPage() {
         {/* Actions bar */}
         <div className="mt-8 flex items-center gap-6 py-4 border-t border-b">
           <button onClick={handleLike} className={`flex items-center gap-2 text-sm font-medium transition-colors ${liked ? "text-red-500" : "text-gray-500 hover:text-red-500"}`}>
-            <Heart className={`h-5 w-5 ${liked ? "fill-current" : ""}`} /> {likeCount} Suka
+            <Heart className={`h-5 w-5 ${liked ? "fill-current" : ""}`} /> {interpolate(t.post.likeCount, { count: likeCount })}
           </button>
           <button onClick={loadComments} className="flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-primary transition-colors">
-            <MessageCircle className="h-5 w-5" /> {post.comment_count || 0} Komentar
+            <MessageCircle className="h-5 w-5" /> {interpolate(t.post.commentCount, { count: post.comment_count || 0 })}
           </button>
           <div className="relative">
-            <button onClick={() => setShareOpen(!shareOpen)} className="flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-primary transition-colors" aria-label="Bagikan post">
-              <Share2 className="h-5 w-5" /> Bagikan
+            <button onClick={() => setShareOpen(!shareOpen)} className="flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-primary transition-colors" aria-label={t.post.shareAria}>
+              <Share2 className="h-5 w-5" /> {t.post.shareButton}
             </button>
             {shareOpen && (
               <div className="absolute bottom-full left-0 mb-2 bg-white dark:bg-navy-800 shadow-lg rounded-xl p-2 gap-1 z-10 border dark:border-primary-900/30 flex animate-scale-in">
-                <button onClick={() => { window.open(`https://wa.me/?text=${encodeURIComponent(post.title + " " + window.location.href)}`, "_blank"); setShareOpen(false); }} className="px-3 py-1.5 text-xs hover:bg-primary-50 dark:hover:bg-navy-800 rounded">WhatsApp</button>
-                <button onClick={() => { window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(post.title)}&url=${encodeURIComponent(window.location.href)}`, "_blank"); setShareOpen(false); }} className="px-3 py-1.5 text-xs hover:bg-primary-50 dark:hover:bg-navy-800 rounded">Twitter</button>
-                <button onClick={() => { navigator.clipboard.writeText(window.location.href); toast.success("Link disalin!"); setShareOpen(false); }} className="px-3 py-1.5 text-xs hover:bg-primary-50 dark:hover:bg-navy-800 rounded">Copy Link</button>
+                <button onClick={() => { window.open(`https://wa.me/?text=${encodeURIComponent(post.title + " " + window.location.href)}`, "_blank"); setShareOpen(false); }} className="px-3 py-1.5 text-xs hover:bg-primary-50 dark:hover:bg-navy-800 rounded">{t.post.shareWhatsApp}</button>
+                <button onClick={() => { window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(post.title)}&url=${encodeURIComponent(window.location.href)}`, "_blank"); setShareOpen(false); }} className="px-3 py-1.5 text-xs hover:bg-primary-50 dark:hover:bg-navy-800 rounded">{t.post.shareTwitter}</button>
+                <button onClick={() => { navigator.clipboard.writeText(window.location.href); toast.success(t.post.linkCopied); setShareOpen(false); }} className="px-3 py-1.5 text-xs hover:bg-primary-50 dark:hover:bg-navy-800 rounded">{t.post.copyLink}</button>
               </div>
             )}
           </div>

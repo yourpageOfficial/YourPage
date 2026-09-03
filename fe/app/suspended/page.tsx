@@ -9,8 +9,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ShieldX } from "lucide-react";
 import { toast } from "@/lib/toast";
 import api from "@/lib/api";
+import { useTranslation } from "@/lib/internationalization";
 
 export default function SuspendedPage() {
+  const { t } = useTranslation();
   const { user, logout } = useAuth();
   const [appeal, setAppeal] = useState("");
   const [submitted, setSubmitted] = useState(false);
@@ -18,8 +20,8 @@ export default function SuspendedPage() {
 
   const submitAppeal = async () => {
     setLoading(true);
-    try { await api.post("/auth/appeal", { reason: appeal }); setSubmitted(true); toast.success("Banding terkirim"); }
-    catch { toast.error("Gagal mengirim banding"); }
+    try { await api.post("/auth/appeal", { reason: appeal }); setSubmitted(true); toast.success(t.auth.appealSuccess); }
+    catch { toast.error(t.auth.appealFailed); }
     finally { setLoading(false); }
   };
 
@@ -30,19 +32,19 @@ export default function SuspendedPage() {
           <div className="h-16 w-16 rounded-2xl bg-red-50 dark:bg-red-900/20 flex items-center justify-center mx-auto mb-4">
             <ShieldX className="h-8 w-8 text-red-500" />
           </div>
-          <h1 className="text-xl font-display font-black tracking-tight mb-2">Akun Ditangguhkan</h1>
+          <h1 className="text-xl font-display font-black tracking-tight mb-2">{t.auth.suspendedTitle}</h1>
           {user?.ban_reason && <Alert variant="error" className="text-left mt-4">{user.ban_reason}</Alert>}
 
           {submitted ? (
-            <div className="mt-6"><Alert variant="info">Banding sudah dikirim. Kami akan meninjau dalam 1-3 hari kerja.</Alert></div>
+            <div className="mt-6"><Alert variant="info">{t.auth.appealSubmitted}</Alert></div>
           ) : (
             <div className="mt-6 text-left space-y-3">
-              <p className="text-sm text-gray-500 dark:text-gray-400">Jelaskan mengapa akun kamu harus dipulihkan:</p>
-              <Textarea value={appeal} onChange={e => setAppeal(e.target.value)} placeholder="Tulis banding kamu..." maxLength={1000} showCount />
-              <Button className="w-full rounded-xl" onClick={submitAppeal} loading={loading} disabled={!appeal.trim()}>Kirim Banding</Button>
+              <p className="text-sm text-gray-500 dark:text-gray-400">{t.auth.suspendedDesc}</p>
+              <Textarea value={appeal} onChange={e => setAppeal(e.target.value)} placeholder={t.auth.appealPlaceholder} maxLength={1000} showCount />
+              <Button className="w-full rounded-xl" onClick={submitAppeal} loading={loading} disabled={!appeal.trim()}>{t.auth.appealSendButton}</Button>
             </div>
           )}
-          <Button variant="ghost" className="mt-4" onClick={logout}>Keluar</Button>
+          <Button variant="ghost" className="mt-4" onClick={logout}>{t.auth.logoutButton}</Button>
         </CardContent>
       </Card>
     </div>

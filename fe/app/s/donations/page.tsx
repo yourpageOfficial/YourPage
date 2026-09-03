@@ -10,8 +10,10 @@ import { Avatar } from "@/components/ui/avatar";
 import { formatCredit, formatDate } from "@/lib/utils";
 import { Heart, MessageSquare } from "lucide-react";
 import Link from "next/link";
+import { useTranslation } from "@/lib/internationalization";
 
 export default function SupporterDonations() {
+  const { t } = useTranslation();
   const { data, isLoading } = useQuery({
     queryKey: ["donations-sent"],
     queryFn: async () => { const { data } = await api.get("/donations/sent?limit=50"); return (data.data || []) as Donation[]; },
@@ -22,20 +24,20 @@ export default function SupporterDonations() {
 
   return (
     <div>
-      <h1 className="text-2xl font-display font-black tracking-tight mb-5">Donasi Terkirim</h1>
+      <h1 className="text-2xl font-display font-black tracking-tight mb-5">{t.supporterHub.donationsSent}</h1>
 
       {/* Summary */}
       <div className="grid grid-cols-2 gap-3 mb-6">
         <Card className="bg-gradient-to-br from-pink-50 to-white dark:from-pink-900/10 dark:to-navy-800">
           <CardContent className="p-4 text-center">
             <p className="text-2xl font-black text-pink-500">{formatCredit(totalDonated)}</p>
-            <p className="text-[10px] text-gray-400 uppercase tracking-wider mt-0.5">Total Donasi</p>
+            <p className="text-[10px] text-gray-400 uppercase tracking-wider mt-0.5">{t.supporterHub.totalDonations}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4 text-center">
             <p className="text-2xl font-black">{uniqueCreators}</p>
-            <p className="text-[10px] text-gray-400 uppercase tracking-wider mt-0.5">Kreator Didukung</p>
+            <p className="text-[10px] text-gray-400 uppercase tracking-wider mt-0.5">{t.supporterHub.creatorsSupported}</p>
           </CardContent>
         </Card>
       </div>
@@ -43,8 +45,8 @@ export default function SupporterDonations() {
       {data?.length === 0 && (
         <Card><CardContent className="p-12 text-center">
           <div className="h-14 w-14 rounded-2xl bg-pink-50 dark:bg-pink-900/20 flex items-center justify-center mx-auto mb-3"><Heart className="h-7 w-7 text-pink-500" /></div>
-          <p className="font-semibold">Belum pernah mengirim donasi</p>
-          <Link href="/explore" className="text-sm text-primary hover:underline mt-2 inline-block">Dukung kreator favoritmu →</Link>
+          <p className="font-semibold">{t.supporterHub.emptyDonationsSent}</p>
+          <Link href="/explore" className="text-sm text-primary hover:underline mt-2 inline-block">{t.supporterHub.supportCreatorsCta}</Link>
         </CardContent></Card>
       )}
 
@@ -71,7 +73,7 @@ export default function SupporterDonations() {
                   </div>
                 )}
                 <div className="flex items-center justify-between mt-2">
-                  <span className="text-[10px] text-gray-400">Net: {formatCredit(d.net_amount_idr)}</span>
+                  <span className="text-[10px] text-gray-400">{t.supporterHub.net} {formatCredit(d.net_amount_idr)}</span>
                   <Badge className={`${statusColor[d.status] || ""} text-[9px]`}>{statusLabel[d.status] || d.status}</Badge>
                 </div>
               </CardContent>

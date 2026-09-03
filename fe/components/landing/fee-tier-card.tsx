@@ -1,5 +1,8 @@
+"use client";
+
 import { cn } from "@/lib/utils";
 import { formatIDR } from "@/lib/utils";
+import { useTranslation } from "@/lib/internationalization";
 
 interface FeeTierCardProps {
   tier: string;
@@ -16,7 +19,9 @@ interface FeeTierCardProps {
  * element requested for the redesign. Reused on the landing page's dedicated section.
  */
 export function FeeTierCard({ tier, takeHomePercent, feePercent, exampleBase = 100000, highlight, compact, className }: FeeTierCardProps) {
+  const { t, interpolate } = useTranslation();
   const exampleTakeHome = Math.round((exampleBase * takeHomePercent) / 100);
+  const exampleParts = t.compLanding.exampleDonation.split("{takeHome}");
   return (
     <div
       className={cn(
@@ -29,19 +34,21 @@ export function FeeTierCard({ tier, takeHomePercent, feePercent, exampleBase = 1
     >
       <p className={cn("text-xs font-bold uppercase tracking-widest", highlight ? "text-accent-400" : "text-primary")}>{tier}</p>
       <p className="mt-2 font-display font-black text-5xl sm:text-6xl tracking-tight">{takeHomePercent}%</p>
-      <p className={cn("text-sm font-medium mt-1", highlight ? "text-white/70" : "text-gray-600 dark:text-gray-400")}>kamu terima dari tiap transaksi</p>
+      <p className={cn("text-sm font-medium mt-1", highlight ? "text-white/70" : "text-gray-600 dark:text-gray-400")}>{t.compLanding.takesFromEach}</p>
 
       <div className={cn("h-3 rounded-full mt-5 overflow-hidden flex", highlight ? "bg-white/10" : "bg-primary-50 dark:bg-navy-900")} role="presentation">
         <div className={highlight ? "bg-accent h-full rounded-full" : "bg-primary h-full rounded-full"} style={{ width: `${takeHomePercent}%` }} />
       </div>
       <div className="flex justify-between mt-1.5 text-[11px] font-medium">
-        <span className={highlight ? "text-white/60" : "text-gray-500 dark:text-gray-400"}>Kamu {takeHomePercent}%</span>
-        <span className={highlight ? "text-white/40" : "text-gray-400 dark:text-gray-500"}>Fee platform {feePercent}%</span>
+        <span className={highlight ? "text-white/60" : "text-gray-500 dark:text-gray-400"}>{interpolate(t.compLanding.youKeepPercent, { percent: takeHomePercent })}</span>
+        <span className={highlight ? "text-white/40" : "text-gray-400 dark:text-gray-500"}>{interpolate(t.compLanding.platformFeePercent, { percent: feePercent })}</span>
       </div>
 
       {!compact && (
         <p className={cn("mt-5 text-sm rounded-xl px-3.5 py-2.5 leading-relaxed", highlight ? "bg-white/10 text-white/90" : "bg-primary-50 dark:bg-primary-900/20 text-gray-700 dark:text-gray-300")}>
-          Contoh: donasi {formatIDR(exampleBase)} masuk → kamu terima <strong>{formatIDR(exampleTakeHome)}</strong>
+          {interpolate(exampleParts[0], { amount: formatIDR(exampleBase) })}
+          <strong>{formatIDR(exampleTakeHome)}</strong>
+          {exampleParts[1]}
         </p>
       )}
     </div>

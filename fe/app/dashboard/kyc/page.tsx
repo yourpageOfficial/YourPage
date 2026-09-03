@@ -9,15 +9,23 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Upload, CheckCircle, Clock, XCircle } from "lucide-react";
+import { useTranslation } from "@/lib/internationalization";
 
-const statusConfig: Record<string, { color: string; icon: any; label: string }> = {
-  pending: { color: "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400", icon: Clock, label: "Menunggu Review" },
-  approved: { color: "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400", icon: CheckCircle, label: "Disetujui" },
-  rejected: { color: "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400", icon: XCircle, label: "Ditolak" },
+const statusIcons: Record<string, { color: string; icon: any }> = {
+  pending: { color: "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400", icon: Clock },
+  approved: { color: "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400", icon: CheckCircle },
+  rejected: { color: "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400", icon: XCircle },
+};
+
+const statusLabels: Record<string, string> = {
+  pending: "kycStatusPending",
+  approved: "kycStatusApproved",
+  rejected: "kycStatusRejected",
 };
 
 export default function DashboardKYC() {
   const qc = useQueryClient();
+  const { t, interpolate } = useTranslation();
   const fileRef = useRef<HTMLInputElement>(null);
   const [fullName, setFullName] = useState("");
   const [idNumber, setIdNumber] = useState("");
@@ -54,27 +62,28 @@ export default function DashboardKYC() {
       setError("");
     },
     onError: (err: any) => {
-      setError(err.response?.data?.error || "Gagal submit KYC");
+      setError(err.response?.data?.error || t.accountMgr.kycFailed);
     },
   });
 
   if (isLoading) return <ListSkeleton count={3} />;
 
   if (kyc) {
-    const cfg = statusConfig[kyc.status] || statusConfig.pending;
+    const cfg = statusIcons[kyc.status] || statusIcons.pending;
+    const label = t.accountMgr[statusLabels[kyc.status] as keyof typeof t.accountMgr] || t.accountMgr.kycStatusPending;
     const Icon = cfg.icon;
     return (
       <div>
-        <h1 className="mb-6 text-2xl font-display font-black tracking-tight">Verifikasi KYC</h1>
+        <h1 className="mb-6 text-2xl font-display font-black tracking-tight">{t.accountMgr.kycTitle}</h1>
         <Card>
           <CardContent className="p-6 text-center">
             <Icon className="mx-auto h-12 w-12 mb-3" />
-            <Badge className={cfg.color}>{cfg.label}</Badge>
+            <Badge className={cfg.color}>{label}</Badge>
             <p className="mt-3 font-medium">{kyc.full_name}</p>
-            {kyc.admin_note && <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">Catatan: {kyc.admin_note}</p>}
-            {kyc.status === "pending" && <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">Admin sedang mereview dokumen kamu.</p>}
-            {kyc.status === "approved" && <p className="mt-2 text-sm text-green-600">KYC diverifikasi. Kamu bisa melakukan penarikan.</p>}
-            {kyc.status === "rejected" && <p className="mt-2 text-sm text-red-600">Hubungi admin untuk submit ulang.</p>}
+            {kyc.admin_note && <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">{interpolate(t.accountMgr.kycNote, { note: kyc.admin_note })}</p>}
+            {kyc.status === "pending" && <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">{t.accountMgr.kycReviewing}</p>}
+            {kyc.status === "approved" && <p className="mt-2 text-sm text-green-600">{t.accountMgr.kycApproved}</p>}
+            {kyc.status === "rejected" && <p className="mt-2 text-sm text-red-600">{t.accountMgr.kycRejected}</p>}
           </CardContent>
         </Card>
       </div>
@@ -83,33 +92,33 @@ export default function DashboardKYC() {
 
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-display font-black tracking-tight">Verifikasi KYC</h1>
+      <h1 className="mb-6 text-2xl font-display font-black tracking-tight">{t.accountMgr.kycTitle}</h1>
       <Card>
         <CardHeader>
-          <CardTitle>Upload KTP</CardTitle>
-          <p className="text-sm text-gray-500 dark:text-gray-400">Diperlukan untuk penarikan pertama. Data aman dan tidak ditampilkan publik.</p>
+          <CardTitle>{t.accountMgr.kycUploadTitle}</CardTitle>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{t.accountMgr.kycUploadDesc}</p>
         </CardHeader>
         <CardContent className="space-y-4">
           {error && <p className="text-sm text-red-600">{error}</p>}
           <div>
-            <label className="text-sm font-medium">Nama Lengkap (sesuai KTP)</label>
-            <Input placeholder="Nama lengkap" value={fullName} onChange={(e) => setFullName(e.target.value)} />
+            <label className="text-sm font-medium">{t.accountMgr.kycFullNameLabel}</label>
+            <Input placeholder={t.accountMgr.kycFullNamePlaceholder} value={fullName} onChange={(e) => setFullName(e.target.value)} />
           </div>
           <div>
-            <label className="text-sm font-medium">Nomor KTP (16 digit)</label>
-            <Input placeholder="3201234567890001" value={idNumber} onChange={(e) => setIdNumber(e.target.value.replace(/\D/g, ""))} maxLength={16} />
-            {idNumber && idNumber.length < 16 && <p className="text-xs text-gray-400 mt-1">{idNumber.length}/16 digit</p>}
+            <label className="text-sm font-medium">{t.accountMgr.kycIdNumberLabel}</label>
+            <Input placeholder={t.accountMgr.kycIdNumberPlaceholder} value={idNumber} onChange={(e) => setIdNumber(e.target.value.replace(/\D/g, ""))} maxLength={16} />
+            {idNumber && idNumber.length < 16 && <p className="text-xs text-gray-400 mt-1">{interpolate(t.accountMgr.kycDigitCount, { count: idNumber.length })}</p>}
           </div>
           <div>
-            <label className="text-sm font-medium">Foto KTP</label>
+            <label className="text-sm font-medium">{t.accountMgr.kycPhotoLabel}</label>
             <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => setKtpFile(e.target.files?.[0] || null)} />
             <Button type="button" variant="outline" size="sm" className="mt-1" onClick={() => fileRef.current?.click()}>
-              <Upload className="mr-1 h-4 w-4" /> {ktpFile ? ktpFile.name : "Pilih foto KTP"}
+              <Upload className="mr-1 h-4 w-4" /> {ktpFile ? ktpFile.name : t.accountMgr.kycPhotoSelect}
             </Button>
             {ktpFile && <img loading="lazy" src={URL.createObjectURL(ktpFile)} alt="preview" className="mt-2 h-40 rounded border object-contain" />}
           </div>
           <Button onClick={() => submit.mutate()} disabled={submit.isPending || !fullName || idNumber.length < 16 || !ktpFile}>
-            {submit.isPending ? "Mengirim..." : "Submit KYC"}
+            {submit.isPending ? t.accountMgr.kycSubmitting : t.accountMgr.kycSubmitButton}
           </Button>
         </CardContent>
       </Card>

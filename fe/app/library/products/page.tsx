@@ -7,9 +7,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatIDR } from "@/lib/utils";
 import Link from "next/link";
+import { useTranslation } from "@/lib/internationalization";
 import type { Product, PaginatedResponse } from "@/lib/types";
 
 export default function LibraryProducts() {
+  const { t } = useTranslation();
   const { data: products } = useQuery({
     queryKey: ["library-products"],
     queryFn: async () => {
@@ -20,7 +22,7 @@ export default function LibraryProducts() {
 
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-display font-black tracking-tight">Produk yang Dibeli</h1>
+      <h1 className="mb-6 text-2xl font-display font-black tracking-tight">{t.supporterHub.purchasedProducts}</h1>
       <div className="space-y-3">
         {products?.map((p) => (
           <Card key={p.id}>
@@ -31,12 +33,12 @@ export default function LibraryProducts() {
                 <span className="ml-2 text-sm text-gray-500 dark:text-gray-400">{formatIDR(p.price_idr)}</span>
               </div>
               <Link href={`/products/${p.id}/download`}>
-                <Button size="sm">Download</Button>
+                <Button size="sm">{t.product.downloadButton}</Button>
               </Link>
             </CardContent>
           </Card>
         ))}
-        {products?.length === 0 && <p className="text-sm text-gray-500 dark:text-gray-400">Belum ada produk yang dibeli.</p>}
+        {products?.length === 0 && <p className="text-sm text-gray-500 dark:text-gray-400">{t.supporterHub.emptyPurchasedProducts}.</p>}
       </div>
     </div>
   );

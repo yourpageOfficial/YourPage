@@ -12,8 +12,10 @@ import Link from "next/link";
 import type { Product, PaginatedResponse } from "@/lib/types";
 import { motion } from "framer-motion";
 import { staggerChildren, staggerItem } from "@/lib/motion-variants";
+import { useTranslation } from "@/lib/internationalization";
 
 export default function SupporterProducts() {
+  const { t } = useTranslation();
   const { data, isLoading } = useQuery({
     queryKey: ["library-products"],
     queryFn: async () => { const { data } = await api.get<PaginatedResponse<Product>>("/library/products"); return data.data; },
@@ -21,14 +23,14 @@ export default function SupporterProducts() {
 
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-display font-black tracking-tight">Produk yang Dibeli</h1>
+      <h1 className="mb-6 text-2xl font-display font-black tracking-tight">{t.supporterHub.purchasedProducts}</h1>
 
       {data?.length === 0 && (
         <Card><CardContent className="p-12 text-center">
           <div className="h-14 w-14 rounded-2xl bg-primary-50 dark:bg-primary-900/20 flex items-center justify-center mx-auto mb-3"><Package className="h-7 w-7 text-primary" /></div>
-          <p className="font-display font-bold">Belum ada produk yang dibeli</p>
-          <p className="text-sm text-gray-400 mt-1">Beli produk dari kreator favoritmu</p>
-          <Link href="/explore"><Button variant="outline" size="sm" className="mt-4 rounded-2xl">Explore Kreator</Button></Link>
+          <p className="font-display font-bold">{t.supporterHub.emptyPurchasedProducts}</p>
+          <p className="text-sm text-gray-400 mt-1">{t.supporterHub.emptyPurchasedProductsDesc}</p>
+          <Link href="/explore"><Button variant="outline" size="sm" className="mt-4 rounded-2xl">{t.supporterHub.exploreCreators}</Button></Link>
         </CardContent></Card>
       )}
 
@@ -68,7 +70,7 @@ export default function SupporterProducts() {
                         ))}
                       </div>
                       <Link href={`/products/${p.id}`} className="mt-2 block">
-                        <Button size="sm" className="w-full rounded-xl"><Download className="mr-1 h-3.5 w-3.5" /> Download</Button>
+                        <Button size="sm" className="w-full rounded-xl"><Download className="mr-1 h-3.5 w-3.5" /> {t.product.downloadButton}</Button>
                       </Link>
                     </div>
                   )}

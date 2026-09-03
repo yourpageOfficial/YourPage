@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
+import { useTranslation } from "@/lib/internationalization";
 
 type Config = {
   overlay_accent_color: string;
@@ -19,6 +20,7 @@ function formatIDR(n: number) {
 function GoalContent() {
   const sp = useSearchParams();
   const creatorId = sp.get("id");
+  const { t, interpolate } = useTranslation();
   const [cfg, setCfg] = useState<Config | null>(null);
 
   const load = useCallback(() => {
@@ -45,7 +47,7 @@ function GoalContent() {
   if (!creatorId) {
     return (
       <div style={{ fontFamily: "system-ui", padding: 24, color: "#fff", background: "#0F0D1A", minHeight: "100vh" }}>
-        Tambahkan <code>?id=&lt;creator-id&gt;</code> pada URL.
+        {t.overlayAlerts.missingIdDesc}
       </div>
     );
   }
@@ -67,7 +69,7 @@ function GoalContent() {
       <div style={{ background: "rgba(255,255,255,0.97)", borderRadius: 18, padding: "16px 20px", boxShadow: `0 12px 36px rgba(0,0,0,0.22), 0 0 0 3px ${accent}`, maxWidth: 460 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12 }}>
           <span style={{ fontSize: 16, fontWeight: 800, color: cfg.overlay_text_color || "#0F0D1A" }}>
-            {cfg.donation_goal_title || "Target Donasi"}
+            {cfg.donation_goal_title || t.overlayAlerts.defaultGoalTitle}
           </span>
           <span style={{ fontSize: 15, fontWeight: 900, color: accent, fontVariantNumeric: "tabular-nums" }}>{pct}%</span>
         </div>
@@ -91,7 +93,7 @@ function GoalContent() {
         </div>
 
         <div style={{ fontSize: 13, color: cfg.overlay_text_color || "#0F0D1A", opacity: 0.75, fontVariantNumeric: "tabular-nums" }}>
-          {formatIDR(cfg.donation_goal_current)} dari {formatIDR(cfg.donation_goal_amount)}
+          {interpolate(t.overlayAlerts.goalProgress, { current: formatIDR(cfg.donation_goal_current), target: formatIDR(cfg.donation_goal_amount) })}
         </div>
       </div>
       <style dangerouslySetInnerHTML={{ __html: "html,body{background:transparent!important;margin:0}" }} />

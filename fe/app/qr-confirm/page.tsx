@@ -9,8 +9,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert } from "@/components/ui/alert";
 import { CheckCircle2, MonitorSmartphone } from "lucide-react";
+import { useTranslation } from "@/lib/internationalization";
 
 function QRConfirmContent() {
+  const { t, interpolate } = useTranslation();
   const params = useSearchParams();
   const router = useRouter();
   const { user, loading } = useAuth();
@@ -26,7 +28,7 @@ function QRConfirmContent() {
       await api.post("/auth/qr-login/confirm", { qr_token: token });
       setState("done");
     } catch (err: any) {
-      setError(err.response?.data?.error || "Kode QR tidak valid atau sudah kedaluwarsa.");
+      setError(err.response?.data?.error || t.auth.qrConfirmFailed);
       setState("idle");
     }
   };
@@ -35,9 +37,9 @@ function QRConfirmContent() {
     return (
       <Card>
         <CardContent className="py-10 text-center">
-          <p className="font-semibold">Kode QR tidak lengkap</p>
+          <p className="font-semibold">{t.auth.qrMissingTitle}</p>
           <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-            Scan ulang kode dari halaman login di perangkat yang ingin kamu masuki.
+            {t.auth.qrMissingDesc}
           </p>
         </CardContent>
       </Card>
@@ -47,7 +49,7 @@ function QRConfirmContent() {
   if (loading) {
     return (
       <Card>
-        <CardContent className="py-10 text-center text-sm text-gray-500 dark:text-gray-400">Memuat…</CardContent>
+        <CardContent className="py-10 text-center text-sm text-gray-500 dark:text-gray-400">{t.auth.loading}</CardContent>
       </Card>
     );
   }
@@ -56,15 +58,15 @@ function QRConfirmContent() {
     return (
       <Card>
         <CardContent className="py-10 text-center">
-          <p className="font-semibold">Masuk dulu di perangkat ini</p>
+          <p className="font-semibold">{t.auth.qrLoginRequiredTitle}</p>
           <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-            Kamu perlu login di HP ini sebelum bisa menyetujui login di perangkat lain.
+            {t.auth.qrLoginRequiredDesc}
           </p>
           <Button
             className="mt-6"
             onClick={() => router.push(`/login?next=${encodeURIComponent(`/qr-confirm?token=${token}`)}`)}
           >
-            Masuk
+            {t.auth.loginButton}
           </Button>
         </CardContent>
       </Card>
@@ -76,11 +78,11 @@ function QRConfirmContent() {
       <Card>
         <CardContent className="py-10 text-center">
           <CheckCircle2 className="mx-auto h-14 w-14 text-emerald-500" />
-          <p className="mt-4 text-lg font-semibold">Login disetujui</p>
+          <p className="mt-4 text-lg font-semibold">{t.auth.qrConfirmSuccess}</p>
           <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-            Perangkat yang menampilkan kode QR sekarang masuk sebagai {user.display_name}.
+            {interpolate(t.auth.qrAddDesc, { name: user.display_name })}
           </p>
-          <Button className="mt-6" variant="outline" onClick={() => router.push("/")}>Selesai</Button>
+          <Button className="mt-6" variant="outline" onClick={() => router.push("/")}>{t.auth.goToLogin}</Button>
         </CardContent>
       </Card>
     );
@@ -93,11 +95,9 @@ function QRConfirmContent() {
           <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
             <MonitorSmartphone className="h-6 w-6" />
           </div>
-          <h1 className="mt-4 text-lg font-semibold">Setujui login di perangkat lain?</h1>
+          <h1 className="mt-4 text-lg font-semibold">{t.auth.qrConfirmTitle}</h1>
           <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-            Perangkat yang menampilkan kode ini akan masuk sebagai{" "}
-            <span className="font-medium text-gray-700 dark:text-gray-200">{user.display_name}</span>.
-            Lanjutkan hanya jika kamu sendiri yang membuka halaman login itu.
+            {interpolate(t.auth.qrConfirmDesc, { name: user.display_name })}
           </p>
           <p className="mt-3 font-mono text-xs tracking-widest text-gray-400 dark:text-gray-500">{token}</p>
         </div>
@@ -105,9 +105,9 @@ function QRConfirmContent() {
         {error && <Alert variant="error" className="mt-5">{error}</Alert>}
 
         <div className="mt-6 flex gap-3">
-          <Button variant="outline" className="flex-1" onClick={() => router.push("/")}>Batal</Button>
+          <Button variant="outline" className="flex-1" onClick={() => router.push("/")}>{t.auth.qrCancelButton}</Button>
           <Button className="flex-1" onClick={confirm} disabled={state === "sending"}>
-            {state === "sending" ? "Menyetujui…" : "Setujui"}
+            {state === "sending" ? t.auth.qrConfirming : t.auth.qrConfirmButton}
           </Button>
         </div>
       </CardContent>

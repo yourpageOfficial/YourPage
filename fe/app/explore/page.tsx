@@ -18,6 +18,7 @@ import {
 import Link from "next/link";
 import { motion, MotionConfig } from "framer-motion";
 import { staggerChildren, staggerItem } from "@/lib/motion-variants";
+import { useTranslation } from "@/lib/internationalization";
 
 interface CreatorItem {
   user_id: string; username: string; display_name: string;
@@ -38,6 +39,7 @@ const categoryIcons: Record<string, LucideIcon> = {
 };
 
 export default function ExplorePage() {
+  const { t } = useTranslation();
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("");
   const debouncedQuery = useDebounce(query, 300);
@@ -64,16 +66,16 @@ export default function ExplorePage() {
         <div className="sticky top-14 sm:top-16 z-30 bg-white/80 dark:bg-navy-900/80 backdrop-blur-lg border-b-2 border-primary-100 dark:border-primary-900/30">
           <div className="mx-auto max-w-3xl px-4 py-3">
             <Input
-              placeholder="Cari kreator..."
+              placeholder={t.explore.searchPlaceholder}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              aria-label="Cari kreator"
+              aria-label={t.explore.searchPlaceholder}
               iconLeft={<Search className="h-4 w-4 text-primary" aria-hidden="true" />}
               iconRight={
                 query ? (
                   <button
                     onClick={() => setQuery("")}
-                    aria-label="Hapus pencarian"
+                    aria-label={t.explore.clearSearch}
                     className="h-8 w-8 -mr-1 flex items-center justify-center rounded-full text-gray-400 hover:text-primary hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                   >
                     <X className="h-3.5 w-3.5" aria-hidden="true" />
@@ -100,7 +102,7 @@ export default function ExplorePage() {
                   }`}
                 >
                   <LayoutGrid className="h-4 w-4 sm:h-3.5 sm:w-3.5" aria-hidden="true" />
-                  <span>Semua</span>
+                  <span>{t.explore.all}</span>
                 </button>
                 {categories.map(c => {
                   const Icon = categoryIcons[c] ?? Shapes;
@@ -117,7 +119,7 @@ export default function ExplorePage() {
                       }`}
                     >
                       <Icon className="h-4 w-4 sm:h-3.5 sm:w-3.5" aria-hidden="true" />
-                      <span>{c}</span>
+                      <span>{t.explore.categories[c as keyof typeof t.explore.categories]}</span>
                     </button>
                   );
                 })}
@@ -133,7 +135,7 @@ export default function ExplorePage() {
                   <div className="h-8 w-8 rounded-xl bg-accent-50 dark:bg-accent-500/15 flex items-center justify-center">
                     <Flame className="h-4 w-4 text-accent-600 dark:text-accent-400" aria-hidden="true" />
                   </div>
-                  <h2 className="font-display font-black text-base tracking-tight">Trending</h2>
+                  <h2 className="font-display font-black text-base tracking-tight">{t.explore.trending}</h2>
                 </div>
               </div>
               <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1 snap-x snap-mandatory [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -153,7 +155,7 @@ export default function ExplorePage() {
                           </div>
                           <p className="font-bold text-sm mt-3 truncate">
                             {c.display_name}
-                            {c.is_verified && <CheckCircle className="h-3.5 w-3.5 text-primary inline ml-1" aria-label="Terverifikasi" />}
+                            {c.is_verified && <CheckCircle className="h-3.5 w-3.5 text-primary inline ml-1" aria-label={t.explore.verified} />}
                           </p>
                           <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">@{c.username}</p>
                           <div className="flex items-center justify-center gap-1 mt-2 text-xs text-primary font-semibold">
@@ -175,7 +177,7 @@ export default function ExplorePage() {
                 <div className="h-8 w-8 rounded-xl bg-secondary-50 dark:bg-secondary-500/15 flex items-center justify-center">
                   <Star className="h-4 w-4 text-secondary" aria-hidden="true" />
                 </div>
-                <h2 className="font-display font-black text-base tracking-tight">Semua Kreator</h2>
+                <h2 className="font-display font-black text-base tracking-tight">{t.explore.allCreators}</h2>
                 <span className="text-xs text-gray-400 ml-1">{creators.length}</span>
               </div>
               <motion.div variants={staggerChildren} initial="hidden" animate="visible" className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -215,8 +217,8 @@ export default function ExplorePage() {
                   <div className="h-16 w-16 rounded-3xl bg-primary-50 dark:bg-primary-900/20 flex items-center justify-center mx-auto mb-4">
                     <Search className="h-8 w-8 text-primary/40" aria-hidden="true" />
                   </div>
-                  <p className="font-display font-bold">Tidak ditemukan</p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Coba kata kunci lain untuk &ldquo;{query}&rdquo;</p>
+                  <p className="font-display font-bold">{t.explore.notFound}</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{t.explore.notFoundDesc.replace("{query}", query)}</p>
                 </div>
               )}
             </div>
@@ -228,8 +230,8 @@ export default function ExplorePage() {
               <div className="h-16 w-16 rounded-3xl bg-primary-50 dark:bg-primary-900/20 flex items-center justify-center mx-auto mb-4">
                 <Compass className="h-8 w-8 text-primary/40" aria-hidden="true" />
               </div>
-              <p className="font-display font-bold">Belum ada kreator</p>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Kreator akan muncul di sini</p>
+              <p className="font-display font-bold">{t.explore.emptyTitle}</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{t.explore.emptyDesc}</p>
             </div>
           )}
         </main>
@@ -241,6 +243,7 @@ export default function ExplorePage() {
 
 /* Card layout for grid view */
 function CreatorCard({ c }: { c: CreatorItem }) {
+  const { t } = useTranslation();
   const CategoryIcon = c.category ? categoryIcons[c.category] ?? Shapes : null;
   return (
     <Link href={`/c/${c.page_slug}`} className="block rounded-2xl cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
@@ -249,7 +252,7 @@ function CreatorCard({ c }: { c: CreatorItem }) {
           <Avatar src={c.avatar_url} name={c.display_name} size="lg" className="ring-2 ring-primary/10" />
           <p className="font-bold text-sm mt-2.5 truncate w-full">
             {c.display_name}
-            {c.is_verified && <CheckCircle className="h-3 w-3 text-primary inline ml-1" aria-label="Terverifikasi" />}
+            {c.is_verified && <CheckCircle className="h-3 w-3 text-primary inline ml-1" aria-label={t.explore.verified} />}
           </p>
           <p className="text-[11px] text-gray-500 dark:text-gray-400 truncate w-full">@{c.username}</p>
           {c.category && CategoryIcon && (
@@ -268,6 +271,7 @@ function CreatorCard({ c }: { c: CreatorItem }) {
 
 /* Row layout for search results */
 function CreatorRow({ c }: { c: CreatorItem }) {
+  const { t } = useTranslation();
   return (
     <Link href={`/c/${c.page_slug}`} className="block rounded-2xl cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
       <Card hover>
@@ -276,7 +280,7 @@ function CreatorRow({ c }: { c: CreatorItem }) {
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1.5">
               <p className="font-bold text-sm truncate">{c.display_name}</p>
-              {c.is_verified && <CheckCircle className="h-3.5 w-3.5 text-primary shrink-0" aria-label="Terverifikasi" />}
+              {c.is_verified && <CheckCircle className="h-3.5 w-3.5 text-primary shrink-0" aria-label={t.explore.verified} />}
             </div>
             <p className="text-xs text-gray-500 dark:text-gray-400">@{c.username}</p>
           </div>

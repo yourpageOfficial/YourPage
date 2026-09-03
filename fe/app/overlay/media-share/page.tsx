@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useSearchParams } from "next/navigation";
+import { useTranslation } from "@/lib/internationalization";
 
 interface MediaShareEvent {
   id: string;
@@ -15,6 +16,7 @@ interface MediaShareEvent {
 export default function MediaShareOverlayPage() {
   const params = useSearchParams();
   const creatorId = params.get("creatorId") ?? "";
+  const { t } = useTranslation();
   const [current, setCurrent] = useState<MediaShareEvent | null>(null);
   const [visible, setVisible] = useState(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -41,7 +43,7 @@ export default function MediaShareOverlayPage() {
             id: data.id ?? "",
             media_url: data.media_url ?? "",
             media_type: data.media_type ?? "image",
-            donor_name: data.donor_name ?? "Anonim",
+            donor_name: data.donor_name ?? t.overlayAlerts.anonymous,
             message: data.message,
           });
         }

@@ -9,8 +9,10 @@ import { PageTransition } from "@/components/ui/page-transition";
 import { CheckCircle, XCircle } from "lucide-react";
 import { motion } from "framer-motion";
 import Link from "next/link";
+import { useTranslation } from "@/lib/internationalization";
 
 function VerifyContent() {
+  const { t, interpolate } = useTranslation();
   const searchParams = useSearchParams();
   const router = useRouter();
   const token = searchParams.get("token");
@@ -26,8 +28,8 @@ function VerifyContent() {
 
   useEffect(() => {
     if (status !== "success") return;
-    const t = setInterval(() => setCountdown(c => { if (c <= 1) { router.push("/dashboard"); clearInterval(t); } return c - 1; }), 1000);
-    return () => clearInterval(t);
+    const timer = setInterval(() => setCountdown(c => { if (c <= 1) { router.push("/dashboard"); clearInterval(timer); } return c - 1; }), 1000);
+    return () => clearInterval(timer);
   }, [status, router]);
 
   return (
@@ -35,22 +37,22 @@ function VerifyContent() {
       <PageTransition>
         <Card className="max-w-sm w-full">
           <CardContent className="p-8 text-center">
-            {status === "loading" && <p className="text-gray-500">Memverifikasi...</p>}
+            {status === "loading" && <p className="text-gray-500">{t.auth.verifying}</p>}
             {status === "success" && (
               <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 0.3 }}>
                 <CheckCircle className="mx-auto h-16 w-16 text-green-500 mb-4" />
-                <h2 className="text-xl font-bold mb-2">Email Terverifikasi! ✅</h2>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Akun kamu sudah aktif sepenuhnya.</p>
-                <p className="text-xs text-gray-400 mb-4">Redirect ke dashboard dalam {countdown} detik...</p>
-                <Link href="/dashboard"><Button className="w-full">Buka Dashboard</Button></Link>
+                <h2 className="text-xl font-bold mb-2">{t.auth.verifySuccess}</h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">{t.auth.verifySuccessDesc}</p>
+                <p className="text-xs text-gray-400 mb-4">{interpolate(t.auth.redirectingDashboard, { count: countdown })}</p>
+                <Link href="/dashboard"><Button className="w-full">{t.auth.openDashboard}</Button></Link>
               </motion.div>
             )}
             {status === "error" && (
               <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 0.3 }}>
                 <XCircle className="mx-auto h-16 w-16 text-red-500 mb-4" />
-                <h2 className="text-xl font-bold mb-2">Link Tidak Valid</h2>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Link verifikasi sudah expired atau tidak valid.</p>
-                <Link href="/login"><Button variant="outline" className="w-full">Kembali ke Login</Button></Link>
+                <h2 className="text-xl font-bold mb-2">{t.auth.verifyFailed}</h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">{t.auth.verifyFailedDesc}</p>
+                <Link href="/login"><Button variant="outline" className="w-full">{t.auth.goToLogin}</Button></Link>
               </motion.div>
             )}
           </CardContent>

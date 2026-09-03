@@ -1,19 +1,23 @@
 "use client";
+import { useTranslation } from "@/lib/internationalization";
 import { Navbar } from "@/components/navbar";
 import { ScrollToTop } from "@/components/ui/scroll-to-top";
 import { PageTransition } from "@/components/ui/page-transition";
 
-
-const sections = [
-  { id: "data", title: "1. Data yang Kami Kumpulkan", items: ["Akun: Email, username, password (terenkripsi).", "Profil: Nama tampilan, bio, avatar (opsional).", "KYC: Nama lengkap, nomor KTP, foto KTP (hanya untuk verifikasi penarikan).", "Transaksi: Riwayat pembelian, donasi, dan penarikan."] },
-  { id: "penggunaan", title: "2. Penggunaan Data", items: ["Menyediakan dan meningkatkan layanan platform.", "Memproses transaksi dan pembayaran.", "Verifikasi identitas untuk penarikan dana.", "Mengirim notifikasi terkait akun dan transaksi."] },
-  { id: "perlindungan", title: "3. Perlindungan Data", items: ["Email tidak pernah ditampilkan di halaman publik.", "Password disimpan dalam bentuk hash (bcrypt).", "Data KTP hanya dapat diakses oleh admin untuk verifikasi.", "JWT hanya berisi user ID dan role — tidak ada data pribadi.", "Semua koneksi menggunakan HTTPS (production)."] },
-  { id: "penyimpanan", title: "4. Penyimpanan", items: ["Data disimpan di server yang berlokasi di Indonesia.", "File media disimpan di object storage terenkripsi.", "Data tidak dijual atau dibagikan ke pihak ketiga."] },
-  { id: "hak", title: "5. Hak Pengguna", items: ["Anda dapat mengubah atau menghapus data profil kapan saja.", "Untuk penghapusan akun, hubungi admin."] },
-  { id: "kontak", title: "6. Kontak", items: ["Pertanyaan tentang privasi dapat dikirim ke admin melalui platform."] },
-];
+const sectionIds = ["data", "penggunaan", "perlindungan", "penyimpanan", "hak", "kontak"] as const;
 
 export default function PrivacyPage() {
+  const { t } = useTranslation();
+  const priv = t.legal.privacy;
+  const sections = [
+    { id: sectionIds[0], title: priv.section1Title, items: [priv.section1Item1, priv.section1Item2, priv.section1Item3, priv.section1Item4] },
+    { id: sectionIds[1], title: priv.section2Title, items: [priv.section2Item1, priv.section2Item2, priv.section2Item3, priv.section2Item4] },
+    { id: sectionIds[2], title: priv.section3Title, items: [priv.section3Item1, priv.section3Item2, priv.section3Item3, priv.section3Item4, priv.section3Item5] },
+    { id: sectionIds[3], title: priv.section4Title, items: [priv.section4Item1, priv.section4Item2, priv.section4Item3] },
+    { id: sectionIds[4], title: priv.section5Title, items: [priv.section5Item1, priv.section5Item2] },
+    { id: sectionIds[5], title: priv.section6Title, items: [priv.section6Item1] },
+  ];
+
   return (
     <>
       <Navbar />
@@ -27,8 +31,8 @@ export default function PrivacyPage() {
             </ul>
           </nav>
           <main className="flex-1 min-w-0">
-            <h1 className="text-2xl sm:text-3xl font-display font-black tracking-tight mb-2">Kebijakan Privasi</h1>
-            <p className="text-gray-500 dark:text-gray-400 text-sm mb-8">Terakhir diperbarui: April 2026</p>
+            <h1 className="text-2xl sm:text-3xl font-display font-black tracking-tight mb-2">{t.legal.privacyTitle}</h1>
+            <p className="text-gray-500 dark:text-gray-400 text-sm mb-8">{t.legal.lastUpdated}</p>
             {sections.map(s => (
               <section key={s.id} id={s.id} className="mb-8 scroll-mt-20">
                 <h2 className="text-lg font-black mb-3">{s.title}</h2>

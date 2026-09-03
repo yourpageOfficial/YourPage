@@ -3,15 +3,18 @@
 import { useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { Check, X } from "lucide-react";
+import { useTranslation } from "@/lib/internationalization";
 
 const rules = [
-  { label: "Minimal 8 karakter", test: (p: string) => p.length >= 8 },
-  { label: "Huruf besar", test: (p: string) => /[A-Z]/.test(p) },
-  { label: "Angka", test: (p: string) => /\d/.test(p) },
-  { label: "Simbol", test: (p: string) => /[^A-Za-z0-9]/.test(p) },
+  { test: (p: string) => p.length >= 8 },
+  { test: (p: string) => /[A-Z]/.test(p) },
+  { test: (p: string) => /\d/.test(p) },
+  { test: (p: string) => /[^A-Za-z0-9]/.test(p) },
 ];
 
 export function PasswordStrength({ password }: { password: string }) {
+  const { t } = useTranslation();
+  const labels = [t.compAccount.ruleMinChars, t.compAccount.ruleUppercase, t.compAccount.ruleNumber, t.compAccount.ruleSymbol];
   const passed = useMemo(() => rules.filter(r => r.test(password)).length, [password]);
   const strength = passed <= 1 ? "weak" : passed <= 2 ? "medium" : "strong";
   const colors = { weak: "bg-red-500", medium: "bg-yellow-500", strong: "bg-green-500" };
@@ -30,7 +33,7 @@ export function PasswordStrength({ password }: { password: string }) {
           const ok = r.test(password);
           return (
             <span key={i} className={cn("text-[11px] flex items-center gap-1", ok ? "text-green-600 dark:text-green-400" : "text-gray-400 dark:text-gray-500")}>
-              {ok ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />} {r.label}
+              {ok ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />} {labels[i]}
             </span>
           );
         })}

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { useTranslation } from "@/lib/internationalization";
 
 interface ControlledProps {
   open: boolean;
@@ -30,13 +31,14 @@ interface UncontrolledProps {
 type Props = ControlledProps | UncontrolledProps;
 
 export function ConfirmDialog(props: Props) {
+  const { t } = useTranslation();
   const [internalOpen, setInternalOpen] = useState(false);
 
   const isControlled = "open" in props && props.open !== undefined;
   const isOpen = isControlled ? props.open : internalOpen;
   const close = isControlled ? props.onClose! : () => setInternalOpen(false);
   const msg = isControlled ? (props as ControlledProps).description : (props as UncontrolledProps).message;
-  const label = isControlled ? (props as ControlledProps).confirmText || "Ya" : (props as UncontrolledProps).confirmLabel || "Ya";
+  const label = isControlled ? (props as ControlledProps).confirmText || t.compAccount.confirmYes : (props as UncontrolledProps).confirmLabel || t.compAccount.confirmYes;
 
   return (
     <>
@@ -48,7 +50,7 @@ export function ConfirmDialog(props: Props) {
             <h3 className="font-semibold text-lg">{props.title}</h3>
             {msg && <p className="text-sm text-gray-600 dark:text-gray-400">{msg}</p>}
             <div className="flex justify-end gap-2">
-              <Button variant="ghost" size="sm" onClick={close} disabled={props.loading}>Batal</Button>
+              <Button variant="ghost" size="sm" onClick={close} disabled={props.loading}>{t.compAccount.confirmCancel}</Button>
               <Button variant={props.variant || "destructive"} size="sm" loading={props.loading} onClick={() => { props.onConfirm(); if (!props.loading) close(); }}>{label}</Button>
             </div>
           </div>

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { Loader2 } from "lucide-react";
+import { useTranslation } from "@/lib/internationalization";
 
 interface InfiniteScrollProps {
   hasMore: boolean;
@@ -12,6 +13,7 @@ interface InfiniteScrollProps {
 }
 
 export function InfiniteScroll({ hasMore, loading, onLoadMore, threshold = 0.1, children }: InfiniteScrollProps) {
+  const { t } = useTranslation();
   const sentinel = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -26,7 +28,7 @@ export function InfiniteScroll({ hasMore, loading, onLoadMore, threshold = 0.1, 
       {children}
       <div ref={sentinel} className="py-4 flex justify-center">
         {loading && <Loader2 className="h-5 w-5 animate-spin text-gray-400" />}
-        {!hasMore && !loading && <p className="text-xs text-gray-400 dark:text-gray-500">Tidak ada lagi</p>}
+        {!hasMore && !loading && <p className="text-xs text-gray-400 dark:text-gray-500">{t.compAccount.noMore}</p>}
       </div>
     </div>
   );

@@ -2,11 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth";
+import { useTranslation } from "@/lib/internationalization";
 
 // Blurs paid content when page is not visible (tab switch, screen record preview)
 export function ContentProtection({ children, enabled }: { children: React.ReactNode; enabled: boolean }) {
   const [hidden, setHidden] = useState(false);
   const { user } = useAuth();
+  const { t } = useTranslation();
 
   useEffect(() => {
     if (!enabled) return;
@@ -39,7 +41,7 @@ export function ContentProtection({ children, enabled }: { children: React.React
 
       {hidden && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-20 rounded-xl">
-          <p className="text-white font-medium text-sm">Konten dilindungi</p>
+          <p className="text-white font-medium text-sm">{t.compSocial.contentProtected}</p>
         </div>
       )}
     </div>

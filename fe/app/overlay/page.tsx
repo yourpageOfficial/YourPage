@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
+import { useTranslation } from "@/lib/internationalization";
 
 type Alert = {
   type: string;
@@ -74,6 +75,7 @@ function tierFor(tiers: Tier[], credits: number): Tier | undefined {
 function OverlayContent() {
   const sp = useSearchParams();
   const creatorId = sp.get("id");
+  const { t, locale, interpolate } = useTranslation();
 
   const [config, setConfig] = useState<Config>(DEFAULTS);
   const [current, setCurrent] = useState<Alert | null>(null);
@@ -101,13 +103,13 @@ function OverlayContent() {
   const speak = useCallback((alert: Alert, cfg: Config) => {
     if (!cfg.overlay_tts_enabled || alert.credits < cfg.overlay_tts_min_credits) return;
     if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
-    const parts = [`${alert.donor_name} berdonasi ${alert.credits} credit`];
+    const parts = [interpolate(t.overlayAlerts.ttsDonate, { name: alert.donor_name, amount: alert.credits })];
     if (alert.message) parts.push(alert.message);
     const utter = new SpeechSynthesisUtterance(parts.join(". "));
-    utter.lang = "id-ID";
+    utter.lang = locale === "en" ? "en-US" : "id-ID";
     utter.volume = Math.min(1, Math.max(0, cfg.overlay_sound_volume / 100));
     window.speechSynthesis.speak(utter);
-  }, []);
+  }, [t, locale, interpolate]);
 
   const playNext = useCallback(() => {
     const next = queue.current.shift();
@@ -167,9 +169,9 @@ function OverlayContent() {
   if (!creatorId) {
     return (
       <div style={{ fontFamily: "system-ui", padding: 24, color: "#fff", background: "#0F0D1A", minHeight: "100vh" }}>
-        <p style={{ fontWeight: 700, fontSize: 18 }}>Overlay URL tidak lengkap</p>
+        <p style={{ fontWeight: 700, fontSize: 18 }}>{t.overlayAlerts.missingIdTitle}</p>
         <p style={{ opacity: 0.8, marginTop: 8 }}>
-          Tambahkan <code>?id=&lt;creator-id&gt;</code>. Salin URL lengkapnya dari Dashboard → Overlay.
+          {t.overlayAlerts.missingIdDesc}
         </p>
       </div>
     );

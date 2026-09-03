@@ -18,11 +18,13 @@ import { ReportButton } from "@/components/report-button";
 import { PageTransition } from "@/components/ui/page-transition";
 import { Avatar } from "@/components/ui/avatar";
 import { useAuth } from "@/lib/auth";
+import { useTranslation } from "@/lib/internationalization";
 import type { Product, ApiResponse } from "@/lib/types";
 
 export default function ProductDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
+  const { t, interpolate } = useTranslation();
   const [buying, setBuying] = useState(false);
   const [purchased, setPurchased] = useState(false);
   const [error, setError] = useState("");
@@ -57,7 +59,7 @@ export default function ProductDetailPage() {
       setDownloadUrls(data.data || []);
     } catch (err: any) {
       const msg = err.response?.data?.error || "Gagal";
-      if (msg.includes("Credit") || msg.includes("insufficient")) setError("Credit tidak cukup.");
+      if (msg.includes("Credit") || msg.includes("insufficient")) setError(t.product.insufficientCredits);
       else if (msg.includes("already")) {
         setPurchased(true);
         try { const { data } = await api.get(`/products/${id}/download`); setDownloadUrls(data.data || []); } catch (e: any) { toast.error(e.response?.data?.error || "Gagal") }
@@ -88,8 +90,8 @@ export default function ProductDetailPage() {
           <div className="md:col-span-3">
             <div className="flex items-center gap-2 mb-2">
               <Badge className="text-xs">{product.type}</Badge>
-              <Badge className="text-xs" variant="outline">{product.delivery_type === "link" ? "🔗 Link" : "📁 File"}</Badge>
-              {!product.is_active && <Badge className="bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400">Tidak Aktif</Badge>}
+              <Badge className="text-xs" variant="outline">{product.delivery_type === "link" ? `🔗 ${t.product.deliveryLink}` : `📁 ${t.product.deliveryFile}`}</Badge>
+              {!product.is_active && <Badge className="bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400">{t.product.inactiveBadge}</Badge>}
             </div>
 
             <h1 className="text-2xl sm:text-3xl font-bold">{product.name}</h1>
@@ -104,13 +106,13 @@ export default function ProductDetailPage() {
 
             {/* Price */}
             <p className="mt-4 text-3xl sm:text-4xl font-bold text-primary">{formatCredit(product.price_idr)}</p>
-            <p className="text-sm text-gray-500 mt-1">{product.sales_count} terjual · {formatDate(product.created_at)}</p>
+            <p className="text-sm text-gray-500 mt-1">{interpolate(t.product.salesSold, { count: product.sales_count })} · {formatDate(product.created_at)}</p>
             <div className="mt-2"><ReportButton targetType="product" targetId={id} /></div>
 
             {/* Description */}
             {product.description && (
               <div className="mt-6">
-                <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2">Deskripsi</h3>
+                <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2">{t.product.description}</h3>
                 <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">{product.description}</p>
               </div>
             )}
@@ -118,7 +120,7 @@ export default function ProductDetailPage() {
             {/* Files included */}
             {product.assets?.length > 0 && (
               <div className="mt-6">
-                <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2">File yang didapat</h3>
+                <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2">{t.product.filesIncluded}</h3>
                 <div className="space-y-2">
                   {product.assets.map((a) => (
                     <div key={a.id} className="flex items-center gap-3 bg-primary-50/50 dark:bg-navy-800 rounded-xl px-3 py-2">
@@ -142,14 +144,14 @@ export default function ProductDetailPage() {
                   <CardContent className="p-4">
                     <div className="flex items-center gap-2 mb-3">
                       <CheckCircle className="h-5 w-5 text-green-600" />
-                      <p className="font-semibold text-green-700 dark:text-green-400">Sudah Dibeli</p>
+                      <p className="font-semibold text-green-700 dark:text-green-400">{t.product.alreadyPurchased}</p>
                     </div>
                     {downloadUrls.length > 0 ? (
                       <div className="space-y-2">
                         {downloadUrls.map((d: any, i: number) => (
                           <a key={d.asset_id || i} href={d.signed_url} target="_blank" rel="noopener">
                             <Button variant="outline" size="sm" className="w-full justify-start mb-1">
-                              {d.file_name === "Link" ? "🔗 Buka Link" : <><Download className="mr-2 h-4 w-4" /> {d.file_name}</>}
+                              {d.file_name === "Link" ? `🔗 ${t.product.openLink}` : <><Download className="mr-2 h-4 w-4" /> {d.file_name}</>}
                               {d.expires_in_seconds > 0 && <span className="ml-auto text-xs text-gray-400 dark:text-gray-500">{d.expires_in_seconds / 60}min</span>}
                             </Button>
                           </a>
@@ -157,28 +159,28 @@ export default function ProductDetailPage() {
                         {product.delivery_note && <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">{product.delivery_note}</p>}
                       </div>
                     ) : (
-                      <p className="text-sm text-gray-500 dark:text-gray-400">Kreator belum mengunggah file untuk produk ini.</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">{t.product.creatorNoFiles}</p>
                     )}
                   </CardContent>
                 </Card>
               ) : !user ? (
                 <div className="space-y-2">
                   <Link href={`/login?redirect=/products/${id}`}>
-                    <Button size="lg" className="w-full"><ShoppingCart className="mr-2 h-5 w-5" />Masuk untuk Membeli</Button>
+                    <Button size="lg" className="w-full"><ShoppingCart className="mr-2 h-5 w-5" />{t.product.buyForLogin}</Button>
                   </Link>
-                  <p className="text-center text-xs text-gray-400">Belum punya akun? <Link href="/register" className="text-primary hover:underline">Daftar gratis</Link></p>
+                  <p className="text-center text-xs text-gray-400">{t.product.registerFree} <Link href="/register" className="text-primary hover:underline">Daftar gratis</Link></p>
                 </div>
               ) : error.includes("Credit") ? (
                 <div className="space-y-2">
                   <Link href="/wallet/topup">
-                    <Button size="lg" className="w-full">Top-up Credit Sekarang</Button>
+                    <Button size="lg" className="w-full">{t.product.topupNow}</Button>
                   </Link>
-                  <p className="text-center text-xs text-gray-400">Kamu butuh <span className="font-semibold">{formatCredit(product.price_idr)}</span> untuk membeli produk ini</p>
+                  <p className="text-center text-xs text-gray-400">{interpolate(t.product.needCreditsProduct, { price: formatCredit(product.price_idr) })}</p>
                 </div>
               ) : (
                 <Button size="lg" className="w-full" onClick={handleBuy} disabled={buying} loading={buying}>
                   <ShoppingCart className="mr-2 h-5 w-5" />
-                  {buying ? "Memproses..." : `Beli — ${formatCredit(product.price_idr)}`}
+                  {buying ? t.product.processing : interpolate(t.product.buyProduct, { price: formatCredit(product.price_idr) })}
                 </Button>
               )}
             </div>

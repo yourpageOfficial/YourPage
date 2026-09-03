@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/lib/internationalization";
 
 const TIER_ICONS: Record<string, typeof Crown> = {
   Business: Crown,
@@ -38,6 +39,7 @@ export interface StorageQuotaProps {
 
 /** Creator dashboard card showing storage usage against the tier quota, with upgrade CTA near the limit. */
 export function StorageQuota({ usedBytes, quotaBytes, tierName, className }: StorageQuotaProps) {
+  const { t, interpolate } = useTranslation();
   const safeUsed = Math.max(usedBytes || 0, 0);
   const safeQuota = Math.max(quotaBytes || 0, 0);
   const pct = safeQuota > 0 ? Math.min((safeUsed / safeQuota) * 100, 100) : 0;
@@ -68,7 +70,7 @@ export function StorageQuota({ usedBytes, quotaBytes, tierName, className }: Sto
           <div className="h-9 w-9 rounded-xl bg-primary-100 dark:bg-primary-900/20 flex items-center justify-center shrink-0">
             <HardDrive className="h-4 w-4 text-primary dark:text-primary-400" />
           </div>
-          <p className="text-sm font-bold">Penyimpanan</p>
+          <p className="text-sm font-bold">{t.compAccount.storageTitle}</p>
         </div>
         <Badge variant={badgeVariant} className="gap-1 shrink-0">
           <TierIcon className="h-3 w-3" /> {label}
@@ -77,7 +79,7 @@ export function StorageQuota({ usedBytes, quotaBytes, tierName, className }: Sto
       <CardContent className="pt-0">
         <div className="flex items-baseline justify-between gap-2 mb-2">
           <p className="text-sm text-gray-600 dark:text-gray-300">
-            <span className={cn("font-bold", textColor)}>{formatBytes(safeUsed)}</span> dari {formatBytes(safeQuota)} terpakai
+            <span className={cn("font-bold", textColor)}>{formatBytes(safeUsed)}</span> {interpolate(t.compAccount.storageUsedOf, { quota: formatBytes(safeQuota) })}
           </p>
           <span className={cn("text-xs font-bold shrink-0", textColor)}>{roundedPct}%</span>
         </div>
@@ -87,7 +89,7 @@ export function StorageQuota({ usedBytes, quotaBytes, tierName, className }: Sto
           aria-valuenow={roundedPct}
           aria-valuemin={0}
           aria-valuemax={100}
-          aria-label={`Penyimpanan terpakai: ${roundedPct} persen dari ${formatBytes(safeQuota)}`}
+          aria-label={interpolate(t.compAccount.storageAria, { pct: String(roundedPct), quota: formatBytes(safeQuota) })}
           className="w-full h-2.5 bg-primary-100 dark:bg-navy-800 rounded-full overflow-hidden"
         >
           <div
@@ -98,10 +100,10 @@ export function StorageQuota({ usedBytes, quotaBytes, tierName, className }: Sto
 
         {level === "error" && (
           <Alert variant="error" className="mt-4">
-            <p className="font-medium">Penyimpanan hampir penuh ({roundedPct}%).</p>
-            <p className="text-xs mt-0.5 text-gray-600 dark:text-gray-300">Upgrade paket untuk menambah kapasitas penyimpanan kamu.</p>
+            <p className="font-medium">{interpolate(t.compAccount.storageAlmostFull, { pct: String(roundedPct) })}</p>
+            <p className="text-xs mt-0.5 text-gray-600 dark:text-gray-300">{t.compAccount.storageUpgradeDesc}</p>
             <Link href="/dashboard/subscription">
-              <Button size="sm" variant="destructive" className="mt-2.5 h-8 text-xs">Upgrade Paket</Button>
+              <Button size="sm" variant="destructive" className="mt-2.5 h-8 text-xs">{t.compAccount.storageUpgradeButton}</Button>
             </Link>
           </Alert>
         )}

@@ -10,8 +10,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/lib/toast";
 import { formatCredit } from "@/lib/utils";
 import { Target, MessageSquare } from "lucide-react";
+import { useTranslation } from "@/lib/internationalization";
 
 export default function DonationSettingsPage() {
+  const { t, interpolate } = useTranslation();
   const qc = useQueryClient();
   const [goalTitle, setGoalTitle] = useState("");
   const [goalAmount, setGoalAmount] = useState("");
@@ -36,8 +38,8 @@ export default function DonationSettingsPage() {
       donation_goal_amount: goalAmount ? parseInt(goalAmount) * 1000 : 0,
       welcome_message: welcomeMsg || null,
     }),
-    onSuccess: () => { toast.success("Pengaturan disimpan!"); qc.invalidateQueries({ queryKey: ["creator-earnings"] }); },
-    onError: (e: any) => toast.error(e.response?.data?.error || "Gagal"),
+    onSuccess: () => { toast.success(t.monetization.settingsSaved); qc.invalidateQueries({ queryKey: ["creator-earnings"] }); },
+    onError: (e: any) => toast.error(e.response?.data?.error || t.monetization.saveFailed),
   });
 
   const goalCurrent = earnings?.donation_goal_current || 0;
@@ -46,42 +48,42 @@ export default function DonationSettingsPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-display font-black tracking-tight mb-6">Pengaturan Donasi</h1>
+      <h1 className="text-2xl font-display font-black tracking-tight mb-6">{t.monetization.donationSettingsTitle}</h1>
 
       {/* Donation Goal */}
       <Card className="mb-4">
         <CardHeader className="pb-2">
-          <CardTitle className="text-base flex items-center gap-2"><Target className="h-5 w-5" /> Target Donasi</CardTitle>
+          <CardTitle className="text-base flex items-center gap-2"><Target className="h-5 w-5" /> {t.monetization.donationGoalTitle}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <p className="text-sm text-gray-500 dark:text-gray-400">Tampilkan target donasi di halaman kamu untuk memotivasi supporter.</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{t.monetization.donationGoalDesc}</p>
           <div>
-            <label className="text-sm font-medium mb-1.5 block">Judul Target</label>
-            <Input value={goalTitle} onChange={e => setGoalTitle(e.target.value)} placeholder="Contoh: Beli kamera baru untuk konten lebih bagus 📸" />
+            <label className="text-sm font-medium mb-1.5 block">{t.monetization.goalTitleLabel}</label>
+            <Input value={goalTitle} onChange={e => setGoalTitle(e.target.value)} placeholder={t.monetization.goalTitlePlaceholder} />
           </div>
           <div>
-            <label className="text-sm font-medium mb-1.5 block">Target Nominal</label>
+            <label className="text-sm font-medium mb-1.5 block">{t.monetization.goalAmountLabel}</label>
             <div className="flex items-center gap-2">
-              <Input type="number" value={goalAmount} onChange={e => setGoalAmount(e.target.value)} placeholder="Target (Credit)" className="w-40" />
-              <span className="text-sm text-gray-500">Credit</span>
+              <Input type="number" value={goalAmount} onChange={e => setGoalAmount(e.target.value)} placeholder={t.monetization.goalAmountPlaceholder} className="w-40" />
+              <span className="text-sm text-gray-500">{t.monetization.creditUnit}</span>
             </div>
           </div>
           {goalTarget > 0 && (
             <div>
               <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
-                <span>{formatCredit(goalCurrent)} terkumpul</span>
-                <span>{formatCredit(goalTarget)} target</span>
+                <span>{interpolate(t.monetization.goalCollected, { amount: formatCredit(goalCurrent) })}</span>
+                <span>{formatCredit(goalTarget)} {t.monetization.goalTargetLabel}</span>
               </div>
               <div className="h-3 bg-primary-100 dark:bg-navy-800 rounded-full overflow-hidden">
                 <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${goalPct}%` }} />
               </div>
-              <p className="text-xs text-gray-400 mt-1">{goalPct.toFixed(0)}% tercapai</p>
+              <p className="text-xs text-gray-400 mt-1">{interpolate(t.monetization.goalPercentReached, { percent: goalPct.toFixed(0) })}</p>
             </div>
           )}
           <div className="flex gap-2">
-            <Button size="sm" variant="outline" onClick={() => setGoalAmount("500")}>500 Credit</Button>
-            <Button size="sm" variant="outline" onClick={() => setGoalAmount("1000")}>1K Credit</Button>
-            <Button size="sm" variant="outline" onClick={() => setGoalAmount("5000")}>5K Credit</Button>
+            <Button size="sm" variant="outline" onClick={() => setGoalAmount("500")}>{t.monetization.preset500Credit}</Button>
+            <Button size="sm" variant="outline" onClick={() => setGoalAmount("1000")}>{t.monetization.preset1kCredit}</Button>
+            <Button size="sm" variant="outline" onClick={() => setGoalAmount("5000")}>{t.monetization.preset5kCredit}</Button>
           </div>
         </CardContent>
       </Card>
@@ -89,18 +91,18 @@ export default function DonationSettingsPage() {
       {/* Welcome Message */}
       <Card className="mb-6">
         <CardHeader className="pb-2">
-          <CardTitle className="text-base flex items-center gap-2"><MessageSquare className="h-5 w-5" /> Pesan Penyambutan</CardTitle>
+          <CardTitle className="text-base flex items-center gap-2"><MessageSquare className="h-5 w-5" /> {t.monetization.welcomeMessageTitle}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          <p className="text-sm text-gray-500 dark:text-gray-400">Pesan otomatis yang tampil setelah seseorang berdonasi atau membeli produk kamu.</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{t.monetization.welcomeMessageDesc}</p>
           <Textarea value={welcomeMsg} onChange={e => setWelcomeMsg(e.target.value)}
-            placeholder="Contoh: Terima kasih banyak atas dukungannya! 🙏 Kamu yang terbaik. Cek konten eksklusif saya di tab Posts ya!" />
+            placeholder={t.monetization.welcomeMessagePlaceholder} />
           <p className="text-xs text-gray-400">{welcomeMsg.length}/500</p>
         </CardContent>
       </Card>
 
       <Button onClick={() => save.mutate()} disabled={save.isPending} className="w-full sm:w-auto">
-        {save.isPending ? "Menyimpan..." : "Simpan Pengaturan"}
+        {save.isPending ? t.monetization.saving : t.monetization.saveSettings}
       </Button>
     </div>
   );

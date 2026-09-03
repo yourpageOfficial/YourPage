@@ -12,19 +12,21 @@ import { Badge } from "@/components/ui/badge";
 import { Trash2, ExternalLink } from "lucide-react";
 import { formatIDR, formatDate } from "@/lib/utils";
 import Link from "next/link";
-
-const sorts = [{ label: "Title", key: "title" }, { label: "Views", key: "view_count" }, { label: "Likes", key: "like_count" }, { label: "Comments", key: "comment_count" }, { label: "Date", key: "created_at" }];
+import { useTranslation } from "@/lib/internationalization";
 
 export default function AdminPosts() {
+  const { t, interpolate } = useTranslation();
   const qc = useQueryClient();
   const list = useAdminList("admin-posts", "/admin/posts");
   const del = useMutation({ mutationFn: (id: string) => api.delete(`/admin/posts/${id}`), onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-posts"] }) });
 
+  const sorts = [{ label: t.adminModeration.sortTitle, key: "title" }, { label: t.adminModeration.sortViews, key: "view_count" }, { label: t.adminModeration.sortLikes, key: "like_count" }, { label: t.adminModeration.sortComments, key: "comment_count" }, { label: t.adminModeration.sortDate, key: "created_at" }];
+
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-display font-black tracking-tight">Posts</h1>
+      <h1 className="mb-6 text-2xl font-display font-black tracking-tight">{t.adminModeration.postsTitle}</h1>
       <AdminList
-        search={list.search} onSearch={list.setSearch} searchPlaceholder="Cari judul, creator..."
+        search={list.search} onSearch={list.setSearch} searchPlaceholder={t.adminModeration.searchPosts}
         sortOptions={sorts} sortKey={list.sortKey} sortDir={list.sortDir} onSort={list.toggleSort}
         nextCursor={list.nextCursor} onNext={list.onNext} onPrev={list.onPrev} hasPrev={list.hasPrev}
         count={list.items.length}
@@ -40,14 +42,14 @@ export default function AdminPosts() {
                 </div>
                 <div className="flex gap-1">
                   <Link href={`/posts/${p.id}`}><Button variant="ghost" size="icon"><ExternalLink className="h-4 w-4" /></Button></Link>
-                  <ConfirmDialog title="Hapus Post?" message={`Yakin ingin hapus "${p.title}"?`} confirmLabel="Hapus" variant="destructive" onConfirm={() => del.mutate(p.id)}>
+                  <ConfirmDialog title={t.adminModeration.postDeleteTitle} message={interpolate(t.adminModeration.postDeleteMessage, { name: p.title })} confirmLabel={t.adminModeration.delete} variant="destructive" onConfirm={() => del.mutate(p.id)}>
                     {(open) => <Button variant="ghost" size="icon" onClick={open}><Trash2 className="h-4 w-4 text-red-500" /></Button>}
                   </ConfirmDialog>
                 </div>
               </CardContent>
             </Card>
           ))}
-          {list.items.length === 0 && <p className="text-sm text-gray-500 dark:text-gray-400">Tidak ada post.</p>}
+          {list.items.length === 0 && <p className="text-sm text-gray-500 dark:text-gray-400">{t.adminModeration.emptyPosts}</p>}
         </div>
       </AdminList>
     </div>

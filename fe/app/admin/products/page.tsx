@@ -12,19 +12,21 @@ import { Badge } from "@/components/ui/badge";
 import { Trash2, ExternalLink } from "lucide-react";
 import { formatIDR, formatDate } from "@/lib/utils";
 import Link from "next/link";
-
-const sorts = [{ label: "Name", key: "name" }, { label: "Price", key: "price_idr" }, { label: "Sales", key: "sales_count" }, { label: "Type", key: "type" }, { label: "Date", key: "created_at" }];
+import { useTranslation } from "@/lib/internationalization";
 
 export default function AdminProducts() {
+  const { t, interpolate } = useTranslation();
   const qc = useQueryClient();
   const list = useAdminList("admin-products", "/admin/products");
   const del = useMutation({ mutationFn: (id: string) => api.delete(`/admin/products/${id}`), onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-products"] }) });
 
+  const sorts = [{ label: t.adminModeration.sortName, key: "name" }, { label: t.adminModeration.sortPrice, key: "price_idr" }, { label: t.adminModeration.sortSales, key: "sales_count" }, { label: t.adminModeration.sortType, key: "type" }, { label: t.adminModeration.sortDate, key: "created_at" }];
+
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-display font-black tracking-tight">Products</h1>
+      <h1 className="mb-6 text-2xl font-display font-black tracking-tight">{t.adminModeration.productsTitle}</h1>
       <AdminList
-        search={list.search} onSearch={list.setSearch} searchPlaceholder="Cari nama produk, tipe..."
+        search={list.search} onSearch={list.setSearch} searchPlaceholder={t.adminModeration.searchProducts}
         sortOptions={sorts} sortKey={list.sortKey} sortDir={list.sortDir} onSort={list.toggleSort}
         nextCursor={list.nextCursor} onNext={list.onNext} onPrev={list.onPrev} hasPrev={list.hasPrev}
         count={list.items.length}
@@ -38,21 +40,21 @@ export default function AdminProducts() {
                   <div className="flex gap-2 mt-1">
                     <Badge>{p.type}</Badge>
                     <span className="text-sm font-medium">{formatIDR(p.price_idr)}</span>
-                    <span className="text-xs text-gray-500 dark:text-gray-400">{p.sales_count} sold</span>
-                    {!p.is_active && <Badge className="bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400">Nonaktif</Badge>}
+                    <span className="text-xs text-gray-500 dark:text-gray-400">{p.sales_count} {t.adminModeration.productSold}</span>
+                    {!p.is_active && <Badge className="bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400">{t.adminModeration.productInactive}</Badge>}
                   </div>
                   <p className="text-xs text-gray-400 mt-1">by @{p.creator?.username || "?"} · {formatDate(p.created_at)}</p>
                 </div>
                 <div className="flex gap-1">
                   <Link href={`/products/${p.id}`}><Button variant="ghost" size="icon"><ExternalLink className="h-4 w-4" /></Button></Link>
-                  <ConfirmDialog title="Hapus Produk?" message={`Yakin ingin hapus "${p.name}"?`} confirmLabel="Hapus" variant="destructive" onConfirm={() => del.mutate(p.id)}>
+                  <ConfirmDialog title={t.adminModeration.productDeleteTitle} message={interpolate(t.adminModeration.productDeleteMessage, { name: p.name })} confirmLabel={t.adminModeration.delete} variant="destructive" onConfirm={() => del.mutate(p.id)}>
                     {(open) => <Button variant="ghost" size="icon" onClick={open}><Trash2 className="h-4 w-4 text-red-500" /></Button>}
                   </ConfirmDialog>
                 </div>
               </CardContent>
             </Card>
           ))}
-          {list.items.length === 0 && <p className="text-sm text-gray-500 dark:text-gray-400">Tidak ada product.</p>}
+          {list.items.length === 0 && <p className="text-sm text-gray-500 dark:text-gray-400">{t.adminModeration.emptyProducts}</p>}
         </div>
       </AdminList>
     </div>

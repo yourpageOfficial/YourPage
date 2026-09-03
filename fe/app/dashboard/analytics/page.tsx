@@ -7,10 +7,12 @@ import { Button } from "@/components/ui/button";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { formatCredit, formatIDR } from "@/lib/utils";
 import { toast } from "@/lib/toast";
+import { useTranslation } from "@/lib/internationalization";
 import { TrendingUp, FileText, Package, Heart, Users, ShoppingCart, Lock, Download, Wallet, ArrowRight } from "lucide-react";
 import Link from "next/link";
 
 export default function AnalyticsPage() {
+  const { t } = useTranslation();
   const { data: earnings, isError } = useQuery({
     queryKey: ["creator-earnings"],
     queryFn: async () => { const { data } = await api.get("/creator/earnings"); return data.data; },
@@ -26,24 +28,24 @@ export default function AnalyticsPage() {
     enabled: isPro,
   });
 
-  if (isError) return <div className="text-center py-12 text-sm text-red-500">Gagal memuat data.</div>;
+  if (isError) return <div className="text-center py-12 text-sm text-red-500">{t.dashboardCore.loadFailed}</div>;
 
   if (!isPro) {
     return (
       <div className="text-center py-16">
         <div className="h-16 w-16 rounded-2xl bg-primary-50 dark:bg-primary-900/20 flex items-center justify-center mx-auto mb-4"><Lock className="h-8 w-8 text-primary" /></div>
-        <h2 className="text-xl font-display font-black">Analytics Advanced</h2>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-2 mb-6">Tersedia untuk tier Pro dan Business.</p>
-        <Link href="/dashboard/subscription"><Button className="rounded-2xl">Upgrade Sekarang</Button></Link>
+        <h2 className="text-xl font-display font-black">{t.dashboardCore.analyticsAdvanced}</h2>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-2 mb-6">{t.dashboardCore.analyticsProOnly}</p>
+        <Link href="/dashboard/subscription"><Button className="rounded-2xl">{t.dashboardCore.upgradeNow}</Button></Link>
       </div>
     );
   }
 
   return (
     <div>
-      <Breadcrumb items={[{ label: "Dashboard", href: "/dashboard" }, { label: "Analytics" }]} className="mb-4" />
+      <Breadcrumb items={[{ label: t.nav.dashboard, href: "/dashboard" }, { label: t.dashboardCore.analytics }]} className="mb-4" />
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-display font-black tracking-tight">Analytics</h1>
+        <h1 className="text-2xl font-display font-black tracking-tight">{t.dashboardCore.analytics}</h1>
         {isBusiness && (
           <Button size="sm" variant="outline" className="rounded-2xl" onClick={async () => {
             try {
@@ -51,8 +53,8 @@ export default function AnalyticsPage() {
               const url = URL.createObjectURL(res.data);
               const a = document.createElement("a"); a.href = url; a.download = "sales.csv"; a.click();
               URL.revokeObjectURL(url);
-            } catch { toast.error("Gagal export."); }
-          }}><Download className="mr-1.5 h-4 w-4" /> Export CSV</Button>
+            } catch { toast.error(t.dashboardCore.exportFailed); }
+          }}><Download className="mr-1.5 h-4 w-4" /> {t.dashboardCore.exportCsv}</Button>
         )}
       </div>
 
@@ -61,23 +63,23 @@ export default function AnalyticsPage() {
         <Card className="lg:col-span-2 bg-gradient-to-br from-accent-50 to-white dark:from-accent-900/10 dark:to-navy-800 overflow-hidden relative">
           <div className="absolute -top-16 -right-16 w-48 h-48 bg-accent/5 rounded-full blur-2xl" />
           <CardContent className="p-6 relative">
-            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Total Pendapatan</p>
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">{t.dashboard.totalEarnings}</p>
             <p className="text-4xl sm:text-5xl font-black text-accent-600 dark:text-accent-400 mt-2">{formatCredit(analytics?.total_earnings ?? 0)}</p>
             <p className="text-sm text-gray-400 mt-1">≈ {formatIDR(analytics?.total_earnings ?? 0)}</p>
             <Link href="/wallet" className="text-xs text-primary font-semibold hover:underline inline-flex items-center gap-1 mt-3">
-              <Wallet className="h-3 w-3" /> Lihat Wallet <ArrowRight className="h-3 w-3" />
+              <Wallet className="h-3 w-3" /> {t.dashboardCore.viewWallet} <ArrowRight className="h-3 w-3" />
             </Link>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-6 flex flex-col justify-between h-full">
             <div>
-              <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Fee Tier</p>
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">{t.dashboardCore.feeTier}</p>
               <p className="text-3xl font-black mt-2">{analytics?.fee_percent ?? 20}%</p>
             </div>
             {!isBusiness && (
               <Link href="/dashboard/subscription" className="text-xs text-primary font-semibold hover:underline mt-3">
-                Upgrade untuk fee lebih rendah →
+                {t.dashboardCore.upgradeLowerFee}
               </Link>
             )}
           </CardContent>
@@ -86,19 +88,19 @@ export default function AnalyticsPage() {
 
       {/* Stats grid — 3x2 bento */}
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 mb-6">
-        <StatCard icon={FileText} label="Posts" value={analytics?.post_count ?? 0} color="text-primary" bg="bg-primary-50 dark:bg-primary-900/20" />
-        <StatCard icon={Package} label="Produk" value={analytics?.product_count ?? 0} color="text-secondary" bg="bg-secondary-50 dark:bg-secondary-900/20" />
-        <StatCard icon={Users} label="Followers" value={analytics?.follower_count ?? 0} color="text-purple-500" bg="bg-purple-50 dark:bg-purple-900/20" />
-        <StatCard icon={ShoppingCart} label="Penjualan" value={analytics?.sales_count ?? 0} color="text-green-500" bg="bg-green-50 dark:bg-green-900/20" />
-        <StatCard icon={TrendingUp} label="Revenue" value={formatCredit(analytics?.total_sales ?? 0)} color="text-green-500" bg="bg-green-50 dark:bg-green-900/20" />
-        <StatCard icon={Heart} label="Donasi" value={`${analytics?.donation_count ?? 0} (${formatCredit(analytics?.total_donations ?? 0)})`} color="text-pink-500" bg="bg-pink-50 dark:bg-pink-900/20" />
+        <StatCard icon={FileText} label={t.dashboardCore.statPosts} value={analytics?.post_count ?? 0} color="text-primary" bg="bg-primary-50 dark:bg-primary-900/20" />
+        <StatCard icon={Package} label={t.dashboardCore.statProducts} value={analytics?.product_count ?? 0} color="text-secondary" bg="bg-secondary-50 dark:bg-secondary-900/20" />
+        <StatCard icon={Users} label={t.dashboardCore.statFollowers} value={analytics?.follower_count ?? 0} color="text-purple-500" bg="bg-purple-50 dark:bg-purple-900/20" />
+        <StatCard icon={ShoppingCart} label={t.dashboardCore.statSales} value={analytics?.sales_count ?? 0} color="text-green-500" bg="bg-green-50 dark:bg-green-900/20" />
+        <StatCard icon={TrendingUp} label={t.dashboardCore.statRevenue} value={formatCredit(analytics?.total_sales ?? 0)} color="text-green-500" bg="bg-green-50 dark:bg-green-900/20" />
+        <StatCard icon={Heart} label={t.dashboardCore.statDonations} value={`${analytics?.donation_count ?? 0} (${formatCredit(analytics?.total_donations ?? 0)})`} color="text-pink-500" bg="bg-pink-50 dark:bg-pink-900/20" />
       </div>
 
       {!isBusiness && (
         <Card className="border-dashed border-accent/40">
           <CardContent className="p-5 text-center">
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">Upgrade ke Business untuk export CSV</p>
-            <Link href="/dashboard/subscription"><Button size="sm" variant="outline" className="rounded-2xl">Upgrade ke Business</Button></Link>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">{t.dashboardCore.upgradeBusinessExport}</p>
+            <Link href="/dashboard/subscription"><Button size="sm" variant="outline" className="rounded-2xl">{t.dashboardCore.upgradeToBusiness}</Button></Link>
           </CardContent>
         </Card>
       )}

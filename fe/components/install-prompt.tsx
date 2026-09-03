@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { X, Download } from "lucide-react";
+import { useTranslation } from "@/lib/internationalization";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>;
@@ -11,6 +12,7 @@ interface BeforeInstallPromptEvent extends Event {
 }
 
 export function InstallPrompt() {
+  const { t } = useTranslation();
   const pathname = usePathname();
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [show, setShow] = useState(false);
@@ -51,11 +53,11 @@ export function InstallPrompt() {
       <div className="flex items-start gap-3">
         <Download className="h-5 w-5 text-primary shrink-0 mt-0.5" />
         <div className="flex-1">
-          <p className="text-sm font-semibold">Install YourPage</p>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Akses lebih cepat langsung dari home screen</p>
+          <p className="text-sm font-semibold">{t.compAccount.installTitle}</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{t.compAccount.installDesc}</p>
           <div className="flex gap-2 mt-3">
-            <Button size="sm" onClick={install} className="text-xs h-8">Install</Button>
-            <Button size="sm" variant="ghost" onClick={dismiss} className="text-xs h-8">Nanti</Button>
+            <Button size="sm" onClick={install} className="text-xs h-8">{t.compAccount.installButton}</Button>
+            <Button size="sm" variant="ghost" onClick={dismiss} className="text-xs h-8">{t.compAccount.installLater}</Button>
           </div>
         </div>
         <button onClick={dismiss} className="text-gray-400 hover:text-gray-600"><X className="h-4 w-4" /></button>

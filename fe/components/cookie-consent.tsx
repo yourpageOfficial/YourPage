@@ -4,8 +4,10 @@ import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
+import { useTranslation } from "@/lib/internationalization";
 
 export function CookieConsent() {
+  const { t } = useTranslation();
   const pathname = usePathname();
   const [show, setShow] = useState(false);
 
@@ -44,11 +46,11 @@ export function CookieConsent() {
         >
           <div className="mx-auto max-w-3xl flex flex-col sm:flex-row items-start sm:items-center gap-3">
             <p className="text-sm text-gray-600 dark:text-gray-400 flex-1">
-              Kami menggunakan cookies untuk meningkatkan pengalaman kamu. <a href="/privacy" className="text-primary hover:underline">Pelajari lebih lanjut</a>
+              {t.compAccount.cookieMessage} <a href="/privacy" className="text-primary hover:underline">{t.compAccount.cookieLearnMore}</a>
             </p>
             <div className="flex gap-2 shrink-0">
-              <Button size="sm" variant="ghost" onClick={reject} className="text-xs">Tolak</Button>
-              <Button size="sm" onClick={accept} className="text-xs">Terima</Button>
+              <Button size="sm" variant="ghost" onClick={reject} className="text-xs">{t.compAccount.cookieReject}</Button>
+              <Button size="sm" onClick={accept} className="text-xs">{t.compAccount.cookieAccept}</Button>
             </div>
           </div>
         </motion.div>

@@ -14,12 +14,14 @@ import { formatCredit } from "@/lib/utils";
 import { ListSkeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, FileText, Music, Save, Trash2, Upload } from "lucide-react";
 import type { Post, ApiResponse } from "@/lib/types";
+import { useTranslation } from "@/lib/internationalization";
 
 export default function DashboardPostDetail() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const qc = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
+  const { t, interpolate } = useTranslation();
 
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
@@ -63,8 +65,8 @@ export default function DashboardPostDetail() {
       price: accessType === "paid" ? parseInt(price) * 1000 : undefined,
       status,
     }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["my-post", id] }); toast.success("Post tersimpan!"); },
-    onError: (err: any) => toast.error(err.response?.data?.error || "Gagal menyimpan"),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["my-post", id] }); toast.success(t.contentMgr.postSaved); },
+    onError: (err: any) => toast.error(err.response?.data?.error || t.contentMgr.saveFailed),
   });
 
   const addMedia = useMutation({
@@ -88,39 +90,39 @@ export default function DashboardPostDetail() {
   return (
     <div>
       <Button variant="ghost" size="sm" onClick={() => router.push("/dashboard/posts")} className="mb-4">
-        <ArrowLeft className="mr-1 h-4 w-4" /> Kembali
+        <ArrowLeft className="mr-1 h-4 w-4" /> {t.contentMgr.back}
       </Button>
 
       <Card className="mb-6">
-        <CardHeader><CardTitle>Edit Post</CardTitle></CardHeader>
+        <CardHeader><CardTitle>{t.contentMgr.editPost}</CardTitle></CardHeader>
         <CardContent className="space-y-3">
-          <Input placeholder="Judul" value={title} onChange={(e) => setTitle(e.target.value)} />
-          <Input placeholder="Excerpt (opsional)" value={excerpt} onChange={(e) => setExcerpt(e.target.value)} />
-          <Textarea placeholder="Konten..." value={content} onChange={(e) => setContent(e.target.value)} className="min-h-[150px]" />
+          <Input placeholder={t.contentMgr.postTitleLabel} value={title} onChange={(e) => setTitle(e.target.value)} />
+          <Input placeholder={t.contentMgr.excerptOptional} value={excerpt} onChange={(e) => setExcerpt(e.target.value)} />
+          <Textarea placeholder={t.contentMgr.contentLabel} value={content} onChange={(e) => setContent(e.target.value)} className="min-h-[150px]" />
           <div className="flex gap-2 flex-wrap">
-            <Button size="sm" variant={accessType === "free" ? "default" : "outline"} onClick={() => setAccessType("free")}>Gratis</Button>
-            <Button size="sm" variant={accessType === "paid" ? "default" : "outline"} onClick={() => setAccessType("paid")}>Berbayar</Button>
-            <Button size="sm" variant={accessType === "members" ? "default" : "outline"} onClick={() => setAccessType("members")}>Members Only</Button>
-            {accessType === "paid" && <Input type="number" placeholder="Harga (Credit)" value={price} onChange={(e) => setPrice(e.target.value)} className="w-40" />}
+            <Button size="sm" variant={accessType === "free" ? "default" : "outline"} onClick={() => setAccessType("free")}>{t.contentMgr.free}</Button>
+            <Button size="sm" variant={accessType === "paid" ? "default" : "outline"} onClick={() => setAccessType("paid")}>{t.contentMgr.paid}</Button>
+            <Button size="sm" variant={accessType === "members" ? "default" : "outline"} onClick={() => setAccessType("members")}>{t.contentMgr.membersOnly}</Button>
+            {accessType === "paid" && <Input type="number" placeholder={t.contentMgr.priceCredit} value={price} onChange={(e) => setPrice(e.target.value)} className="w-40" />}
           </div>
           {accessType === "members" && membershipTiers && membershipTiers.length > 0 && (
             <div>
-              <label className="text-sm font-medium mb-1.5 block">Pilih tier minimum (kosong = semua member)</label>
+              <label className="text-sm font-medium mb-1.5 block">{t.contentMgr.selectTierMinimum}</label>
               <select value={memberTierID} onChange={(e) => setMemberTierID(e.target.value)} className="w-full mt-1 rounded-xl border border-primary-200 dark:border-primary-900/40 bg-white dark:bg-navy-800 px-3 py-2 text-sm">
-                <option value="">Semua Member</option>
-                {membershipTiers.map((t: any) => (
-                  <option key={t.id} value={t.id}>{t.name} ({t.price_credits} Credit/bulan)</option>
+                <option value="">{t.contentMgr.allMembers}</option>
+                {membershipTiers.map((tier: any) => (
+                  <option key={tier.id} value={tier.id}>{tier.name} ({interpolate(t.contentMgr.creditPerMonth, { count: tier.price_credits })})</option>
                 ))}
               </select>
             </div>
           )}
           <div className="flex gap-2 flex-wrap">
             <Button size="sm" variant={status === "draft" ? "outline" : "default"} onClick={() => setStatus(status === "draft" ? "published" : "draft")}>
-              {status === "published" ? "✓ Published" : "Draft"}
+              {status === "published" ? t.contentMgr.publishedStatus : t.contentMgr.draftStatus}
             </Button>
           </div>
           <Button onClick={() => save.mutate()} disabled={save.isPending}>
-            <Save className="mr-1 h-4 w-4" /> {save.isPending ? "Menyimpan..." : "Simpan"}
+            <Save className="mr-1 h-4 w-4" /> {save.isPending ? t.contentMgr.saving : t.contentMgr.save}
           </Button>
         </CardContent>
       </Card>
@@ -129,18 +131,18 @@ export default function DashboardPostDetail() {
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle>Media ({post.media?.length || 0})</CardTitle>
+            <CardTitle>{interpolate(t.contentMgr.mediaCount, { count: post.media?.length || 0 })}</CardTitle>
             <div>
               <input ref={fileRef} type="file" multiple accept="image/*,video/*,audio/*,.pdf,.zip" className="hidden"
                 onChange={(e) => { if (e.target.files) Array.from(e.target.files).forEach(f => addMedia.mutate(f)); }} />
               <Button size="sm" variant="outline" onClick={() => fileRef.current?.click()}>
-                <Upload className="mr-1 h-4 w-4" /> Upload
+                <Upload className="mr-1 h-4 w-4" /> {t.contentMgr.upload}
               </Button>
             </div>
           </div>
         </CardHeader>
         <CardContent>
-          {post.media?.length === 0 && <p className="text-sm text-gray-500 dark:text-gray-400">Belum ada media.</p>}
+          {post.media?.length === 0 && <p className="text-sm text-gray-500 dark:text-gray-400">{t.contentMgr.noMedia}</p>}
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {post.media?.map((m) => (
               <div key={m.id} className="relative group rounded border overflow-hidden">

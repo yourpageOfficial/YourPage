@@ -1,20 +1,24 @@
 "use client";
+import { useTranslation } from "@/lib/internationalization";
 import { Navbar } from "@/components/navbar";
 import { ScrollToTop } from "@/components/ui/scroll-to-top";
 import { PageTransition } from "@/components/ui/page-transition";
 
-
-const sections = [
-  { id: "tentang", title: "1. Tentang YourPage", content: "YourPage adalah platform monetisasi konten untuk kreator Indonesia. Dengan menggunakan layanan ini, Anda menyetujui syarat dan ketentuan berikut." },
-  { id: "akun", title: "2. Akun", items: ["Anda harus berusia minimal 17 tahun untuk mendaftar.", "Informasi yang diberikan harus akurat dan terkini.", "Anda bertanggung jawab atas keamanan akun Anda.", "Satu orang hanya boleh memiliki satu akun."] },
-  { id: "konten", title: "3. Konten", items: ["Kreator bertanggung jawab penuh atas konten yang dipublikasikan.", "Dilarang mempublikasikan konten NSFW, kekerasan, ujaran kebencian, atau melanggar hukum.", "YourPage berhak menghapus konten dan menangguhkan akun yang melanggar."] },
-  { id: "pembayaran", title: "4. Pembayaran & Fee", items: ["Platform fee sebesar 10% dikenakan pada setiap transaksi (post, produk, donasi).", "Harga yang ditetapkan kreator sudah termasuk PPN (inclusive).", "Credit yang dibeli tidak dapat dicairkan kembali.", "Minimum penarikan adalah Rp 100.000.", "KYC (verifikasi identitas) wajib untuk penarikan pertama."] },
-  { id: "refund", title: "5. Refund & Sengketa", items: ["Platform tidak menyediakan refund otomatis.", "Sengketa ditangani oleh admin secara manual.", "Dalam kasus chargeback, platform berhak memotong saldo kreator terkait."] },
-  { id: "penangguhan", title: "6. Penangguhan", content: "YourPage berhak menangguhkan atau menghapus akun yang melanggar ketentuan tanpa pemberitahuan sebelumnya." },
-  { id: "perubahan", title: "7. Perubahan Ketentuan", content: "YourPage dapat mengubah syarat dan ketentuan ini sewaktu-waktu. Perubahan akan diumumkan melalui platform." },
-];
+const sectionIds = ["tentang", "akun", "konten", "pembayaran", "refund", "penangguhan", "perubahan"] as const;
 
 export default function TermsPage() {
+  const { t } = useTranslation();
+  const terms = t.legal.terms;
+  const sections = [
+    { id: sectionIds[0], title: terms.section1Title, content: terms.section1Content },
+    { id: sectionIds[1], title: terms.section2Title, items: [terms.section2Item1, terms.section2Item2, terms.section2Item3, terms.section2Item4] },
+    { id: sectionIds[2], title: terms.section3Title, items: [terms.section3Item1, terms.section3Item2, terms.section3Item3] },
+    { id: sectionIds[3], title: terms.section4Title, items: [terms.section4Item1, terms.section4Item2, terms.section4Item3, terms.section4Item4, terms.section4Item5] },
+    { id: sectionIds[4], title: terms.section5Title, items: [terms.section5Item1, terms.section5Item2, terms.section5Item3] },
+    { id: sectionIds[5], title: terms.section6Title, content: terms.section6Content },
+    { id: sectionIds[6], title: terms.section7Title, content: terms.section7Content },
+  ];
+
   return (
     <>
       <Navbar />
@@ -28,8 +32,8 @@ export default function TermsPage() {
             </ul>
           </nav>
           <main className="flex-1 min-w-0">
-            <h1 className="text-2xl sm:text-3xl font-display font-black tracking-tight mb-2">Syarat & Ketentuan</h1>
-            <p className="text-gray-500 dark:text-gray-400 text-sm mb-8">Terakhir diperbarui: April 2026</p>
+            <h1 className="text-2xl sm:text-3xl font-display font-black tracking-tight mb-2">{t.legal.termsTitle}</h1>
+            <p className="text-gray-500 dark:text-gray-400 text-sm mb-8">{t.legal.lastUpdated}</p>
             {sections.map(s => (
               <section key={s.id} id={s.id} className="mb-8 scroll-mt-20">
                 <h2 className="text-lg font-black mb-3">{s.title}</h2>

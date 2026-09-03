@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { WifiOff } from "lucide-react";
+import { useTranslation } from "@/lib/internationalization";
 
 export function OfflineIndicator() {
+  const { t } = useTranslation();
   const [offline, setOffline] = useState(false);
 
   useEffect(() => {
@@ -19,7 +21,7 @@ export function OfflineIndicator() {
 
   return (
     <div className="fixed top-14 sm:top-16 left-0 right-0 z-[90] bg-red-600 text-white text-center py-1.5 text-xs font-medium flex items-center justify-center gap-1">
-      <WifiOff className="h-3 w-3" /> Tidak ada koneksi internet
+      <WifiOff className="h-3 w-3" /> {t.compSocial.offline}
     </div>
   );
 }

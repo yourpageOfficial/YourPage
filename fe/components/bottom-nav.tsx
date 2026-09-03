@@ -5,9 +5,11 @@ import { usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { Home, Bell, User, MessageCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/lib/internationalization";
 
 export function BottomNav() {
   const { user } = useAuth();
+  const { t } = useTranslation();
   const pathname = usePathname();
 
   if (!user || pathname.startsWith("/overlay")) return null;
@@ -15,14 +17,14 @@ export function BottomNav() {
   const dashboardLink = user.role === "admin" ? "/admin" : user.role === "creator" ? "/dashboard" : "/s";
 
   const items = [
-    { href: dashboardLink, icon: Home, label: "Beranda" },
-    { href: "/chat", icon: MessageCircle, label: "Chat" },
-    { href: "/notifications", icon: Bell, label: "Notifikasi" },
-    { href: user.role === "admin" ? "/admin/profile" : "/profile", icon: User, label: "Profil" },
+    { href: dashboardLink, icon: Home, label: t.compSocial.bottomHome },
+    { href: "/chat", icon: MessageCircle, label: t.compSocial.bottomChat },
+    { href: "/notifications", icon: Bell, label: t.compSocial.bottomNotifications },
+    { href: user.role === "admin" ? "/admin/profile" : "/profile", icon: User, label: t.compSocial.bottomProfile },
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 sm:hidden bg-white/90 dark:bg-navy-900/90 backdrop-blur-xl border-t border-primary-100/80 dark:border-primary-900/30 safe-bottom" role="navigation" aria-label="Main navigation">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 sm:hidden bg-white/90 dark:bg-navy-900/90 backdrop-blur-xl border-t border-primary-100/80 dark:border-primary-900/30 safe-bottom" role="navigation" aria-label={t.compSocial.mainNavigation}>
       <div className="flex items-center justify-around h-16 px-2">
         {items.map((item) => {
           const active = pathname === item.href || pathname.startsWith(item.href + "/");

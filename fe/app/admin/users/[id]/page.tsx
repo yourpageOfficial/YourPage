@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { toast } from "@/lib/toast";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import { useTranslation } from "@/lib/internationalization";
 
 import { useState } from "react";
 
@@ -23,6 +24,7 @@ export default function AdminUserDetail() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const qc = useQueryClient();
+  const { t, interpolate } = useTranslation();
 
   // Fetch user from admin users list (no dedicated endpoint, use list with filter)
   const { data: user } = useQuery({
@@ -73,7 +75,7 @@ export default function AdminUserDetail() {
       note: promoNote,
     }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin-user", id] }); toast.success("Promo updated"); },
-    onError: (e: any) => toast.error(e.response?.data?.error || "Gagal"),
+    onError: (e: any) => toast.error(e.response?.data?.error || t.adminOverview.settingsSaveFailed),
   });
 
   if (!user) return <ListSkeleton count={3} />;
@@ -81,12 +83,12 @@ export default function AdminUserDetail() {
   return (
     <div>
       <Button variant="ghost" size="sm" onClick={() => router.push("/admin/users")} className="mb-4">
-        <ArrowLeft className="mr-1 h-4 w-4" /> Kembali
+        <ArrowLeft className="mr-1 h-4 w-4" /> {t.common.back}
       </Button>
 
       {/* Profile Card */}
       <Card className="mb-6">
-        <CardHeader><CardTitle>Detail User</CardTitle></CardHeader>
+        <CardHeader><CardTitle>{t.adminOverview.userDetailTitle}</CardTitle></CardHeader>
         <CardContent className="space-y-3">
           <div className="flex items-center gap-4">
             <Avatar src={user.avatar_url} name={user.display_name} size="xl" />
@@ -95,22 +97,22 @@ export default function AdminUserDetail() {
               <p className="text-gray-500 dark:text-gray-400">@{user.username}</p>
               <div className="flex gap-2 mt-1">
                 <Badge className={roleBadge[user.role] || ""}>{user.role}</Badge>
-                {user.is_banned && <Badge className="bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400">Banned</Badge>}
+                {user.is_banned && <Badge className="bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400">{t.adminOverview.bannedBadge}</Badge>}
               </div>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
-            <div><span className="text-gray-500 dark:text-gray-400">ID:</span> {user.id}</div>
-            <div><span className="text-gray-500 dark:text-gray-400">Joined:</span> {formatDate(user.created_at)}</div>
-            {user.bio && <div className="col-span-2"><span className="text-gray-500 dark:text-gray-400">Bio:</span> {user.bio}</div>}
+            <div><span className="text-gray-500 dark:text-gray-400">{t.adminOverview.userId}</span> {user.id}</div>
+            <div><span className="text-gray-500 dark:text-gray-400">{t.adminOverview.joined}</span> {formatDate(user.created_at)}</div>
+            {user.bio && <div className="col-span-2"><span className="text-gray-500 dark:text-gray-400">{t.adminOverview.bio}</span> {user.bio}</div>}
           </div>
           <div className="flex gap-2 pt-2">
-            {user.role === "creator" && <Link href={`/c/${user.username}`}><Button size="sm" variant="outline">Lihat Page</Button></Link>}
+            {user.role === "creator" && <Link href={`/c/${user.username}`}><Button size="sm" variant="outline">{t.adminOverview.viewPage}</Button></Link>}
             {user.is_banned
-              ? <Button size="sm" onClick={() => unban.mutate()}>Unban</Button>
+              ? <Button size="sm" onClick={() => unban.mutate()}>{t.adminOverview.unbanUser}</Button>
               : user.role !== "admin" && (
-                <ConfirmDialog title="Ban User?" message={`Yakin ingin ban ${user.display_name}?`} confirmLabel="Ban" variant="destructive" onConfirm={() => ban.mutate()}>
-                  {(open) => <Button size="sm" variant="destructive" onClick={open}>Ban User</Button>}
+                <ConfirmDialog title={t.adminOverview.banConfirmTitle} message={interpolate(t.adminOverview.banConfirmMessage, { name: user.display_name })} confirmLabel={t.adminOverview.banUser} variant="destructive" onConfirm={() => ban.mutate()}>
+                  {(open) => <Button size="sm" variant="destructive" onClick={open}>{t.adminOverview.banUser}</Button>}
                 </ConfirmDialog>
               )
             }
@@ -121,26 +123,26 @@ export default function AdminUserDetail() {
       {/* Creator Promo (only for creators) */}
       {user.role === "creator" && (
         <Card className="mb-6">
-          <CardHeader><CardTitle>🎯 Promo Creator</CardTitle></CardHeader>
+          <CardHeader><CardTitle>🎯 {t.adminOverview.promoCreatorTitle}</CardTitle></CardHeader>
           <CardContent className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-xs text-gray-500 dark:text-gray-400">Promo Fee %</label>
-                <Input type="number" placeholder="Kosong = pakai tier" value={promoFee} onChange={e => setPromoFee(e.target.value)} />
+                <label className="text-xs text-gray-500 dark:text-gray-400">{t.adminOverview.promoFeePercent}</label>
+                <Input type="number" placeholder={t.adminOverview.promoFeePlaceholder} value={promoFee} onChange={e => setPromoFee(e.target.value)} />
               </div>
               <div>
-                <label className="text-xs text-gray-500 dark:text-gray-400">Durasi (hari)</label>
+                <label className="text-xs text-gray-500 dark:text-gray-400">{t.adminOverview.promoDurationDays}</label>
                 <Input type="number" value={promoDays} onChange={e => setPromoDays(e.target.value)} />
               </div>
             </div>
             <label className="flex items-center gap-2 text-sm cursor-pointer">
               <input type="checkbox" checked={featured} onChange={e => setFeatured(e.target.checked)} className="rounded" />
-              Featured di homepage
+              {t.adminOverview.featuredHomepage}
             </label>
-            <Input placeholder="Catatan admin (opsional)" value={promoNote} onChange={e => setPromoNote(e.target.value)} />
+            <Input placeholder={t.adminOverview.adminNoteOptional} value={promoNote} onChange={e => setPromoNote(e.target.value)} />
             <div className="flex gap-2">
-              <Button size="sm" onClick={() => setPromo.mutate()}>Simpan Promo</Button>
-              <Button size="sm" variant="ghost" onClick={() => { setPromoFee(""); setPromoDays("90"); setFeatured(false); setPromoNote(""); setPromo.mutate(); }}>Reset Promo</Button>
+              <Button size="sm" onClick={() => setPromo.mutate()}>{t.adminOverview.savePromo}</Button>
+              <Button size="sm" variant="ghost" onClick={() => { setPromoFee(""); setPromoDays("90"); setFeatured(false); setPromoNote(""); setPromo.mutate(); }}>{t.adminOverview.resetPromo}</Button>
             </div>
           </CardContent>
         </Card>
@@ -148,9 +150,9 @@ export default function AdminUserDetail() {
 
       {/* Payment History */}
       <Card className="mb-6">
-        <CardHeader><CardTitle>Riwayat Payment ({payments?.length || 0})</CardTitle></CardHeader>
+        <CardHeader><CardTitle>{interpolate(t.adminOverview.paymentHistoryTitle, { count: payments?.length || 0 })}</CardTitle></CardHeader>
         <CardContent>
-          {payments?.length === 0 && <p className="text-sm text-gray-500 dark:text-gray-400">Tidak ada payment.</p>}
+          {payments?.length === 0 && <p className="text-sm text-gray-500 dark:text-gray-400">{t.adminOverview.noPayments}</p>}
           <div className="space-y-2">
             {payments?.slice(0, 20).map((p: any) => (
               <div key={p.id} className="flex items-center justify-between text-sm border-b pb-2">
@@ -170,9 +172,9 @@ export default function AdminUserDetail() {
 
       {/* Donation History */}
       <Card>
-        <CardHeader><CardTitle>Riwayat Donasi ({donations?.length || 0})</CardTitle></CardHeader>
+        <CardHeader><CardTitle>{interpolate(t.adminOverview.donationHistoryTitle, { count: donations?.length || 0 })}</CardTitle></CardHeader>
         <CardContent>
-          {donations?.length === 0 && <p className="text-sm text-gray-500 dark:text-gray-400">Tidak ada donasi.</p>}
+          {donations?.length === 0 && <p className="text-sm text-gray-500 dark:text-gray-400">{t.adminOverview.noDonations}</p>}
           <div className="space-y-2">
             {donations?.slice(0, 20).map((d: any) => (
               <div key={d.id} className="flex items-center justify-between text-sm border-b pb-2">

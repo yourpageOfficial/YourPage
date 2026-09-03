@@ -12,8 +12,10 @@ import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { formatIDR, formatCredit, formatDate } from "@/lib/utils";
 import { Banknote, Wallet, TrendingUp } from "lucide-react";
 import type { Withdrawal, PaginatedResponse } from "@/lib/types";
+import { useTranslation } from "@/lib/internationalization";
 
 export default function DashboardWithdrawals() {
+  const { t, locale, interpolate } = useTranslation();
   const qc = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [amount, setAmount] = useState("");
@@ -46,8 +48,8 @@ export default function DashboardWithdrawals() {
   });
 
   const validateWithdrawal = (): string | null => {
-    if (!/^\d{10,16}$/.test(accNumber)) return "Nomor rekening harus 10-16 digit angka";
-    if (!amount || parseInt(amount) < minCredits) return `Minimum penarikan ${minCredits} Credit`;
+    if (!/^\d{10,16}$/.test(accNumber)) return t.monetization.validationDigitsError;
+    if (!amount || parseInt(amount) < minCredits) return interpolate(t.monetization.minimumWithdrawal, { min: minCredits });
     return null;
   };
 
@@ -62,21 +64,21 @@ export default function DashboardWithdrawals() {
       setShowForm(false); setAmount(""); setBankName(""); setAccNumber(""); setAccName(""); setError("");
     },
     onError: (err: any) => {
-      const msg = err.response?.data?.error || err.message || "Gagal";
+      const msg = err.response?.data?.error || err.message || t.monetization.saveFailed;
       if (msg.includes("digit")) setError(msg);
-      else if (msg.includes("minimum") || msg.includes("100 Credit")) setError("Minimum penarikan 100 Credit");
-      else if (msg.includes("Credit") || msg.includes("insufficient")) setError("Saldo tidak cukup");
-      else if (msg.includes("KYC")) setError("KYC harus diverifikasi terlebih dahulu");
+      else if (msg.includes("minimum") || msg.includes("100 Credit")) setError(interpolate(t.monetization.minimumWithdrawal, { min: 100 }));
+      else if (msg.includes("Credit") || msg.includes("insufficient")) setError(t.monetization.insufficientBalance);
+      else if (msg.includes("KYC")) setError(t.monetization.kycRequired);
       else setError(msg);
     },
   });
 
   return (
     <div>
-      <Breadcrumb items={[{ label: "Dashboard", href: "/dashboard" }, { label: "Penarikan" }]} className="mb-4" />
+      <Breadcrumb items={[{ label: t.monetization.breadcrumbDashboard, href: "/dashboard" }, { label: t.monetization.breadcrumbWithdrawals }]} className="mb-4" />
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-display font-black tracking-tight">Penarikan Dana</h1>
-        <Button size="sm" onClick={() => setShowForm(!showForm)} className="rounded-2xl">💰 Tarik Dana</Button>
+        <h1 className="text-2xl font-display font-black tracking-tight">{t.monetization.withdrawalsTitle}</h1>
+        <Button size="sm" onClick={() => setShowForm(!showForm)} className="rounded-2xl">{t.monetization.withdrawButtonLabel}</Button>
       </div>
 
       {/* Balance summary */}
@@ -85,15 +87,15 @@ export default function DashboardWithdrawals() {
           <div className="absolute -top-8 -right-8 w-24 h-24 bg-accent/10 rounded-full blur-xl" />
           <CardContent className="p-5 relative">
             <div className="h-9 w-9 rounded-xl bg-white/10 flex items-center justify-center mb-2"><Wallet className="h-5 w-5" /></div>
-            <p className="text-primary-200 text-xs">Saldo Credit</p>
+            <p className="text-primary-200 text-xs">{t.monetization.creditBalanceLabel}</p>
             <p className="text-2xl font-black">{wallet?.balance_credits ?? 0}</p>
-            <p className="text-[10px] text-primary-200/60 mt-0.5">= {formatIDR((wallet?.balance_credits ?? 0) * rate)}</p>
+            <p className="text-[10px] text-primary-200/60 mt-0.5">{interpolate(t.monetization.amountEquivalent, { amount: ((wallet?.balance_credits ?? 0) * rate).toLocaleString(locale === "id" ? "id-ID" : "en-US") })}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-5">
             <div className="h-9 w-9 rounded-xl bg-accent-50 dark:bg-accent-900/20 flex items-center justify-center mb-2"><TrendingUp className="h-5 w-5 text-accent-600" /></div>
-            <p className="text-xs text-gray-500 dark:text-gray-400">Total Pendapatan</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">{t.monetization.totalEarningsLabel}</p>
             <p className="text-2xl font-black text-accent-600">{formatCredit(earnings?.total_earnings ?? 0)}</p>
           </CardContent>
         </Card>
@@ -101,23 +103,23 @@ export default function DashboardWithdrawals() {
 
       {showForm && (
         <Card className="mb-6 border-primary/20">
-          <CardHeader><CardTitle>Form Penarikan</CardTitle></CardHeader>
+          <CardHeader><CardTitle>{t.monetization.withdrawalFormTitle}</CardTitle></CardHeader>
           <CardContent className="space-y-4">
             {error && <div className="bg-red-50 dark:bg-red-900/20 text-red-600 text-sm rounded-xl px-4 py-3">{error}</div>}
             <div>
-              <label className="text-sm font-medium">Nominal Credit (min {minCredits})</label>
-              <Input type="number" placeholder="100" value={amount} onChange={(e) => setAmount(e.target.value)} />
-              {amount && <p className="text-xs text-gray-500 mt-1">= Rp {(parseInt(amount) * 1000).toLocaleString("id-ID")}</p>}
+              <label className="text-sm font-medium">{interpolate(t.monetization.amountLabel, { min: minCredits })}</label>
+              <Input type="number" placeholder={t.monetization.amountPlaceholder} value={amount} onChange={(e) => setAmount(e.target.value)} />
+              {amount && <p className="text-xs text-gray-500 mt-1">{interpolate(t.monetization.amountEquivalent, { amount: (parseInt(amount) * 1000).toLocaleString(locale === "id" ? "id-ID" : "en-US") })}</p>}
             </div>
-            <Input placeholder="Nama Bank (BCA, BNI, Mandiri, dll)" value={bankName} onChange={(e) => setBankName(e.target.value)} />
-            <Input placeholder="Nomor Rekening (10-16 digit)" value={accNumber} onChange={(e) => setAccNumber(e.target.value.replace(/\D/g, ""))} inputMode="numeric" maxLength={16} />
+            <Input placeholder={t.monetization.bankNamePlaceholder} value={bankName} onChange={(e) => setBankName(e.target.value)} />
+            <Input placeholder={t.monetization.accountNumberPlaceholder} value={accNumber} onChange={(e) => setAccNumber(e.target.value.replace(/\D/g, ""))} inputMode="numeric" maxLength={16} />
             <div>
-              <Input placeholder="Konfirmasi Nomor Rekening" value={accNumberConfirm} onChange={(e) => setAccNumberConfirm(e.target.value.replace(/\D/g, ""))} inputMode="numeric" maxLength={16} />
-              {accNumberConfirm && accNumber !== accNumberConfirm && <p className="text-xs text-red-500 mt-1">Nomor rekening tidak cocok</p>}
+              <Input placeholder={t.monetization.confirmAccountPlaceholder} value={accNumberConfirm} onChange={(e) => setAccNumberConfirm(e.target.value.replace(/\D/g, ""))} inputMode="numeric" maxLength={16} />
+              {accNumberConfirm && accNumber !== accNumberConfirm && <p className="text-xs text-red-500 mt-1">{t.monetization.accountMismatch}</p>}
             </div>
-            <Input placeholder="Nama Pemilik Rekening (sesuai KTP)" value={accName} onChange={(e) => setAccName(e.target.value)} />
+            <Input placeholder={t.monetization.accountNamePlaceholder} value={accName} onChange={(e) => setAccName(e.target.value)} />
             <Button onClick={() => create.mutate()} disabled={create.isPending || !amount || !bankName || !accNumber || accNumber !== accNumberConfirm || !accName} className="rounded-xl">
-              {create.isPending ? "Memproses..." : "Kirim Request"}
+              {create.isPending ? t.monetization.processing : t.monetization.submitRequest}
             </Button>
           </CardContent>
         </Card>
@@ -133,7 +135,7 @@ export default function DashboardWithdrawals() {
               <div className="flex-1 min-w-0">
                 <p className="font-bold">{formatIDR(w.amount_idr)}</p>
                 <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{w.bank_name} — {w.account_number} ({w.account_name})</p>
-                {w.admin_note && <p className="text-[10px] text-gray-400 mt-0.5">Admin: {w.admin_note}</p>}
+                {w.admin_note && <p className="text-[10px] text-gray-400 mt-0.5">{interpolate(t.monetization.adminNote, { note: w.admin_note })}</p>}
                 <p className="text-[10px] text-gray-400 mt-0.5">{formatDate(w.created_at)}</p>
               </div>
               <Badge className={statusColor[w.status] || ""}>{statusLabel[w.status] || w.status}</Badge>
@@ -143,7 +145,7 @@ export default function DashboardWithdrawals() {
         {withdrawals?.length === 0 && (
           <Card><CardContent className="p-10 text-center">
             <div className="h-14 w-14 rounded-2xl bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center mx-auto mb-3"><Banknote className="h-7 w-7 text-orange-500" /></div>
-            <p className="font-semibold">Belum ada penarikan</p>
+            <p className="font-semibold">{t.monetization.noWithdrawals}</p>
           </CardContent></Card>
         )}
       </div>

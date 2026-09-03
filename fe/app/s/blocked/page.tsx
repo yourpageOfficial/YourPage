@@ -7,9 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar } from "@/components/ui/avatar";
 import { Ban, ShieldOff } from "lucide-react";
+import { useTranslation } from "@/lib/internationalization";
 import type { UserBlock, ApiResponse } from "@/lib/types";
 
 export default function BlockedUsersPage() {
+  const { t, locale, interpolate } = useTranslation();
   const qc = useQueryClient();
 
   const { data: blocks, isLoading } = useQuery({
@@ -23,10 +25,10 @@ export default function BlockedUsersPage() {
   const unblockMutation = useMutation({
     mutationFn: (blockedId: string) => api.delete(`/follow/block/${blockedId}`),
     onSuccess: () => {
-      toast.success("User berhasil di-unblock");
+      toast.success(t.supporterHub.unblockSuccess);
       qc.invalidateQueries({ queryKey: ["blocked-users"] });
     },
-    onError: () => toast.error("Gagal unblock user"),
+    onError: () => toast.error(t.supporterHub.unblockError),
   });
 
   return (
@@ -34,10 +36,10 @@ export default function BlockedUsersPage() {
       <div className="mb-6">
         <h1 className="text-2xl font-display font-black flex items-center gap-2">
           <Ban className="h-6 w-6 text-red-500" />
-          User yang Diblokir
+          {t.supporterHub.blockedUsers}
         </h1>
         <p className="text-gray-500 dark:text-gray-400 mt-1 text-sm">
-          User yang kamu blokir tidak bisa follow, chat, atau berinteraksi denganmu.
+          {t.supporterHub.blockedUsersDesc}
         </p>
       </div>
 
@@ -53,7 +55,7 @@ export default function BlockedUsersPage() {
         <Card>
           <CardContent className="py-12 text-center">
             <ShieldOff className="h-10 w-10 text-gray-300 mx-auto mb-3" />
-            <p className="text-gray-500">Kamu belum memblokir siapapun.</p>
+            <p className="text-gray-500">{t.supporterHub.emptyBlocked}</p>
           </CardContent>
         </Card>
       )}
@@ -67,7 +69,7 @@ export default function BlockedUsersPage() {
                 <div>
                   <p className="font-medium text-sm">{block.blocked_id}</p>
                   <p className="text-xs text-gray-400">
-                    Diblokir {new Date(block.created_at).toLocaleDateString("id-ID")}
+                    {interpolate(t.supporterHub.blockedOn, { date: new Date(block.created_at).toLocaleDateString(locale === "id" ? "id-ID" : "en-US") })}
                   </p>
                 </div>
               </div>
@@ -77,7 +79,7 @@ export default function BlockedUsersPage() {
                 onClick={() => unblockMutation.mutate(block.blocked_id)}
                 loading={unblockMutation.isPending}
               >
-                Buka Blokir
+                {t.supporterHub.unblockButton}
               </Button>
             </CardContent>
           </Card>

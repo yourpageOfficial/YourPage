@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import api from "@/lib/api";
 import type { CreatorEarnings, Sale } from "@/lib/types";
 import { useAuth } from "@/lib/auth";
+import { useTranslation } from "@/lib/internationalization";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatCredit } from "@/lib/utils";
 import { ArrowRight, Banknote, CheckCircle, Circle, Crown, Eye, FileText, Package, Rocket, Sparkles, TrendingUp, Users, Wallet, Zap } from "lucide-react";
@@ -16,6 +17,7 @@ import Link from "next/link";
 
 export default function DashboardOverview() {
   const { user } = useAuth();
+  const { t } = useTranslation();
 
   const { data, isLoading } = useQuery({
     queryKey: ["creator-earnings"],
@@ -35,10 +37,10 @@ export default function DashboardOverview() {
   if (isLoading) return <ListSkeleton count={4} />;
 
   const checks = [
-    { done: !!user?.avatar_url, label: "Upload avatar", href: "/dashboard/profile", emoji: "📸" },
-    { done: !!user?.bio, label: "Tulis bio", href: "/dashboard/profile", emoji: "✍️" },
-    { done: (data?.post_count ?? 0) > 0, label: "Buat post pertama", href: "/dashboard/posts", emoji: "📝" },
-    { done: !!kyc, label: "Verifikasi KYC", href: "/dashboard/kyc", emoji: "🪪" },
+    { done: !!user?.avatar_url, label: t.dashboardCore.checkUploadAvatar, href: "/dashboard/profile", emoji: "📸" },
+    { done: !!user?.bio, label: t.dashboardCore.checkWriteBio, href: "/dashboard/profile", emoji: "✍️" },
+    { done: (data?.post_count ?? 0) > 0, label: t.dashboardCore.checkFirstPost, href: "/dashboard/posts", emoji: "📝" },
+    { done: !!kyc, label: t.dashboardCore.checkVerifyKyc, href: "/dashboard/kyc", emoji: "🪪" },
   ];
   const allDone = checks.every((c) => c.done);
   const doneCount = checks.filter(c => c.done).length;
@@ -52,9 +54,9 @@ export default function DashboardOverview() {
 
   const greeting = () => {
     const h = new Date().getHours();
-    if (h < 12) return "Selamat pagi";
-    if (h < 17) return "Selamat siang";
-    return "Selamat malam";
+    if (h < 12) return t.dashboard.greetingMorning;
+    if (h < 17) return t.dashboard.greetingAfternoon;
+    return t.dashboard.greetingEvening;
   };
 
   return (
@@ -79,8 +81,8 @@ export default function DashboardOverview() {
             </div>
             {/* Quick action row */}
             <div className="flex gap-2 mt-5">
-              <Link href="/dashboard/posts"><Button size="sm" variant="secondary" className="rounded-full text-xs h-8 px-4 shadow-lg">✏️ Post Baru</Button></Link>
-              <Link href={`/c/${user?.creator_profile?.page_slug || user?.username}`}><Button size="sm" className="rounded-full text-xs h-8 px-4 bg-white/15 hover:bg-white/25 border-0 text-white shadow-none"><Eye className="h-3.5 w-3.5 mr-1" /> Halaman Saya</Button></Link>
+              <Link href="/dashboard/posts"><Button size="sm" variant="secondary" className="rounded-full text-xs h-8 px-4 shadow-lg">✏️ {t.dashboard.newPostButton}</Button></Link>
+              <Link href={`/c/${user?.creator_profile?.page_slug || user?.username}`}><Button size="sm" className="rounded-full text-xs h-8 px-4 bg-white/15 hover:bg-white/25 border-0 text-white shadow-none"><Eye className="h-3.5 w-3.5 mr-1" /> {t.dashboard.myPageButton}</Button></Link>
             </div>
           </div>
         </div>
@@ -91,14 +93,14 @@ export default function DashboardOverview() {
           <CardContent className="p-6 relative h-full flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between">
-                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Total Earnings</p>
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">{t.dashboard.totalEarnings}</p>
                 <div className="h-8 w-8 rounded-xl bg-accent/10 flex items-center justify-center"><TrendingUp className="h-4 w-4 text-accent-600" /></div>
               </div>
               <p className="text-3xl sm:text-4xl font-black mt-3 text-accent-600 dark:text-accent-400">{formatCredit(data?.total_earnings ?? 0)}</p>
-              <p className="text-xs text-gray-400 mt-1">Credit</p>
+              <p className="text-xs text-gray-400 mt-1">{t.dashboardCore.credit}</p>
             </div>
             <Link href="/dashboard/analytics" className="text-xs text-primary font-semibold hover:underline inline-flex items-center gap-1 mt-4">
-              Lihat detail <ArrowRight className="h-3 w-3" />
+              {t.dashboardCore.viewDetails} <ArrowRight className="h-3 w-3" />
             </Link>
           </CardContent>
         </Card>
@@ -112,7 +114,7 @@ export default function DashboardOverview() {
               <Users className="h-5 w-5 text-purple-500" />
             </div>
             <p className="text-2xl sm:text-3xl font-black mt-2 text-purple-600 dark:text-purple-400">{data?.follower_count ?? 0}</p>
-            <p className="text-[10px] text-gray-400 uppercase tracking-wider mt-0.5">Followers</p>
+            <p className="text-[10px] text-gray-400 uppercase tracking-wider mt-0.5">{t.dashboardCore.followers}</p>
           </CardContent>
         </Card>
         <Link href="/wallet">
@@ -121,8 +123,8 @@ export default function DashboardOverview() {
               <div className="h-11 w-11 rounded-2xl bg-primary-100 dark:bg-primary-900/20 flex items-center justify-center mx-auto group-hover:scale-110 transition-transform">
                 <Wallet className="h-5 w-5 text-primary" />
               </div>
-              <p className="text-2xl sm:text-3xl font-black mt-2 text-primary">Wallet</p>
-              <p className="text-[10px] text-primary uppercase tracking-wider mt-0.5 font-medium">Lihat →</p>
+              <p className="text-2xl sm:text-3xl font-black mt-2 text-primary">{t.dashboardCore.walletBalance}</p>
+              <p className="text-[10px] text-primary uppercase tracking-wider mt-0.5 font-medium">{t.dashboardCore.view}</p>
             </CardContent>
           </Card>
         </Link>
@@ -143,7 +145,7 @@ export default function DashboardOverview() {
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <Rocket className="h-5 w-5" aria-hidden="true" />
-                <p className="font-black text-sm">Setup Halaman</p>
+                <p className="font-black text-sm">{t.dashboard.setupTitle}</p>
               </div>
               <Badge variant="secondary" className="text-[10px]">{doneCount}/{checks.length}</Badge>
             </div>
@@ -168,10 +170,10 @@ export default function DashboardOverview() {
           <CardContent className="p-5">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <p className="font-black text-sm">Penjualan 7 Hari</p>
-                {totalRecentSales > 0 && <p className="text-xs text-gray-400 mt-0.5">Total: <span className="text-green-500 font-bold">{formatCredit(totalRecentSales)}</span></p>}
+                <p className="font-black text-sm">{t.dashboardCore.sales7Days}</p>
+                {totalRecentSales > 0 && <p className="text-xs text-gray-400 mt-0.5">{t.dashboardCore.total} <span className="text-green-500 font-bold">{formatCredit(totalRecentSales)}</span></p>}
               </div>
-              <Link href="/dashboard/sales"><Button size="sm" variant="ghost" className="text-xs rounded-xl">Semua <ArrowRight className="h-3 w-3 ml-1" /></Button></Link>
+              <Link href="/dashboard/sales"><Button size="sm" variant="ghost" className="text-xs rounded-xl">{t.dashboardCore.all} <ArrowRight className="h-3 w-3 ml-1" /></Button></Link>
             </div>
             {recentSales.length > 0 ? (
               <div className="flex items-end gap-1.5 h-32 sm:h-40">
@@ -190,7 +192,7 @@ export default function DashboardOverview() {
             ) : (
               <div className="h-32 sm:h-40 flex flex-col items-center justify-center text-center">
                 <div className="h-12 w-12 rounded-2xl bg-primary-50 dark:bg-primary-900/20 flex items-center justify-center mb-2"><TrendingUp className="h-6 w-6 text-primary/40" /></div>
-                <p className="text-xs text-gray-400">Belum ada data penjualan</p>
+                <p className="text-xs text-gray-400">{t.dashboardCore.noSalesData}</p>
               </div>
             )}
           </CardContent>
@@ -202,7 +204,7 @@ export default function DashboardOverview() {
             <Card clickable className="group">
               <CardContent className="p-4 text-center">
                 <div className="h-10 w-10 rounded-2xl bg-primary-100 dark:bg-primary-900/20 flex items-center justify-center mx-auto group-hover:scale-110 transition-transform"><FileText className="h-5 w-5 text-primary" /></div>
-                <p className="text-xs font-bold mt-2">Buat Post</p>
+                <p className="text-xs font-bold mt-2">{t.dashboardCore.createPost}</p>
               </CardContent>
             </Card>
           </Link>
@@ -210,7 +212,7 @@ export default function DashboardOverview() {
             <Card clickable className="group">
               <CardContent className="p-4 text-center">
                 <div className="h-10 w-10 rounded-2xl bg-purple-100 dark:bg-purple-900/20 flex items-center justify-center mx-auto group-hover:scale-110 transition-transform"><Package className="h-5 w-5 text-purple-500" /></div>
-                <p className="text-xs font-bold mt-2">Buat Produk</p>
+                <p className="text-xs font-bold mt-2">{t.dashboardCore.createProduct}</p>
               </CardContent>
             </Card>
           </Link>
@@ -218,7 +220,7 @@ export default function DashboardOverview() {
             <Card clickable className="group">
               <CardContent className="p-4 text-center">
                 <div className="h-10 w-10 rounded-2xl bg-green-100 dark:bg-green-900/20 flex items-center justify-center mx-auto group-hover:scale-110 transition-transform"><Banknote className="h-5 w-5 text-green-500" /></div>
-                <p className="text-xs font-bold mt-2">Tarik Saldo</p>
+                <p className="text-xs font-bold mt-2">{t.dashboardCore.withdrawBalance}</p>
               </CardContent>
             </Card>
           </Link>
@@ -226,7 +228,7 @@ export default function DashboardOverview() {
             <Card clickable className="group">
               <CardContent className="p-4 text-center">
                 <div className="h-10 w-10 rounded-2xl bg-accent-100 dark:bg-accent-900/20 flex items-center justify-center mx-auto group-hover:scale-110 transition-transform"><Sparkles className="h-5 w-5 text-accent-600" /></div>
-                <p className="text-xs font-bold mt-2">Upgrade</p>
+                <p className="text-xs font-bold mt-2">{t.dashboardCore.upgrade}</p>
               </CardContent>
             </Card>
           </Link>

@@ -9,10 +9,12 @@ import { AuthGuard } from "@/components/auth-guard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useTranslation } from "@/lib/internationalization";
 
 export default function UpgradeCreatorPage() {
   const { user, fetchMe } = useAuth();
   const router = useRouter();
+  const { t, interpolate } = useTranslation();
   const [pageSlug, setPageSlug] = useState("");
   const [displayName, setDisplayName] = useState(user?.display_name || "");
   const [loading, setLoading] = useState(false);
@@ -30,7 +32,7 @@ export default function UpgradeCreatorPage() {
       await fetchMe();
       router.push("/dashboard");
     } catch (err: any) {
-      setError(err.response?.data?.error || "Gagal upgrade");
+      setError(err.response?.data?.error || t.upgrade.upgradeFailed);
     } finally { setLoading(false); }
   };
 
@@ -40,22 +42,22 @@ export default function UpgradeCreatorPage() {
       <main className="mx-auto max-w-md px-4 py-12">
         <Card>
           <CardHeader>
-            <CardTitle>Jadi Creator</CardTitle>
-            <p className="text-sm text-gray-500 dark:text-gray-400">Mulai monetisasi kontenmu di YourPage</p>
+            <CardTitle>{t.upgrade.title}</CardTitle>
+            <p className="text-sm text-gray-500 dark:text-gray-400">{t.upgrade.subtitle}</p>
           </CardHeader>
           <CardContent className="space-y-4">
             {error && <p className="text-sm text-red-600">{error}</p>}
             <div>
-              <label className="text-sm font-medium">Display Name</label>
-              <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="Nama tampilan" />
+              <label className="text-sm font-medium">{t.upgrade.displayNameLabel}</label>
+              <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder={t.upgrade.displayNamePlaceholder} />
             </div>
             <div>
-              <label className="text-sm font-medium">Page Slug</label>
-              <Input value={pageSlug} onChange={(e) => setPageSlug(e.target.value.toLowerCase().replace(/[^a-z0-9]/g, ""))} placeholder="username" />
-              <p className="text-xs text-gray-400 mt-1">Halaman kamu: yourpage.id/c/{pageSlug || "..."}</p>
+              <label className="text-sm font-medium">{t.upgrade.pageSlugLabel}</label>
+              <Input value={pageSlug} onChange={(e) => setPageSlug(e.target.value.toLowerCase().replace(/[^a-z0-9]/g, ""))} placeholder={t.upgrade.slugPlaceholder} />
+              <p className="text-xs text-gray-400 mt-1">{interpolate(t.upgrade.pageHint, { slug: pageSlug || "..." })}</p>
             </div>
             <Button className="w-full" onClick={handleUpgrade} disabled={loading || !pageSlug || !displayName}>
-              {loading ? "Memproses..." : "Upgrade ke Creator"}
+              {loading ? t.upgrade.processing : t.upgrade.upgradeButton}
             </Button>
           </CardContent>
         </Card>

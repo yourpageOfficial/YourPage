@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { TrendingUp, Heart, ShoppingBag, Sparkles } from "lucide-react";
+import { useTranslation } from "@/lib/internationalization";
 
 // Static illustrative bar heights (%) — purely decorative sparkline, not real data.
 const bars = [38, 52, 44, 68, 58, 82, 100];
@@ -12,6 +13,7 @@ const bars = [38, 52, 44, 68, 58, 82, 100];
  * Clearly labeled as an illustration so it never reads as a real user's data.
  */
 export function EarningsPreviewCard() {
+  const { t } = useTranslation();
   return (
     <div className="relative mx-auto w-full max-w-sm lg:max-w-none">
       <motion.div
@@ -26,25 +28,25 @@ export function EarningsPreviewCard() {
               <span className="motion-safe:animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
               <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500" />
             </span>
-            <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Dashboard Kreator</span>
+            <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">{t.compLanding.dashboardTitle}</span>
           </div>
           <Sparkles className="h-4 w-4 text-accent" aria-hidden="true" />
         </div>
 
-        <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Pendapatan bulan ini</p>
+        <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">{t.compLanding.monthlyEarnings}</p>
         <p className="text-3xl sm:text-4xl font-display font-black tracking-tight mt-1">Rp12.450.000</p>
         <div className="inline-flex items-center gap-1 mt-2 text-xs font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 rounded-full px-2.5 py-1">
           <TrendingUp className="h-3 w-3" aria-hidden="true" />
-          +18% dari bulan lalu
+          {t.compLanding.growthLabel}
         </div>
 
-        <div className="flex items-end gap-1.5 h-16 mt-5" role="img" aria-label="Grafik tren pendapatan yang terus naik">
+        <div className="flex items-end gap-1.5 h-16 mt-5" role="img" aria-label={t.compLanding.chartAriaLabel}>
           {bars.map((h, i) => (
             <div key={i} className={`flex-1 rounded-t-md ${i === bars.length - 1 ? "bg-accent" : "bg-primary-200 dark:bg-primary-800"}`} style={{ height: `${h}%` }} />
           ))}
         </div>
 
-        <p className="mt-4 text-[11px] text-gray-400 dark:text-gray-500 text-center italic">*Ilustrasi tampilan dashboard</p>
+        <p className="mt-4 text-[11px] text-gray-400 dark:text-gray-500 text-center italic">{t.compLanding.illustrationNote}</p>
       </motion.div>
 
       <motion.div
@@ -57,7 +59,7 @@ export function EarningsPreviewCard() {
           <Heart className="h-3.5 w-3.5" aria-hidden="true" />
         </div>
         <div className="leading-tight">
-          <p className="text-[11px] font-bold">Donasi baru</p>
+          <p className="text-[11px] font-bold">{t.compLanding.newDonation}</p>
           <p className="text-[10px] text-gray-500 dark:text-gray-400">+Rp50.000</p>
         </div>
       </motion.div>
@@ -72,8 +74,8 @@ export function EarningsPreviewCard() {
           <ShoppingBag className="h-3.5 w-3.5" aria-hidden="true" />
         </div>
         <div className="leading-tight">
-          <p className="text-[11px] font-bold">Produk terjual</p>
-          <p className="text-[10px] text-gray-500 dark:text-gray-400">E-book Design</p>
+          <p className="text-[11px] font-bold">{t.compLanding.productSold}</p>
+          <p className="text-[10px] text-gray-500 dark:text-gray-400">{t.compLanding.ebookDesign}</p>
         </div>
       </motion.div>
     </div>

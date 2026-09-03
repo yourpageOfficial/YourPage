@@ -8,8 +8,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PasswordStrength } from "@/components/password-strength-meter";
+import { useTranslation } from "@/lib/internationalization";
 
 export function ChangePasswordCard() {
+  const { t } = useTranslation();
   const [oldPw, setOldPw] = useState("");
   const [newPw, setNewPw] = useState("");
   const [confirmPw, setConfirmPw] = useState("");
@@ -18,13 +20,13 @@ export function ChangePasswordCard() {
   const change = useMutation({
     mutationFn: () => api.post("/auth/change-password", { old_password: oldPw, new_password: newPw }),
     onSuccess: () => {
-      toast.success("Password berhasil diubah!");
+      toast.success(t.compAccount.passwordChangeSuccess);
       setOldPw("");
       setNewPw("");
       setConfirmPw("");
     },
     onError: (e: any) => {
-      const msg = e.response?.data?.error || "Gagal mengubah password";
+      const msg = e.response?.data?.error || t.compAccount.passwordChangeFailed;
       toast.error(msg);
     },
   });
@@ -32,32 +34,32 @@ export function ChangePasswordCard() {
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="text-base">🔒 Ganti Password</CardTitle>
+        <CardTitle className="text-base">{t.compAccount.changePasswordTitle}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
         <p className="text-xs text-gray-500 dark:text-gray-400">
-          Gunakan password yang kuat dan belum pernah digunakan sebelumnya untuk melindungi akun kamu.
+          {t.compAccount.changePasswordDesc}
         </p>
         <div>
           <label htmlFor="old-password-input" className="text-sm font-medium mb-1 block">
-            Password Lama
+            {t.compAccount.oldPasswordLabel}
           </label>
           <Input
             id="old-password-input"
             type="password"
-            placeholder="Password lama"
+            placeholder={t.compAccount.oldPasswordPlaceholder}
             value={oldPw}
             onChange={(e) => setOldPw(e.target.value)}
           />
         </div>
         <div>
           <label htmlFor="new-password-input" className="text-sm font-medium mb-1 block">
-            Password Baru
+            {t.compAccount.newPasswordLabel}
           </label>
           <Input
             id="new-password-input"
             type="password"
-            placeholder="Min 8 karakter"
+            placeholder={t.compAccount.newPasswordPlaceholder}
             value={newPw}
             onChange={(e) => setNewPw(e.target.value)}
           />
@@ -65,22 +67,22 @@ export function ChangePasswordCard() {
         </div>
         <div>
           <label htmlFor="confirm-password-input" className="text-sm font-medium mb-1 block">
-            Konfirmasi Password
+            {t.compAccount.confirmPasswordLabel}
           </label>
           <Input
             id="confirm-password-input"
             type="password"
-            placeholder="Ulangi password baru"
+            placeholder={t.compAccount.confirmPasswordPlaceholder}
             value={confirmPw}
             onChange={(e) => setConfirmPw(e.target.value)}
           />
-          {mismatch && <p className="text-xs text-red-500 mt-1">Password tidak cocok</p>}
+          {mismatch && <p className="text-xs text-red-500 mt-1">{t.compAccount.passwordMismatch}</p>}
         </div>
         <Button
           onClick={() => change.mutate()}
           disabled={change.isPending || !oldPw || newPw.length < 8 || !!mismatch}
         >
-          {change.isPending ? "Memproses..." : "Ganti Password"}
+          {change.isPending ? t.compAccount.loadingDots : t.compAccount.changePasswordTitle.replace("🔒 ", "")}
         </Button>
       </CardContent>
     </Card>

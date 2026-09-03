@@ -8,10 +8,12 @@ import { AuthGuard } from "@/components/auth-guard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar } from "@/components/ui/avatar";
+import { useTranslation } from "@/lib/internationalization";
 
 export default function ProfilePage() {
   const { user, loading, fetchMe } = useAuth();
   const router = useRouter();
+  const { t } = useTranslation();
 
   useEffect(() => {
     if (typeof window !== "undefined" && !user && loading) {
@@ -30,7 +32,7 @@ export default function ProfilePage() {
     // Supporter stays on this page
   }, [user, loading, router]);
 
-  if (loading || !user) return <div className="p-8 text-center text-gray-500 dark:text-gray-400">Memuat...</div>;
+  if (loading || !user) return <div className="p-8 text-center text-gray-500 dark:text-gray-400">{t.profilePage.loading}</div>;
 
   // Supporter profile
   if (user.role === "supporter") {
@@ -52,10 +54,10 @@ export default function ProfilePage() {
               {/* Actions */}
               <div className="mt-6 space-y-2">
                 <a href="/s" className="block w-full text-center py-2.5 rounded-xl bg-primary text-white text-sm font-medium hover:bg-primary-700 transition-colors">
-                  Dashboard
+                  {t.profilePage.dashboard}
                 </a>
                 <a href="/upgrade" className="block w-full text-center py-2.5 rounded-xl border text-sm font-medium text-primary hover:bg-primary-50 transition-colors">
-                  Upgrade ke Creator
+                  {t.profilePage.upgradeToCreator}
                 </a>
               </div>
             </CardContent>
@@ -65,5 +67,5 @@ export default function ProfilePage() {
     );
   }
 
-  return <div className="p-8 text-center text-gray-500 dark:text-gray-400">Redirecting...</div>;
+  return <div className="p-8 text-center text-gray-500 dark:text-gray-400">{t.profilePage.redirecting}</div>;
 }

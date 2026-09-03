@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/avatar";
 import { Copy, Users, Coins, Gift, ExternalLink } from "lucide-react";
 import type { ReferralStats, ReferralUse, PaginatedResponse, ApiResponse } from "@/lib/types";
+import { useTranslation } from "@/lib/internationalization";
 
 function StatCard({ icon, label, value }: { icon: React.ReactNode; label: string; value: string | number }) {
   return (
@@ -28,6 +29,7 @@ function StatCard({ icon, label, value }: { icon: React.ReactNode; label: string
 }
 
 export default function ReferralDashboardPage() {
+  const { t, interpolate, locale } = useTranslation();
   const { data: stats } = useQuery({
     queryKey: ["referral-stats"],
     queryFn: async () => {
@@ -48,35 +50,35 @@ export default function ReferralDashboardPage() {
 
   const copyLink = () => {
     navigator.clipboard.writeText(referralLink);
-    toast.success("Link referral disalin!");
+    toast.success(t.accountMgr.referralLinkCopied);
   };
 
   const copyCode = () => {
     if (!stats) return;
     navigator.clipboard.writeText(stats.code);
-    toast.success("Kode referral disalin!");
+    toast.success(t.accountMgr.referralCodeCopied);
   };
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-8 space-y-6">
       <div>
-        <h1 className="text-2xl font-display font-black">Program Referral 🎁</h1>
+        <h1 className="text-2xl font-display font-black">{t.accountMgr.referralTitle}</h1>
         <p className="text-gray-500 dark:text-gray-400 mt-1 text-sm">
-          Ajak teman daftar dan dapatkan bonus kredit untuk kamu berdua.
+          {t.accountMgr.referralSubtitle}
         </p>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <StatCard icon={<Users className="h-5 w-5" />} label="Total Referral" value={stats?.total_referred ?? 0} />
-        <StatCard icon={<Coins className="h-5 w-5" />} label="Total Kredit Diperoleh" value={`${stats?.total_credits_earned ?? 0} CR`} />
-        <StatCard icon={<Gift className="h-5 w-5" />} label="Bonus per Referral" value={`${stats?.reward_per_referral ?? 10} CR`} />
+        <StatCard icon={<Users className="h-5 w-5" />} label={t.accountMgr.referralTotalLabel} value={stats?.total_referred ?? 0} />
+        <StatCard icon={<Coins className="h-5 w-5" />} label={t.accountMgr.referralCreditsEarnedLabel} value={`${stats?.total_credits_earned ?? 0} CR`} />
+        <StatCard icon={<Gift className="h-5 w-5" />} label={t.accountMgr.referralBonusLabel} value={`${stats?.reward_per_referral ?? 10} CR`} />
       </div>
 
       {/* Referral Link */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Link & Kode Referral Kamu</CardTitle>
+          <CardTitle className="text-base">{t.accountMgr.referralLinkTitle}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           {/* Code */}
@@ -92,7 +94,7 @@ export default function ReferralDashboardPage() {
           {/* Full link */}
           <div className="flex items-center gap-2">
             <div className="flex-1 bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2 text-xs text-gray-500 truncate border border-gray-200 dark:border-gray-700 font-mono">
-              {referralLink || "Memuat..."}
+              {referralLink || t.accountMgr.referralLoading}
             </div>
             <Button variant="outline" size="sm" onClick={copyLink}>
               <Copy className="h-4 w-4" />
@@ -107,8 +109,7 @@ export default function ReferralDashboardPage() {
           </div>
 
           <p className="text-xs text-gray-400">
-            Setiap orang yang daftar melalui link/kode kamu akan mendapat{" "}
-            <strong>{stats?.reward_per_referral ?? 10} kredit</strong> bonus, dan kamu juga mendapatkan hal yang sama.
+            {interpolate(t.accountMgr.referralCommissionDesc, { value: stats?.reward_per_referral ?? 10 })}
           </p>
         </CardContent>
       </Card>
@@ -116,11 +117,11 @@ export default function ReferralDashboardPage() {
       {/* Who registered */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Yang Mendaftar via Referral Kamu</CardTitle>
+          <CardTitle className="text-base">{t.accountMgr.referralRegisteredTitle}</CardTitle>
         </CardHeader>
         <CardContent>
           {!referrals || referrals.length === 0 ? (
-            <p className="text-gray-400 text-sm text-center py-6">Belum ada yang daftar. Bagikan linkmu!</p>
+            <p className="text-gray-400 text-sm text-center py-6">{t.accountMgr.referralEmpty}</p>
           ) : (
             <div className="space-y-3">
               {referrals.map((use) => (
@@ -139,7 +140,7 @@ export default function ReferralDashboardPage() {
                   <div className="text-right">
                     <p className="text-sm font-bold text-green-500">+{use.reward_credits} CR</p>
                     <p className="text-xs text-gray-400">
-                      {new Date(use.created_at).toLocaleDateString("id-ID")}
+                      {new Date(use.created_at).toLocaleDateString(locale === "id" ? "id-ID" : "en-US")}
                     </p>
                   </div>
                 </div>

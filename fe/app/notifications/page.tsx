@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { PageTransition } from "@/components/ui/page-transition";
 import { formatDate } from "@/lib/utils";
 import { Bell, Heart, ShoppingCart, UserPlus, MessageCircle, CreditCard } from "lucide-react";
+import { useTranslation } from "@/lib/internationalization";
 import type { Notification, PaginatedResponse } from "@/lib/types";
 
 const typeConfig: Record<string, { icon: any; color: string; bg: string }> = {
@@ -19,13 +20,13 @@ const typeConfig: Record<string, { icon: any; color: string; bg: string }> = {
   topup: { icon: CreditCard, color: "text-accent-600", bg: "bg-accent-50 dark:bg-accent-900/20" },
 };
 
-function groupByDate(notifs: Notification[]) {
+function groupByDate(notifs: Notification[], todayLabel: string, yesterdayLabel: string) {
   const groups: Record<string, Notification[]> = {};
   const today = new Date().toDateString();
   const yesterday = new Date(Date.now() - 86400000).toDateString();
   for (const n of notifs) {
     const d = new Date(n.created_at).toDateString();
-    const label = d === today ? "Hari ini" : d === yesterday ? "Kemarin" : formatDate(n.created_at);
+    const label = d === today ? todayLabel : d === yesterday ? yesterdayLabel : formatDate(n.created_at);
     (groups[label] ||= []).push(n);
   }
   return groups;
@@ -33,6 +34,7 @@ function groupByDate(notifs: Notification[]) {
 
 export default function NotificationsPage() {
   const qc = useQueryClient();
+  const { t } = useTranslation();
 
   const { data: notifs } = useQuery({
     queryKey: ["notifications"],
@@ -44,7 +46,7 @@ export default function NotificationsPage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["notifications"] }),
   });
 
-  const grouped = notifs ? groupByDate(notifs) : {};
+  const grouped = notifs ? groupByDate(notifs, t.notifications.today, t.notifications.yesterday) : {};
 
   return (
     <AuthGuard>
@@ -52,14 +54,14 @@ export default function NotificationsPage() {
       <PageTransition>
         <main className="mx-auto max-w-2xl px-4 py-6 sm:py-8">
           <div className="mb-6 flex items-center justify-between">
-            <h1 className="text-2xl font-display font-black tracking-tight">Notifikasi</h1>
-            <Button variant="ghost" size="sm" onClick={() => markAll.mutate()} loading={markAll.isPending} className="rounded-xl text-xs">Tandai dibaca</Button>
+            <h1 className="text-2xl font-display font-black tracking-tight">{t.notifications.title}</h1>
+            <Button variant="ghost" size="sm" onClick={() => markAll.mutate()} loading={markAll.isPending} className="rounded-xl text-xs">{t.notifications.markAllRead}</Button>
           </div>
           {notifs?.length === 0 && (
             <div className="text-center py-16">
               <div className="h-16 w-16 rounded-2xl bg-primary-50 dark:bg-primary-900/20 flex items-center justify-center mx-auto mb-4"><Bell className="h-8 w-8 text-primary" /></div>
-              <p className="font-semibold">Semua sudah dibaca</p>
-              <p className="text-xs text-gray-400 mt-1">Notifikasi baru akan muncul di sini</p>
+              <p className="font-semibold">{t.notifications.allReadTitle}</p>
+              <p className="text-xs text-gray-400 mt-1">{t.notifications.allReadDesc}</p>
             </div>
           )}
           {Object.entries(grouped).map(([label, items]) => (

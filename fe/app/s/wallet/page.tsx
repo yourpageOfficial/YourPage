@@ -10,8 +10,10 @@ import Link from "next/link";
 import type { Wallet as WalletType, CreditTransaction, ApiResponse, PaginatedResponse } from "@/lib/types";
 import { motion } from "framer-motion";
 import { staggerChildren, staggerItem } from "@/lib/motion-variants";
+import { useTranslation } from "@/lib/internationalization";
 
 export default function SupporterWallet() {
+  const { t } = useTranslation();
   const { data: wallet } = useQuery({
     queryKey: ["wallet"],
     queryFn: async () => { const { data } = await api.get<ApiResponse<WalletType>>("/wallet/balance"); return data.data; },
@@ -27,8 +29,8 @@ export default function SupporterWallet() {
   return (
     <div>
       <div className="flex items-center justify-between mb-5">
-        <h1 className="text-2xl font-display font-black tracking-tight">Wallet</h1>
-        <Link href="/wallet/topup"><Button size="sm" variant="secondary" className="rounded-2xl">Top-up</Button></Link>
+        <h1 className="text-2xl font-display font-black tracking-tight">{t.nav.wallet}</h1>
+        <Link href="/wallet/topup"><Button size="sm" variant="secondary" className="rounded-2xl">{t.wallet.topupButton}</Button></Link>
       </div>
 
       {/* Balance + stats */}
@@ -36,28 +38,28 @@ export default function SupporterWallet() {
         <Card className="lg:col-span-2 bg-gradient-to-br from-primary-600 via-primary to-primary-800 dark:from-primary-900 dark:via-primary-800 dark:to-navy-900 border-0 text-white overflow-hidden relative">
           <div className="absolute top-0 right-0 w-40 h-40 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/3" />
           <CardContent className="p-6 relative">
-            <p className="text-primary-200 text-xs font-medium">Saldo Credit</p>
+            <p className="text-primary-200 text-xs font-medium">{t.wallet.creditBalance}</p>
             <p className="text-4xl sm:text-5xl font-black mt-1">{wallet?.balance_credits ?? 0}</p>
-            <p className="text-primary-200/60 text-xs mt-1">1 Credit = Rp 1.000</p>
+            <p className="text-primary-200/60 text-xs mt-1">{t.wallet.creditRateNote}</p>
           </CardContent>
         </Card>
         <div className="grid grid-cols-2 lg:grid-cols-1 gap-3">
           <Card>
             <CardContent className="p-4 flex items-center gap-3">
               <div className="h-9 w-9 rounded-xl bg-green-50 dark:bg-green-900/20 flex items-center justify-center shrink-0"><ArrowDownLeft className="h-4 w-4 text-green-500" /></div>
-              <div><p className="text-lg font-black text-green-500">+{income}</p><p className="text-[10px] text-gray-400">Masuk</p></div>
+              <div><p className="text-lg font-black text-green-500">+{income}</p><p className="text-[10px] text-gray-400">{t.supporterHub.income}</p></div>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-4 flex items-center gap-3">
               <div className="h-9 w-9 rounded-xl bg-red-50 dark:bg-red-900/20 flex items-center justify-center shrink-0"><ArrowUpRight className="h-4 w-4 text-red-500" /></div>
-              <div><p className="text-lg font-black text-red-500">-{spent}</p><p className="text-[10px] text-gray-400">Keluar</p></div>
+              <div><p className="text-lg font-black text-red-500">-{spent}</p><p className="text-[10px] text-gray-400">{t.supporterHub.outgoing}</p></div>
             </CardContent>
           </Card>
         </div>
       </div>
 
-      <h2 className="text-sm font-bold mb-3">Riwayat</h2>
+      <h2 className="text-sm font-bold mb-3">{t.supporterHub.history}</h2>
       {txs && txs.length > 0 ? (
         <Card>
           <motion.div variants={staggerChildren} initial="hidden" animate="visible" className="divide-y divide-primary-50 dark:divide-primary-900/20">
@@ -83,7 +85,7 @@ export default function SupporterWallet() {
       ) : (
         <Card><CardContent className="p-10 text-center">
           <div className="h-12 w-12 rounded-2xl bg-primary-50 dark:bg-primary-900/20 flex items-center justify-center mx-auto mb-3"><Wallet className="h-6 w-6 text-primary" /></div>
-          <p className="text-sm text-gray-400">Belum ada transaksi</p>
+          <p className="text-sm text-gray-400">{t.wallet.emptyTransactions}</p>
         </CardContent></Card>
       )}
     </div>

@@ -12,18 +12,15 @@ import { PageTransition } from "@/components/ui/page-transition";
 import { Eye, EyeOff, Sparkles, Coffee, Palette } from "lucide-react";
 import Link from "next/link";
 import { SocialAuthButtons } from "@/components/social-auth-buttons";
+import { useTranslation } from "@/lib/internationalization";
 
-
-const ROLE_OPTIONS = [
-  { value: "supporter" as const, label: "Supporter", Icon: Coffee, desc: "Beli konten, kirim donasi, chat dengan kreator" },
-  { value: "creator" as const, label: "Kreator", Icon: Palette, desc: "Jual konten, terima donasi, buka page sendiri" },
-];
 
 export default function RegisterPage() {
   return <Suspense fallback={<div className="p-8 text-center">Memuat...</div>}><RegisterContent /></Suspense>;
 }
 
 function RegisterContent() {
+  const { t } = useTranslation();
   const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
@@ -36,6 +33,11 @@ function RegisterContent() {
   const [loading, setLoading] = useState(false);
   const { register, login } = useAuth();
 
+  const ROLE_OPTIONS = [
+    { value: "supporter" as const, label: t.auth.roleSupporterLabel, Icon: Coffee, desc: t.auth.roleSupporterDesc },
+    { value: "creator" as const, label: t.auth.roleCreatorLabel, Icon: Palette, desc: t.auth.roleCreatorDesc },
+  ];
+
   useEffect(() => {
     const ref = searchParams.get("ref");
     if (ref) setReferralCode(ref);
@@ -46,21 +48,21 @@ function RegisterContent() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    if (!emailRegex.test(email)) { setError("Format email tidak valid"); return; }
-    if (password !== confirmPassword) { setError("Konfirmasi password tidak cocok"); return; }
+    if (!emailRegex.test(email)) { setError(t.auth.invalidEmail); return; }
+    if (password !== confirmPassword) { setError(t.auth.passwordMismatch); return; }
     setLoading(true);
     try {
       await register(email, username, password, role, referralCode || undefined);
       await login(email, password);
     } catch (err: any) {
-      setError(err.response?.data?.error || "Registrasi gagal");
+      setError(err.response?.data?.error || t.auth.registerFailed);
     } finally {
       setLoading(false);
     }
   };
 
   const pwToggle = (
-    <button type="button" onClick={() => setShowPw(!showPw)} className="text-gray-400 hover:text-gray-600" aria-label={showPw ? "Sembunyikan password" : "Tampilkan password"}>
+    <button type="button" onClick={() => setShowPw(!showPw)} className="text-gray-400 hover:text-gray-600" aria-label={showPw ? t.auth.hidePassword : t.auth.showPassword}>
       {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
     </button>
   );
@@ -94,8 +96,8 @@ function RegisterContent() {
             </div>
 
             <div className="mb-6">
-              <h1 className="text-2xl sm:text-3xl font-display font-black tracking-tight">Buat Akun Baru ✨</h1>
-              <p className="text-gray-500 dark:text-gray-400 mt-2">Daftar gratis dalam 2 menit</p>
+              <h1 className="text-2xl sm:text-3xl font-display font-black tracking-tight">{t.auth.registerTitle}</h1>
+              <p className="text-gray-500 dark:text-gray-400 mt-2">{t.auth.registerSubtitle}</p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -103,7 +105,7 @@ function RegisterContent() {
 
               {/* Role selector */}
               <div>
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">Saya daftar sebagai</label>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">{t.auth.roleSelectorLabel}</label>
                 <div className="grid grid-cols-2 gap-3">
                   {ROLE_OPTIONS.map((opt) => (
                     <button key={opt.value} type="button" onClick={() => setRole(opt.value)}
@@ -120,43 +122,43 @@ function RegisterContent() {
               </div>
 
               <div>
-                <label htmlFor="reg-email" className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">Email</label>
-                <Input id="reg-email" type="email" placeholder="nama@email.com" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" error={email && !emailRegex.test(email) ? "Format email tidak valid" : undefined} />
+                <label htmlFor="reg-email" className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">{t.auth.emailLabel}</label>
+                <Input id="reg-email" type="email" placeholder="nama@email.com" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" error={email && !emailRegex.test(email) ? t.auth.invalidEmail : undefined} />
               </div>
               <div>
-                <label htmlFor="reg-username" className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">Username</label>
-                <Input id="reg-username" placeholder="huruf & angka saja" value={username} onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9]/g, ""))} required maxLength={30} />
+                <label htmlFor="reg-username" className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">{t.auth.usernameLabel}</label>
+                <Input id="reg-username" placeholder={t.auth.usernamePlaceholder} value={username} onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9]/g, ""))} required maxLength={30} />
               </div>
               <div>
-                <label htmlFor="reg-password" className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">Password</label>
-                <Input id="reg-password" type={showPw ? "text" : "password"} placeholder="Min 8 karakter" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} autoComplete="new-password" iconRight={pwToggle} />
+                <label htmlFor="reg-password" className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">{t.auth.passwordLabel}</label>
+                <Input id="reg-password" type={showPw ? "text" : "password"} placeholder={t.auth.passwordMin} value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} autoComplete="new-password" iconRight={pwToggle} />
                 <PasswordStrength password={password} />
               </div>
               <div>
-                <label htmlFor="reg-confirm-pw" className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">Ulangi Password</label>
-                <Input id="reg-confirm-pw" type={showPw ? "text" : "password"} placeholder="Ketik ulang password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required error={confirmPassword && password !== confirmPassword ? "Password tidak cocok" : undefined} />
+                <label htmlFor="reg-confirm-pw" className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">{t.auth.confirmPasswordLabel}</label>
+                <Input id="reg-confirm-pw" type={showPw ? "text" : "password"} placeholder={t.auth.passwordLabel} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required error={confirmPassword && password !== confirmPassword ? t.auth.passwordMismatch : undefined} />
               </div>
               <div>
-                <label htmlFor="reg-referral" className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">Kode Referral <span className="text-gray-400 font-normal">(opsional)</span></label>
-                <Input id="reg-referral" placeholder="Masukkan kode" value={referralCode} onChange={(e) => setReferralCode(e.target.value.trim())} />
-                {referralCode && <p className="text-xs text-green-600 mt-1.5">🎁 Kamu dan teman yang mengajak akan dapat 10 Credit gratis!</p>}
+                <label htmlFor="reg-referral" className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">{t.auth.referralLabel} <span className="text-gray-400 font-normal">{t.auth.referralOptional}</span></label>
+                <Input id="reg-referral" placeholder={t.auth.referralPlaceholder} value={referralCode} onChange={(e) => setReferralCode(e.target.value.trim())} />
+                {referralCode && <p className="text-xs text-green-600 mt-1.5">{t.auth.referralBonus}</p>}
               </div>
-              <Button type="submit" className="w-full h-12" loading={loading}>Daftar Sekarang</Button>
+              <Button type="submit" className="w-full h-12" loading={loading}>{t.auth.registerButton}</Button>
             </form>
 
             <div className="relative my-6">
               <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200 dark:border-gray-700" /></div>
-              <div className="relative flex justify-center text-sm"><span className="bg-white dark:bg-navy-900 px-2 text-gray-500">atau daftar dengan</span></div>
+              <div className="relative flex justify-center text-sm"><span className="bg-white dark:bg-navy-900 px-2 text-gray-500">{t.auth.orDivider}</span></div>
             </div>
 
             <SocialAuthButtons />
 
             <p className="text-center text-sm text-gray-500 dark:text-gray-400 mt-6">
 
-              Sudah punya akun? <Link href="/login" className="text-primary font-semibold hover:underline">Masuk</Link>
+              {t.auth.alreadyHaveAccount} <Link href="/login" className="text-primary font-semibold hover:underline">{t.auth.loginButton}</Link>
             </p>
             <p className="text-center text-[11px] text-gray-400 dark:text-gray-500 mt-3">
-              Dengan mendaftar, kamu setuju dengan <Link href="/terms" className="underline">Syarat & Ketentuan</Link> dan <Link href="/privacy" className="underline">Kebijakan Privasi</Link>.
+              {t.auth.termsAgreement}
             </p>
           </div>
         </PageTransition>

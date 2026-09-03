@@ -7,9 +7,11 @@ import { AuthGuard } from "@/components/auth-guard";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatCredit, formatDate } from "@/lib/utils";
+import { useTranslation } from "@/lib/internationalization";
 import type { Donation, PaginatedResponse } from "@/lib/types";
 
 export default function DonationsSent() {
+  const { t } = useTranslation();
   const { data: donations } = useQuery({
     queryKey: ["donations-sent"],
     queryFn: async () => {
@@ -22,7 +24,7 @@ export default function DonationsSent() {
     <AuthGuard>
       <Navbar />
       <main className="mx-auto max-w-2xl px-3 sm:px-4 py-6 sm:py-8">
-        <h1 className="mb-6 text-2xl font-display font-black tracking-tight">Donasi Terkirim</h1>
+        <h1 className="mb-6 text-2xl font-display font-black tracking-tight">{t.supporterHub.donationsSent}</h1>
         <div className="space-y-3">
           {donations?.map((d) => (
             <Card key={d.id}>
@@ -36,7 +38,7 @@ export default function DonationsSent() {
               </CardContent>
             </Card>
           ))}
-          {donations?.length === 0 && <p className="text-sm text-gray-500 dark:text-gray-400">Belum ada donasi.</p>}
+          {donations?.length === 0 && <p className="text-sm text-gray-500 dark:text-gray-400">{t.supporterHub.emptyDonations}</p>}
         </div>
       </main>
     </AuthGuard>

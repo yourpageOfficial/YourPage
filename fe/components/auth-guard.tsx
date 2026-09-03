@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
+import { useTranslation } from "@/lib/internationalization";
 
 interface Props {
   children: React.ReactNode;
@@ -11,6 +12,7 @@ interface Props {
 }
 
 export function AuthGuard({ children, role, requireAuth = true }: Props) {
+  const { t } = useTranslation();
   const { user, loading, fetchMe } = useAuth();
   const router = useRouter();
 
@@ -40,7 +42,7 @@ export function AuthGuard({ children, role, requireAuth = true }: Props) {
     }
   }, [user, loading, role, requireAuth, router]);
 
-  if (loading) return <div className="p-8 text-center text-gray-500">Memuat...</div>;
+  if (loading) return <div className="p-8 text-center text-gray-500">{t.compAccount.loading}</div>;
   if (requireAuth && !user) return null;
   if (role === "admin" && user?.role !== "admin") return null;
   if (role === "creator" && user?.role !== "creator" && user?.role !== "admin") return null;

@@ -13,11 +13,10 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@/lib/utils";
-
-const filters = [{ label: "Menunggu", value: "pending" }, { label: "Disetujui", value: "approved" }, { label: "Ditolak", value: "rejected" }];
-const sorts = [{ label: "Name", key: "full_name" }, { label: "Date", key: "created_at" }, { label: "Status", key: "status" }];
+import { useTranslation } from "@/lib/internationalization";
 
 export default function AdminKYC() {
+  const { t, interpolate } = useTranslation();
   const qc = useQueryClient();
   const list = useAdminList("admin-kyc", "/admin/kyc");
   const [notes, setNotes] = useState<Record<string, string>>({});
@@ -26,12 +25,15 @@ export default function AdminKYC() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-kyc"] }),
   });
 
+  const filters = [{ label: t.adminModeration.filterPending, value: "pending" }, { label: t.adminModeration.filterApproved, value: "approved" }, { label: t.adminModeration.filterRejected, value: "rejected" }];
+  const sorts = [{ label: t.adminModeration.sortName, key: "full_name" }, { label: t.adminModeration.sortDate, key: "created_at" }, { label: t.adminModeration.sortStatus, key: "status" }];
+
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-display font-black tracking-tight">KYC Verification</h1>
+      <h1 className="mb-6 text-2xl font-display font-black tracking-tight">{t.adminModeration.kycTitle}</h1>
       <AdminList
         filters={filters} activeFilter={list.filter} onFilter={list.setFilter}
-        search={list.search} onSearch={list.setSearch} searchPlaceholder="Cari nama, user ID..."
+        search={list.search} onSearch={list.setSearch} searchPlaceholder={t.adminModeration.searchKyc}
         sortOptions={sorts} sortKey={list.sortKey} sortDir={list.sortDir} onSort={list.toggleSort}
         nextCursor={list.nextCursor} onNext={list.onNext} onPrev={list.onPrev} hasPrev={list.hasPrev}
         count={list.items.length}
@@ -45,36 +47,36 @@ export default function AdminKYC() {
                   <Badge className={statusColor[k.status] || ""}>{statusLabel[k.status] || k.status}</Badge>
                 </div>
                 <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
-                  <div><span className="text-gray-500 dark:text-gray-400">User:</span> {k.user?.username || k.user_id?.slice(0, 8) + "..."}</div>
-                  <div><span className="text-gray-500 dark:text-gray-400">Submitted:</span> {formatDate(k.created_at)}</div>
-                  {k.reviewed_at && <div><span className="text-gray-500 dark:text-gray-400">Reviewed:</span> {formatDate(k.reviewed_at)}</div>}
+                  <div><span className="text-gray-500 dark:text-gray-400">{t.adminModeration.kycUser}</span> {k.user?.username || k.user_id?.slice(0, 8) + "..."}</div>
+                  <div><span className="text-gray-500 dark:text-gray-400">{t.adminModeration.kycSubmitted}</span> {formatDate(k.created_at)}</div>
+                  {k.reviewed_at && <div><span className="text-gray-500 dark:text-gray-400">{t.adminModeration.kycReviewed}</span> {formatDate(k.reviewed_at)}</div>}
                 </div>
                 {/* The reviewer previously had no document to look at and
                     approved blind. This link is signed and short-lived. */}
                 {k.ktp_image_url ? (
                   <a href={k.ktp_image_url} target="_blank" rel="noopener noreferrer" className="block">
-                    <img loading="lazy" src={k.ktp_image_url} alt={`Dokumen identitas ${k.full_name}`} className="max-h-56 rounded-xl border object-contain dark:border-navy-800" />
-                    <span className="mt-1 block text-xs text-gray-500 dark:text-gray-400">Klik untuk memperbesar &middot; tautan kedaluwarsa 15 menit</span>
+                    <img loading="lazy" src={k.ktp_image_url} alt={interpolate(t.adminModeration.kycDocAlt, { name: k.full_name })} className="max-h-56 rounded-xl border object-contain dark:border-navy-800" />
+                    <span className="mt-1 block text-xs text-gray-500 dark:text-gray-400">{t.adminModeration.kycDocClickHint}</span>
                   </a>
                 ) : (
                   <p className="rounded-xl border border-dashed border-amber-300 bg-amber-50 p-2 text-xs text-amber-700 dark:border-amber-700 dark:bg-amber-900/20 dark:text-amber-400">
-                    Dokumen tidak tersedia. Minta user mengunggah ulang sebelum menyetujui.
+                    {t.adminModeration.kycDocUnavailable}
                   </p>
                 )}
-                {k.admin_note && <p className="text-sm bg-primary-50/50 dark:bg-navy-800 p-2 rounded">Note: {k.admin_note}</p>}
+                {k.admin_note && <p className="text-sm bg-primary-50/50 dark:bg-navy-800 p-2 rounded">{t.adminModeration.kycNoteLabel} {k.admin_note}</p>}
                 {k.status === "pending" && <>
-                  <Input placeholder="Catatan (opsional)" value={notes[k.id] || ""} onChange={(e) => setNotes({ ...notes, [k.id]: e.target.value })} />
+                  <Input placeholder={t.adminModeration.kycNotePlaceholder} value={notes[k.id] || ""} onChange={(e) => setNotes({ ...notes, [k.id]: e.target.value })} />
                   <div className="flex gap-2">
-                    <Button size="sm" onClick={() => update.mutate({ id: k.id, status: "approved" })}>Setujui</Button>
-                    <ConfirmDialog title="Tolak KYC?" message={`Yakin ingin menolak KYC ${k.full_name}?`} confirmLabel="Tolak" variant="destructive" onConfirm={() => update.mutate({ id: k.id, status: "rejected" })}>
-                      {(open) => <Button size="sm" variant="destructive" onClick={open}>Tolak</Button>}
+                    <Button size="sm" onClick={() => update.mutate({ id: k.id, status: "approved" })}>{t.adminModeration.approve}</Button>
+                    <ConfirmDialog title={t.adminModeration.kycRejectTitle} message={interpolate(t.adminModeration.kycRejectMessage, { name: k.full_name })} confirmLabel={t.adminModeration.reject} variant="destructive" onConfirm={() => update.mutate({ id: k.id, status: "rejected" })}>
+                      {(open) => <Button size="sm" variant="destructive" onClick={open}>{t.adminModeration.reject}</Button>}
                     </ConfirmDialog>
                   </div>
                 </>}
               </CardContent>
             </Card>
           ))}
-          {list.items.length === 0 && <p className="text-sm text-gray-500 dark:text-gray-400">Tidak ada KYC.</p>}
+          {list.items.length === 0 && <p className="text-sm text-gray-500 dark:text-gray-400">{t.adminModeration.emptyKyc}</p>}
         </div>
       </AdminList>
     </div>

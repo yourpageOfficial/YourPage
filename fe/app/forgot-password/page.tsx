@@ -9,8 +9,10 @@ import { Alert } from "@/components/ui/alert";
 import { PageTransition } from "@/components/ui/page-transition";
 import { Mail, Sparkles } from "lucide-react";
 import Link from "next/link";
+import { useTranslation } from "@/lib/internationalization";
 
 export default function ForgotPasswordPage() {
+  const { t, interpolate } = useTranslation();
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
   const [error, setError] = useState("");
@@ -18,7 +20,7 @@ export default function ForgotPasswordPage() {
   const send = useMutation({
     mutationFn: () => api.post("/auth/forgot-password", { email }),
     onSuccess: () => { setError(""); setSent(true); },
-    onError: (err: any) => setError(err.response?.data?.error || "Gagal mengirim email"),
+    onError: (err: any) => setError(err.response?.data?.error || t.auth.forgotSendFailed),
   });
 
   return (
@@ -39,22 +41,22 @@ export default function ForgotPasswordPage() {
             {sent ? (
               <div className="text-center space-y-4">
                 <div className="h-16 w-16 rounded-2xl bg-primary-50 dark:bg-primary-900/20 flex items-center justify-center mx-auto"><Mail className="h-8 w-8 text-primary" /></div>
-                <h1 className="text-2xl font-display font-black tracking-tight">Email Terkirim!</h1>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Cek inbox <span className="font-semibold">{email}</span> dan klik link reset password. Link berlaku 15 menit.</p>
-                <Link href="/login" className="block text-sm text-primary font-semibold hover:underline">← Kembali ke Login</Link>
+                <h1 className="text-2xl font-display font-black tracking-tight">{t.auth.forgotSentTitle}</h1>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{interpolate(t.auth.forgotSentDesc, { email })}</p>
+                <Link href="/login" className="block text-sm text-primary font-semibold hover:underline">{t.auth.backToLogin}</Link>
               </div>
             ) : (
               <>
-                <h1 className="text-2xl sm:text-3xl font-display font-black tracking-tight">Lupa Password? 🔑</h1>
-                <p className="text-gray-500 dark:text-gray-400 mt-2 mb-6">Masukkan email akun kamu, kami kirimkan link reset.</p>
+                <h1 className="text-2xl sm:text-3xl font-display font-black tracking-tight">{t.auth.forgotTitle}</h1>
+                <p className="text-gray-500 dark:text-gray-400 mt-2 mb-6">{t.auth.forgotSubtitle}</p>
                 <div className="space-y-4">
                   {error && <Alert variant="error">{error}</Alert>}
                   <div>
-                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">Email</label>
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">{t.auth.emailLabel}</label>
                     <Input type="email" placeholder="nama@email.com" value={email} onChange={e => setEmail(e.target.value)} onKeyDown={e => e.key === "Enter" && email && send.mutate()} />
                   </div>
-                  <Button className="w-full h-12" onClick={() => send.mutate()} loading={send.isPending} disabled={!email}>Kirim Link Reset</Button>
-                  <p className="text-center text-sm text-gray-500"><Link href="/login" className="text-primary font-semibold hover:underline">← Kembali ke Login</Link></p>
+                  <Button className="w-full h-12" onClick={() => send.mutate()} loading={send.isPending} disabled={!email}>{t.auth.forgotSendButton}</Button>
+                  <p className="text-center text-sm text-gray-500"><Link href="/login" className="text-primary font-semibold hover:underline">{t.auth.backToLogin}</Link></p>
                 </div>
               </>
             )}

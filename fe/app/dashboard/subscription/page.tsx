@@ -11,9 +11,11 @@ import { formatCredit } from "@/lib/utils";
 import { Check, Crown, Zap } from "lucide-react";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useState } from "react";
+import { useTranslation } from "@/lib/internationalization";
 
 export default function SubscriptionPage() {
   const { user, fetchMe } = useAuth();
+  const { t, interpolate, locale } = useTranslation();
   const qc = useQueryClient();
   const [confirmTier, setConfirmTier] = useState<any>(null);
 
@@ -30,12 +32,12 @@ export default function SubscriptionPage() {
   const subscribe = useMutation({
     mutationFn: (tierID: string) => api.post("/auth/subscribe-tier", { tier_id: tierID }),
     onSuccess: () => {
-      toast.success("Tier berhasil diupdate!");
+      toast.success(t.accountMgr.subscriptionUpdated);
       qc.invalidateQueries({ queryKey: ["my-profile"] });
       fetchMe();
       setConfirmTier(null);
     },
-    onError: (e: any) => toast.error(e.response?.data?.error || "Gagal subscribe"),
+    onError: (e: any) => toast.error(e.response?.data?.error || t.accountMgr.subscriptionFailed),
   });
 
   const currentTierID = profile?.creator_profile?.tier_id;
@@ -46,10 +48,10 @@ export default function SubscriptionPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-display font-black tracking-tight mb-2">Subscription</h1>
+      <h1 className="text-2xl font-display font-black tracking-tight mb-2">{t.accountMgr.subscriptionTitle}</h1>
       {tierExpires && (
         <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-          Tier aktif sampai: {new Date(tierExpires).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}
+          {interpolate(t.accountMgr.subscriptionActiveUntil, { date: new Date(tierExpires).toLocaleDateString(locale === "id" ? "id-ID" : "en-US", { day: "numeric", month: "long", year: "numeric" }) })}
         </p>
       )}
 
@@ -65,15 +67,15 @@ export default function SubscriptionPage() {
                 <div className="flex items-center gap-2">
                   {icon}
                   <CardTitle className="text-lg">{t.name}</CardTitle>
-                  {isCurrent && <Badge>Aktif</Badge>}
+                  {isCurrent && <Badge>{t.accountMgr.subscriptionActive}</Badge>}
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
                   {t.price_idr === 0 ? (
-                    <p className="text-2xl font-display font-black tracking-tight">Gratis</p>
+                    <p className="text-2xl font-display font-black tracking-tight">{t.accountMgr.subscriptionFree}</p>
                   ) : (
-                    <p className="text-2xl font-display font-black tracking-tight">{formatCredit(t.price_idr)} <span className="text-sm font-normal text-gray-500 dark:text-gray-400">Credit/bulan</span></p>
+                    <p className="text-2xl font-display font-black tracking-tight">{formatCredit(t.price_idr)} <span className="text-sm font-normal text-gray-500 dark:text-gray-400">{t.accountMgr.subscriptionCreditPerMonth}</span></p>
                   )}
                 </div>
                 <div className="space-y-1.5">
@@ -84,12 +86,12 @@ export default function SubscriptionPage() {
                     </div>
                   ))}
                 </div>
-                <div className="text-xs text-gray-500 dark:text-gray-400">Fee: {t.fee_percent}% · Storage: {(t.storage_bytes / (1024*1024*1024)).toFixed(0)} GB</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">{t.accountMgr.subscriptionFeeLabel}: {t.fee_percent}% · {t.accountMgr.subscriptionStorageLabel}: {(t.storage_bytes / (1024*1024*1024)).toFixed(0)} GB</div>
                 {isCurrent ? (
-                  <Button disabled className="w-full">Paket Saat Ini</Button>
+                  <Button disabled className="w-full">{t.accountMgr.subscriptionCurrentPlan}</Button>
                 ) : (
                   <Button className="w-full" variant={t.price_idr > 0 && t.price_idr < 149000 ? "default" : "outline"} onClick={() => setConfirmTier(t)}>
-                    {t.price_idr === 0 ? "Downgrade" : "Upgrade"}
+                    {t.price_idr === 0 ? t.accountMgr.subscriptionDowngrade : t.accountMgr.subscriptionUpgrade}
                   </Button>
                 )}
               </CardContent>
@@ -102,11 +104,11 @@ export default function SubscriptionPage() {
         open={!!confirmTier}
         onClose={() => setConfirmTier(null)}
         onConfirm={() => confirmTier && subscribe.mutate(confirmTier.id)}
-        title={confirmTier?.price_idr === 0 ? "Downgrade ke Free?" : `Upgrade ke ${confirmTier?.name}?`}
+        title={confirmTier?.price_idr === 0 ? t.accountMgr.subscriptionDowngradeTitle : interpolate(t.accountMgr.subscriptionUpgradeTitle, { name: confirmTier?.name })}
         description={confirmTier?.price_idr === 0
-          ? `Fee akan kembali ke ${freeTier?.fee_percent ?? 20}% dan limit produk ${freeTier?.max_products ?? 3}.`
-          : `${formatCredit(confirmTier?.price_idr || 0)} Credit akan dipotong dari wallet kamu untuk 1 bulan.`}
-        confirmText={confirmTier?.price_idr === 0 ? "Downgrade" : "Bayar & Upgrade"}
+          ? interpolate(t.accountMgr.subscriptionDowngradeDesc, { fee: freeTier?.fee_percent ?? 20, limit: freeTier?.max_products ?? 3 })
+          : interpolate(t.accountMgr.subscriptionUpgradeDesc, { value: formatCredit(confirmTier?.price_idr || 0) })}
+        confirmText={confirmTier?.price_idr === 0 ? t.accountMgr.subscriptionDowngrade : t.accountMgr.subscriptionPayUpgrade}
         variant={confirmTier?.price_idr === 0 ? "destructive" : "default"}
       />
     </div>

@@ -18,9 +18,11 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import type { Post, MembershipTier, PaginatedResponse } from "@/lib/types";
 import { motion, AnimatePresence } from "framer-motion";
 import { staggerChildren, staggerItem } from "@/lib/motion-variants";
+import { useTranslation } from "@/lib/internationalization";
 
 export default function DashboardPosts() {
   const { user } = useAuth();
+  const { t, locale, interpolate } = useTranslation();
   const qc = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
   const [showForm, setShowForm] = useState(false);
@@ -75,14 +77,14 @@ export default function DashboardPosts() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["my-posts"] });
       setShowForm(false); setTitle(""); setContent(""); setPrice(""); setFiles([]);
-      toast.success("Post berhasil dipublikasikan!");
+      toast.success(t.contentMgr.postCreated);
     },
-    onError: (err: any) => toast.error(err.response?.data?.error || "Gagal membuat post"),
+    onError: (err: any) => toast.error(err.response?.data?.error || t.contentMgr.postCreatedFailed),
   });
 
   const deletePost = useMutation({
     mutationFn: (id: string) => api.delete(`/posts/${id}`),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["my-posts"] }); toast.success("Post dihapus"); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["my-posts"] }); toast.success(t.contentMgr.postDeleted); },
   });
 
   const handleFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -99,14 +101,14 @@ export default function DashboardPosts() {
       {/* Header with stats */}
       <div className="flex items-start justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-display font-black tracking-tight">Posts</h1>
+          <h1 className="text-2xl font-display font-black tracking-tight">{t.contentMgr.postsTitle}</h1>
           <div className="flex items-center gap-3 mt-1.5">
-            <span className="text-xs text-gray-500 dark:text-gray-400">{published.length} published</span>
-            {drafts.length > 0 && <span className="text-xs text-amber-500">{drafts.length} draft</span>}
+            <span className="text-xs text-gray-500 dark:text-gray-400">{interpolate(t.contentMgr.postsPublishedCount, { count: published.length })}</span>
+            {drafts.length > 0 && <span className="text-xs text-amber-500">{interpolate(t.contentMgr.postsDraftCount, { count: drafts.length })}</span>}
           </div>
         </div>
         <Button size="sm" onClick={() => setShowForm(!showForm)} className="rounded-2xl">
-          {showForm ? <><X className="mr-1.5 h-4 w-4" /> Tutup</> : <><Plus className="mr-1.5 h-4 w-4" /> Buat Post</>}
+          {showForm ? <><X className="mr-1.5 h-4 w-4" /> {t.contentMgr.close}</> : <><Plus className="mr-1.5 h-4 w-4" /> {t.contentMgr.createPost}</>}
         </Button>
       </div>
 
@@ -116,13 +118,13 @@ export default function DashboardPosts() {
           <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden mb-6">
             <Card className="border-primary/20">
               <CardContent className="space-y-4 p-5">
-                <Input placeholder="Judul post" value={title} onChange={(e) => setTitle(e.target.value)} />
-                <Textarea placeholder="Tulis konten..." value={content} onChange={(e) => setContent(e.target.value)} className="min-h-[120px]" />
+                <Input placeholder={t.contentMgr.postTitlePlaceholder} value={title} onChange={(e) => setTitle(e.target.value)} />
+                <Textarea placeholder={t.contentMgr.postContentPlaceholder} value={content} onChange={(e) => setContent(e.target.value)} className="min-h-[120px]" />
 
                 <div>
                   <input ref={fileRef} type="file" multiple accept="image/*,video/*,audio/*,.pdf,.zip" className="hidden" onChange={handleFiles} />
                   <Button type="button" variant="outline" size="sm" onClick={() => fileRef.current?.click()} className="rounded-xl">
-                    <Upload className="mr-1.5 h-4 w-4" /> Upload Media
+                    <Upload className="mr-1.5 h-4 w-4" /> {t.contentMgr.uploadMedia}
                   </Button>
                   {files.length > 0 && (
                     <div className="mt-2 flex flex-wrap gap-2">
@@ -139,12 +141,12 @@ export default function DashboardPosts() {
 
                 {/* Access type — horizontal toggle */}
                 <div>
-                  <label className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 block">Akses</label>
+                  <label className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 block">{t.contentMgr.accessLabel}</label>
                   <div className="inline-flex rounded-xl bg-primary-50 dark:bg-navy-800 p-1">
-                    {(["free", "paid", "members"] as const).map(t => (
-                      <button key={t} onClick={() => setAccessType(t)}
-                        className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${accessType === t ? "bg-white dark:bg-navy-900 text-primary shadow-sm" : "text-gray-500"}`}>
-                        {t === "free" ? "Gratis" : t === "paid" ? "Berbayar" : "Members"}
+                    {(["free", "paid", "members"] as const).map(access => (
+                      <button key={access} onClick={() => setAccessType(access)}
+                        className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${accessType === access ? "bg-white dark:bg-navy-900 text-primary shadow-sm" : "text-gray-500"}`}>
+                        {access === "free" ? t.contentMgr.free : access === "paid" ? t.contentMgr.paid : t.contentMgr.members}
                       </button>
                     ))}
                   </div>
@@ -153,35 +155,35 @@ export default function DashboardPosts() {
                 {accessType === "paid" && (
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="text-sm font-medium mb-1.5 block">Harga (Credit)</label>
-                      <Input type="number" placeholder="5" value={price} onChange={(e) => setPrice(e.target.value)} />
+                      <label className="text-sm font-medium mb-1.5 block">{t.contentMgr.priceCredit}</label>
+                      <Input type="number" placeholder={t.contentMgr.pricePlaceholder} value={price} onChange={(e) => setPrice(e.target.value)} />
                     </div>
                     <div>
-                      <label className="text-sm font-medium mb-1.5 block">Preview teks</label>
-                      <Input value={excerpt} onChange={(e) => setExcerpt(e.target.value)} placeholder="Teaser singkat..." />
+                      <label className="text-sm font-medium mb-1.5 block">{t.contentMgr.previewText}</label>
+                      <Input value={excerpt} onChange={(e) => setExcerpt(e.target.value)} placeholder={t.contentMgr.teaserPlaceholder} />
                     </div>
                   </div>
                 )}
                 {accessType === "members" && membershipTiers && membershipTiers.length > 0 && (
                   <div>
-                    <label className="text-sm font-medium mb-1.5 block">Tier minimum</label>
+                    <label className="text-sm font-medium mb-1.5 block">{t.contentMgr.tierMinimum}</label>
                     <select value={memberTierID} onChange={(e) => setMemberTierID(e.target.value)} className="w-full">
-                      <option value="">Semua Member</option>
-                      {membershipTiers.map((t: any) => <option key={t.id} value={t.id}>{t.name} ({t.price_credits} Credit/bulan)</option>)}
+                      <option value="">{t.contentMgr.allMembers}</option>
+                      {membershipTiers.map((tier: any) => <option key={tier.id} value={tier.id}>{tier.name} ({interpolate(t.contentMgr.creditPerMonth, { count: tier.price_credits })})</option>)}
                     </select>
                   </div>
                 )}
                 {accessType === "members" && (!membershipTiers || membershipTiers.length === 0) && (
-                  <p className="text-xs text-amber-600">⚠️ Belum punya membership tier. <a href="/dashboard/membership" className="underline text-primary">Buat dulu</a></p>
+                  <p className="text-xs text-amber-600">{t.contentMgr.noMembershipTier} <a href="/dashboard/membership" className="underline text-primary">{t.contentMgr.createTierFirst}</a></p>
                 )}
                 {isPro && (
                   <div>
-                    <label className="text-sm font-medium mb-1.5 block">Jadwalkan (opsional)</label>
+                    <label className="text-sm font-medium mb-1.5 block">{t.contentMgr.scheduleOptional}</label>
                     <Input type="datetime-local" value={scheduledAt} onChange={(e) => setScheduledAt(e.target.value)} className="w-60" min={new Date().toISOString().slice(0, 16)} />
                   </div>
                 )}
                 <Button onClick={() => createPost.mutate()} disabled={createPost.isPending || !title || (accessType === "paid" && (!price || isNaN(parseInt(price)) || parseInt(price) < 1))} className="rounded-xl">
-                  {createPost.isPending ? "Menyimpan..." : scheduledAt ? "📅 Jadwalkan" : "🚀 Publish"}
+                  {createPost.isPending ? t.contentMgr.saving : scheduledAt ? t.contentMgr.schedule : t.contentMgr.publish}
                 </Button>
               </CardContent>
             </Card>
@@ -192,7 +194,7 @@ export default function DashboardPosts() {
       {/* Drafts section */}
       {drafts.length > 0 && (
         <div className="mb-6">
-          <p className="text-xs font-bold text-amber-500 uppercase tracking-wider mb-2">📝 Draft ({drafts.length})</p>
+          <p className="text-xs font-bold text-amber-500 uppercase tracking-wider mb-2">{interpolate(t.contentMgr.draftHeader, { count: drafts.length })}</p>
           <div className="space-y-2">
             {drafts.map((post) => <PostItem key={post.id} post={post} onDelete={(id) => deletePost.mutate(id)} />)}
           </div>
@@ -211,8 +213,8 @@ export default function DashboardPosts() {
       {posts?.length === 0 && (
         <Card><CardContent className="p-12 text-center">
           <div className="h-14 w-14 rounded-2xl bg-primary-50 dark:bg-primary-900/20 flex items-center justify-center mx-auto mb-3"><FileText className="h-7 w-7 text-primary" /></div>
-          <p className="font-display font-bold">Belum ada post</p>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Buat post pertamamu!</p>
+          <p className="font-display font-bold">{t.contentMgr.emptyPostsTitle}</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{t.contentMgr.emptyPostsDesc}</p>
         </CardContent></Card>
       )}
     </div>
@@ -221,6 +223,7 @@ export default function DashboardPosts() {
 
 function PostItem({ post, onDelete }: { post: Post; onDelete: (id: string) => void }) {
   const router = useRouter();
+  const { t, locale } = useTranslation();
   return (
     <Card clickable onClick={() => router.push(`/dashboard/posts/${post.id}`)}>
       <CardContent className="p-4">
@@ -228,18 +231,18 @@ function PostItem({ post, onDelete }: { post: Post; onDelete: (id: string) => vo
           <div className="flex-1 min-w-0">
             <p className="font-bold truncate">{post.title}</p>
             <div className="flex flex-wrap items-center gap-2 mt-2">
-              <Badge variant={post.status === "published" ? "success" : "warning"}>{post.status}</Badge>
+              <Badge variant={post.status === "published" ? "success" : "warning"}>{post.status === "published" ? t.contentMgr.publishedBadge : t.contentMgr.draftBadge}</Badge>
               {post.scheduled_at && post.status === "draft" && (
-                <Badge variant="outline" className="text-[10px]"><Clock className="h-3 w-3 mr-1" />{new Date(post.scheduled_at).toLocaleDateString("id-ID")}</Badge>
+                <Badge variant="outline" className="text-[10px]"><Clock className="h-3 w-3 mr-1" />{new Date(post.scheduled_at).toLocaleDateString(locale === "id" ? "id-ID" : "en-US")}</Badge>
               )}
               <Badge variant={post.access_type === "paid" ? "secondary" : "outline"}>
-                {post.access_type === "paid" ? formatCredit(post.price || 0) : "Gratis"}
+                {post.access_type === "paid" ? formatCredit(post.price || 0) : t.contentMgr.free}
               </Badge>
               {post.media?.length > 0 && <Badge variant="outline" className="text-[10px]"><ImageIcon className="h-3 w-3 mr-1" />{post.media.length}</Badge>}
               <span className="text-[11px] text-gray-400">{formatDate(post.created_at)}</span>
             </div>
           </div>
-          <ConfirmDialog title="Hapus Post?" message="Post yang dihapus tidak bisa dikembalikan." onConfirm={() => onDelete(post.id)}>
+          <ConfirmDialog title={t.contentMgr.deletePostTitle} message={t.contentMgr.deletePostMessage} onConfirm={() => onDelete(post.id)}>
             {(open) => <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); open(); }}><Trash2 className="h-4 w-4 text-red-400 hover:text-red-600" /></Button>}
           </ConfirmDialog>
         </div>
